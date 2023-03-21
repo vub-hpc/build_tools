@@ -273,6 +273,24 @@ if ( mode() ~= "spider" ) then
 end
 """ % ", ".join(archless_path)
 
+    # set COMSOL licenses
+    if self.name == 'COMSOL':
+        self.cfg['modluafooter'] = """
+if userInGroup("bcomsol") then
+    setenv("LMCOMSOL_LICENSE_FILE", "/apps/brussel/licenses/comsol/License.dat")
+elseif userInGroup("bcomsol_efremov") then
+    setenv("LMCOMSOL_LICENSE_FILE", "/apps/brussel/licenses/comsol/License_efremov.dat")
+end
+"""
+
+    # print info about BUSCO database
+    if self.name == 'BUSCO':
+        if LooseVersion(self.version) >= '5.0.0':
+            self.cfg['modloadmsg'] = """
+BUSCO v5 databases are located in /databases/bio/BUSCO-5. Use local DBs with command:
+`busco --offline --download_path /databases/bio/BUSCO-5 ...`
+"""
+
     # add links to our documentation for software covered in
     # https://hpc.vub.be/docs/software/usecases/
     doc_url = 'https://hpc.vub.be/docs/software/usecases/'
@@ -298,12 +316,3 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
             self.cfg['docurls'] = [usage_info['link']]
 
     self.cfg.enable_templating = en_templ
-
-    if self.name == 'COMSOL':
-        self.cfg['modluafooter'] = """
-if userInGroup("bcomsol") then
-    setenv("LMCOMSOL_LICENSE_FILE", "/apps/brussel/licenses/comsol/License.dat")
-elseif userInGroup("bcomsol_efremov") then
-    setenv("LMCOMSOL_LICENSE_FILE", "/apps/brussel/licenses/comsol/License_efremov.dat")
-end
-"""
