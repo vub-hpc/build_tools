@@ -17,36 +17,25 @@ eb_hooks base distribution setup.py
 @author: Alex Domingo (Vrije Universiteit Brussel)
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
+from vsc.install import shared_setup
+from vsc.install.shared_setup import ad, sm, wp
 
-from pathlib import Path
-import setuptools
 
-this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
-
-PKG = {}
-with open("src/eb_hooks/package.py", encoding='utf-8') as fh:
-    exec(fh.read(), PKG)  # pylint: disable=exec-used
-
-setuptools.setup(
-    name="eb_hooks",
-    version=PKG["VERSION"],
-    author=', '.join(PKG["AUTHOR"].values()),
-    author_email=', '.join(PKG["AUTHOR_EMAIL"].values()),
-    description="EasyBuild hooks for HPC clusters ",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://vub-hpc/eb_hooks",
-
-    package_dir={"": "src"},
-    packages=setuptools.find_packages(where="src"),
-
-    python_requires='~=3.6',
-    install_requires=[
+PACKAGE = {
+    'version': '1.0.0',
+    'author': [ad, sm, wp],
+    'maintainer': [ad, sm, wp],
+    'setup_requires': [
+        'vsc-install >= 0.15.3',
+    ],
+    'install_requires': [
         'easybuild',
     ],
-    tests_require=[
-        'pytest',
-    ],
-    zip_safe=False,
-)
+    'python_requires': '~=3.6',
+    'zip_safe': False,
+    'url': "https://vub-hpc/eb_hooks",
+}
+
+
+if __name__ == '__main__':
+    shared_setup.action_target(PACKAGE)

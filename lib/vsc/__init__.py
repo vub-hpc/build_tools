@@ -11,22 +11,8 @@
 #
 ##
 """
-Package info for eb_hooks
-
-@author: Alex Domingo (Vrije Universiteit Brussel)
-@author: Samuel Moors (Vrije Universiteit Brussel)
+Allow other packages to extend this namespace, zip safe setuptools style
+@author: Andy Georges (Ghent University)
 """
-
-VERSION = '1.0.0'
-
-AUTHOR = {
-    'wp': 'Ward Poelmans',
-    'sm': 'Samuel Moors',
-    'ad': 'Alex Domingo',
-}
-
-AUTHOR_EMAIL = {
-    'wp': 'ward.poelmans@vub.be',
-    'sm': 'samuel.moors@vub.be',
-    'ad': 'alex.domingo.toro@vub.be',
-}
+import pkg_resources
+pkg_resources.declare_namespace(__name__)

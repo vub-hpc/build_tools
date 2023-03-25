@@ -23,7 +23,7 @@ from distutils.version import LooseVersion
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.tools.config import install_path
 
-from eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK, DUAL_IB_ARCHS
+from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK, DUAL_IB_ARCHS
 
 # permission groups for licensed software
 SOFTWARE_GROUPS = {
@@ -295,7 +295,7 @@ BUSCO v5 databases are located in /databases/bio/BUSCO-5. Use local DBs with com
     # https://hpc.vub.be/docs/software/usecases/
     doc_url = 'https://hpc.vub.be/docs/software/usecases/'
     doc_app = ['MATLAB', 'R', 'Gaussian', 'GaussView', 'matplotlib', ('CESM-deps', 'cesm-cime'), 'GAP', 'Mathematica',
-               'Stata', 'GROMACS', 'CP2K', 'PyTorch', 'ORCA', 'SRA-Toolkit']
+               'Stata', 'GROMACS', 'CP2K', 'PyTorch', 'ORCA', 'SRA-Toolkit', 'AlphaFold', 'OpenFold', 'GAMESS-US']
 
     # generate links for documented apps
     app_anchors = [(app, app.lower()) if isinstance(app, str) else app for app in doc_app]

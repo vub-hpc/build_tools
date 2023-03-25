@@ -10,3 +10,9 @@
 # and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
 #
 ##
+"""
+Allow other packages to extend this namespace, zip safe setuptools style
+@author: Andy Georges (Ghent University)
+"""
+import pkg_resources
+pkg_resources.declare_namespace(__name__)
