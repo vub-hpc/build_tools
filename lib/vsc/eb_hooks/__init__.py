@@ -1,6 +1,5 @@
 #
 # Copyright 2017-2023 Vrije Universiteit Brussel
-# All rights reserved.
 #
 # This file is part of eb_hooks,
 # originally created by the HPC team of Vrije Universiteit Brussel (https://hpc.vub.be),
@@ -9,7 +8,10 @@
 # the Flemish Research Foundation (FWO) (http://www.fwo.be/en)
 # and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
 #
-##
+# https://github.com/vub-hpc/eb_hooks
+#
+# All rights reserved.
+#
 """
 Allow other packages to extend this namespace, zip safe setuptools style
 @author: Andy Georges (Ghent University)
