@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2023 Vrije Universiteit Brussel
+# Copyright 2016-2023 Vrije Universiteit Brussel
 #
 # This file is part of eb_hooks,
 # originally created by the HPC team of Vrije Universiteit Brussel (https://hpc.vub.be),
@@ -13,8 +13,5 @@
 # All rights reserved.
 #
 """
-Allow other packages to extend this namespace, zip safe setuptools style
-@author: Andy Georges (Ghent University)
 """
-import pkg_resources
-pkg_resources.declare_namespace(__name__)
+from vsc.install.commontest import CommonTest

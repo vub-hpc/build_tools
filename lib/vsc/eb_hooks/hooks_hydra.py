@@ -1,6 +1,5 @@
 #
 # Copyright 2017-2023 Vrije Universiteit Brussel
-# All rights reserved.
 #
 # This file is part of eb_hooks,
 # originally created by the HPC team of Vrije Universiteit Brussel (https://hpc.vub.be),
@@ -9,7 +8,10 @@
 # the Flemish Research Foundation (FWO) (http://www.fwo.be/en)
 # and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
 #
-##
+# https://github.com/vub-hpc/eb_hooks
+#
+# All rights reserved.
+#
 """
 Custom EasyBuild hooks for VUB-HPC Clusters
 
@@ -43,7 +45,7 @@ SOFTWARE_GROUPS = {
 }
 
 
-def parse_hook(ec, *args, **kwargs):
+def parse_hook(ec, *args, **kwargs):  #pylint: disable=unused-argument
     """Alter the parameters of easyconfigs"""
 
     # PMIx deps and sanity checks for munge
@@ -96,7 +98,7 @@ def parse_hook(ec, *args, **kwargs):
         ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
 
 
-def pre_configure_hook(self, *args, **kwargs):
+def pre_configure_hook(self, *args, **kwargs):  #pylint: disable=unused-argument
     """Hook at pre-configure level to alter configopts"""
 
     # PMIx settings:
@@ -142,7 +144,7 @@ def pre_configure_hook(self, *args, **kwargs):
         self.log.info("[pre-configure hook] Updated '%s': %s", ec_param, self.cfg[ec_param])
 
 
-def pre_module_hook(self, *args, **kwargs):
+def pre_module_hook(self, *args, **kwargs):  #pylint: disable=unused-argument
     """Hook at pre-module level to alter module files"""
 
     # Must be done this way, updating self.cfg['modextravars']
