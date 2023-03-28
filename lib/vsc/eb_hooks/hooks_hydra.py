@@ -31,6 +31,7 @@ from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT
 SOFTWARE_GROUPS = {
     'ADF': 'badf',
     'AMS': 'badf',
+    'CASTEP': 'bcastep',
     'COMSOL': 'bcomsol_users',  # autogroup (bcomsol, bcomsol_efremov)
     'FLUENT': 'bansys',
     'Gaussian': 'brusselall',  # site license
