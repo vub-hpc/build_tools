@@ -42,11 +42,13 @@ SOFTWARE_GROUPS = {
     'MATLAB': 'brusselall',  # site license
     'Q-Chem': 'bqchem',
     'QuantumATK': 'bquantumatk',
+    'ReaxFF-param': 'breaxff',
+    'ReaxFF-sim': 'breaxff',
     'VASP': 'bvasp',
 }
 
 
-def parse_hook(ec, *args, **kwargs):  #pylint: disable=unused-argument
+def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     """Alter the parameters of easyconfigs"""
 
     # PMIx deps and sanity checks for munge
@@ -99,7 +101,7 @@ def parse_hook(ec, *args, **kwargs):  #pylint: disable=unused-argument
         ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
 
 
-def pre_configure_hook(self, *args, **kwargs):  #pylint: disable=unused-argument
+def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     """Hook at pre-configure level to alter configopts"""
 
     # PMIx settings:
@@ -145,7 +147,7 @@ def pre_configure_hook(self, *args, **kwargs):  #pylint: disable=unused-argument
         self.log.info("[pre-configure hook] Updated '%s': %s", ec_param, self.cfg[ec_param])
 
 
-def pre_module_hook(self, *args, **kwargs):  #pylint: disable=unused-argument
+def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     """Hook at pre-module level to alter module files"""
 
     # Must be done this way, updating self.cfg['modextravars']
