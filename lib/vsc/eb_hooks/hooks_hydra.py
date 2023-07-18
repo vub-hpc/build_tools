@@ -44,6 +44,7 @@ SOFTWARE_GROUPS = {
     'QuantumATK': 'bquantumatk',
     'ReaxFF-param': 'breaxff',
     'ReaxFF-sim': 'breaxff',
+    'Stata': 'brusselall',  # site license
     'VASP': 'bvasp',
 }
 
