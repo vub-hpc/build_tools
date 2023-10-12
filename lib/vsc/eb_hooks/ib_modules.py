@@ -33,4 +33,5 @@ IB_OPT_MARK = ['verbs', 'VERBS', 'rdma']
 # version suffix of IB archs and modules
 IB_MODULE_SUFFIX = '-ib'
 
-DUAL_IB_ARCHS = ['skylake']
+# architectures with both non-IB and IB modules
+DUAL_IB_ARCHS = ['skylake', 'zen3']

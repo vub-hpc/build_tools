@@ -22,7 +22,7 @@ from vsc.install.shared_setup import ad, sm, wp
 
 
 PACKAGE = {
-    'version': '1.0.3',
+    'version': '1.0.4',
     'author': [ad, sm, wp],
     'maintainer': [ad, sm, wp],
     'setup_requires': [
