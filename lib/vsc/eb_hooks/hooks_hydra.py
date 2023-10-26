@@ -25,7 +25,7 @@ from distutils.version import LooseVersion
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.tools.config import install_path
 
-from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK, DUAL_IB_ARCHS
+from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
 # permission groups for licensed software
 SOFTWARE_GROUPS = {
@@ -69,19 +69,11 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # InfiniBand support
     if ec.name in IB_MODULE_SOFTWARE:
-        local_arch = os.getenv('VSC_ARCH_LOCAL')
-        local_arch_suffix = os.getenv('VSC_ARCH_SUFFIX')
-
         # remove any OS dependency on libverbs in non-IB nodes
-        if not local_arch_suffix == IB_MODULE_SUFFIX:
+        if os.getenv('VSC_ARCH_SUFFIX') != IB_MODULE_SUFFIX:
             pkg_ibverbs = EASYCONFIG_CONSTANTS['OS_PKG_IBVERBS_DEV'][0]
             ec['osdependencies'] = [d for d in ec['osdependencies'] if d != pkg_ibverbs]
-            ec.log.info("[parse hook] OS dependencies on non-IB system: %s", ec['osdependencies'])
-
-        # archs with IB/non-IB nodes get the IB version in a versionsuffix
-        if local_arch in DUAL_IB_ARCHS and local_arch_suffix == IB_MODULE_SUFFIX:
-            ec['versionsuffix'] += IB_MODULE_SUFFIX
-            ec.log.info("[parse hook] Appended IB suffix to version string: %s", ec['versionsuffix'])
+            ec.log.info("[parse hook] Removed IB from OS dependencies on non-IB system: %s", ec['osdependencies'])
 
     if ec.name == 'Gurobi':
         # use centrally installed Gurobi license file, and don't copy to installdir
