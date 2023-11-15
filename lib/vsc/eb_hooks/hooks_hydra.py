@@ -24,6 +24,7 @@ from distutils.version import LooseVersion
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.tools.config import install_path
+from easybuild.tools import toolchain
 
 from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
@@ -96,6 +97,15 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     if ec.name in SOFTWARE_GROUPS:
         ec['group'] = SOFTWARE_GROUPS[ec.name]
         ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
+
+    # set optarch for intel compilers on AMD nodes
+    local_arch = os.getenv('VSC_ARCH_LOCAL')
+    if local_arch in ['zen2', 'zen3'] and ec.toolchain.name in ['intel-compilers', 'iimpi', 'iimkl', 'intel']:
+        optarch = ec.toolchain.options.get('optarch')
+        # only set if not set in the easyconfig or if set to default value (i.e. True)
+        if not optarch or optarch is True:
+            ec.toolchain.options['optarch'] = 'march=core-avx2'
+            ec.log.info(f"[parse hook] Set optarch in parameter toolchainopts: {ec.toolchain.options['optarch']}")
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
