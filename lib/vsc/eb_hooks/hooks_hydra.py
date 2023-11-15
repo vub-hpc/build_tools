@@ -303,6 +303,12 @@ BUSCO v5 databases are located in /databases/bio/BUSCO-5. Use local DBs with com
 `busco --offline --download_path /databases/bio/BUSCO-5 ...`
 """
 
+    # set AlphaFold database location
+    if self.name == 'AlphaFold':
+        self.cfg['modextravars'] = {
+            'ALPHAFOLD_DATA_DIR': '/databases/bio/%(namelower)s-%(version)s',
+        }
+
     # add links to our documentation for software covered in
     # https://hpc.vub.be/docs/software/usecases/
     doc_url = 'https://hpc.vub.be/docs/software/usecases/'
