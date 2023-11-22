@@ -163,11 +163,6 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
 
     # MPI settings:
     if self.name == 'OpenMPI':
-        # use pbsdsh instead of ssh for OpenMPI in Torque
-        # more info: https://projects.cc.vub.ac.be/issues/2933
-        self.log.info("[pre-module hook] Set MPI bootstrap in Torque")
-        pbs_env = [("OMPI_MCA_plm_rsh_agent", "pbsdsh")]
-
         # set MPI communication type in Slurm (default is none)
         # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/4706
         slurm_mpi_type = None
@@ -179,20 +174,6 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
         if slurm_mpi_type:
             self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
             self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
-
-        # map processes to cores to avoid torque-NUMA issue for OpenMPI version >= 4.0.3
-        # this is a temporary workaround until we have a proper fix
-        # more info: https://projects.cc.vub.ac.be/issues/3068
-        if LooseVersion(self.version) >= '4.0.3':
-            self.log.info("[pre-module hook] Set OMPI_MCA_rmaps_base_mapping_policy=core for Torque")
-            pbs_env.append(("OMPI_MCA_rmaps_base_mapping_policy", "core"))
-
-        modlua_setenv = ['setenv("%s", "%s")' % (e, v) for (e, v) in pbs_env]
-        self.cfg['modluafooter'] = """
-if ( os.getenv("PBS_JOBID") and not os.getenv("SLURM_JOB_ID") ) then
-    %s
-end
-""" % '\n    '.join(modlua_setenv)
 
     if self.name == 'impi':
         # - use PMI1/2 implementation from Slurm
@@ -225,17 +206,13 @@ end
             intel_mpi['pmi_lib'] = '/usr/lib64/slurmpmi/libpmi2.so'
             slurm_mpi_type = 'pmi2'
 
-        # - use pbsdsh instead of ssh for Intel MPI in Torque
-        # more info: https://projects.cc.vub.ac.be/issues/2933
-        self.log.info("[pre-module hook] Set MPI bootstrap for Torque and Slurm")
+        self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
         self.cfg['modluafooter'] = """
 if ( os.getenv("SLURM_JOB_ID") ) then
     setenv("I_MPI_HYDRA_BOOTSTRAP", "slurm")
     setenv("I_MPI_PIN_RESPECT_CPUSET", "0")
     setenv("I_MPI_PMI_LIBRARY", "%(pmi_lib)s")
     setenv("%(pmi_var)s", "%(pmi_set)s")
-elseif ( os.getenv("PBS_JOBID") ) then
-    setenv("I_MPI_HYDRA_BOOTSTRAP", "pbsdsh")
 end
 """ % intel_mpi
 
