@@ -56,7 +56,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     if ec.name == 'PMIx':
         # Add osdependency on munge-devel
         extradep = 'munge-devel'
-        ec.log.info("[parse hook] Adding OS dependency on: %s" % extradep)
+        ec.log.info("[parse hook] Adding OS dependency on: %s", extradep)
         ec['osdependencies'].append(extradep)
         # Add sanity check on munge component
         ec.log.info("[parse hook] Adding sanity check on munge component")
@@ -249,17 +249,18 @@ setenv("MCR_CACHE_ROOT", os.getenv("TMPDIR") or pathJoin("/tmp", os.getenv("USER
 
         # cannot know MODULEPATH in advance for archs with IB variants, use environment at load time
         local_arch = os.getenv('VSC_ARCH_LOCAL') + os.getenv("VSC_ARCH_SUFFIX")
-        archless_path = ['"%s"' % p for p in mod_install_path.split(local_arch)]
+        archless_path = [f'"{p}"' for p in mod_install_path.split(local_arch)]
         if len(archless_path) > 1:
             archless_path.insert(1, 'os.getenv("VSC_ARCH_LOCAL") .. os.getenv("VSC_ARCH_SUFFIX")')
+        modulepath = ", ".join(archless_path)
 
-        self.cfg['modluafooter'] = """
+        self.cfg['modluafooter'] = f"""
 -- restrict MODULEPATH to current software generation
 if ( mode() ~= "spider" ) then
     pushenv("MODULEPATH", "/etc/modulefiles/vsc")
-    prepend_path("MODULEPATH", pathJoin(%s))
+    prepend_path("MODULEPATH", pathJoin({modulepath}))
 end
-""" % ", ".join(archless_path)
+"""
 
     # set COMSOL licenses
     if self.name == 'COMSOL':
