@@ -42,8 +42,7 @@ SOFTWARE_GROUPS = {
     'MATLAB': 'brusselall',  # site license
     'Q-Chem': 'bqchem',
     'QuantumATK': 'bquantumatk',
-    'ReaxFF-param': 'breaxff',
-    'ReaxFF-sim': 'breaxff',
+    'ReaxFF': 'breaxff',
     'Stata': 'brusselall',  # site license
     'VASP': 'bvasp',
 }
