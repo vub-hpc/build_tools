@@ -160,7 +160,10 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     en_templ = self.cfg.enable_templating
     self.cfg.enable_templating = False
 
-    # MPI settings:
+    ##########################
+    #------- MPI ------------#
+    ##########################
+
     if self.name == 'OpenMPI':
         # set MPI communication type in Slurm (default is none)
         # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/4706
@@ -222,6 +225,10 @@ end
             self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
             self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
+    ##########################
+    #------- TUNING ---------#
+    ##########################
+
     # set the maximum heap memory for Java applications to 80% of memory allocated to the job
     # more info: https://projects.cc.vub.ac.be/issues/2940
     if self.name == 'Java':
@@ -261,6 +268,10 @@ if ( mode() ~= "spider" ) then
 end
 """
 
+    ##########################
+    #------- LICENSES -------#
+    ##########################
+
     # set COMSOL licenses
     if self.name == 'COMSOL':
         self.cfg['modluafooter'] = """
@@ -271,15 +282,21 @@ elseif userInGroup("bcomsol_efremov") then
 end
 """
 
-    # print info about BUSCO database
+    ##########################
+    #------- DATABASES ------#
+    ##########################
+
+    apps_with_dbs = ["AlphaFold", "BUSCO", "ColabFold", "OpenFold"]
+
+    if self.name in apps_with_dbs:
+        self.cfg['modloadmsg'] = "%(name)s databases are located in /databases/bio/%(namelower)s-%(version)s"
+
     if self.name == 'BUSCO':
         if LooseVersion(self.version) >= '5.0.0':
-            self.cfg['modloadmsg'] = """
-BUSCO v5 databases are located in /databases/bio/BUSCO-5. Use local DBs with command:
-`busco --offline --download_path /databases/bio/BUSCO-5 ...`
+            self.cfg['modloadmsg'] += """
+Use local DBs with command: `busco --offline --download_path /databases/bio/BUSCO-5 ...`
 """
 
-    # set AlphaFold database location
     if self.name == 'AlphaFold':
         self.cfg['modextravars'] = {
             'ALPHAFOLD_DATA_DIR': '/databases/bio/%(namelower)s-%(version)s',
