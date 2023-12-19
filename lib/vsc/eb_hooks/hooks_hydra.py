@@ -29,6 +29,7 @@ from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT
 
 # permission groups for licensed software
 SOFTWARE_GROUPS = {
+    'ABAQUS': 'babaqus',
     'ADF': 'badf',
     'AMS': 'badf',
     'CASTEP': 'bcastep',
@@ -40,6 +41,7 @@ SOFTWARE_GROUPS = {
     'Lumerical': 'bphot',
     'Mathematica': 'brusselall',  # site license
     'MATLAB': 'brusselall',  # site license
+    'Morfeo': 'bmorfeo',
     'Q-Chem': 'bqchem',
     'QuantumATK': 'bquantumatk',
     'ReaxFF': 'breaxff',
