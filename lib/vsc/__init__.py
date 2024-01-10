@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2023 Vrije Universiteit Brussel
+# Copyright 2017-2024 Vrije Universiteit Brussel
 #
 # This file is part of eb_hooks,
 # originally created by the HPC team of Vrije Universiteit Brussel (https://hpc.vub.be),
