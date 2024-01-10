@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2017-2023 Vrije Universiteit Brussel
+# Copyright 2017-2024 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of eb_hooks,
@@ -22,7 +22,7 @@ from vsc.install.shared_setup import ad, sm, wp
 
 
 PACKAGE = {
-    'version': '1.3.0',
+    'version': '1.3.1',
     'author': [ad, sm, wp],
     'maintainer': [ad, sm, wp],
     'setup_requires': [
