@@ -228,7 +228,7 @@ end
             self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
     ##########################
-    #------- TUNING ---------#
+    # ------ TUNING -------- #
     ##########################
 
     # set the maximum heap memory for Java applications to 80% of memory allocated to the job
@@ -271,7 +271,7 @@ end
 """
 
     ##########################
-    #------- LICENSES -------#
+    # ------ LICENSES ------ #
     ##########################
 
     # set COMSOL licenses
@@ -284,8 +284,16 @@ elseif userInGroup("bcomsol_efremov") then
 end
 """
 
+    # Morfeo license file
+    if self.name == 'Morfeo':
+        self.cfg['modextravars'].update({'CENAERO_LICENSE_FILE': '/apps/brussel/licenses/morfeo/license.lic'})
+
+    # ABAQUS license file
+    if self.name == 'ABAQUS':
+        self.cfg['modextravars'].update({'ABAQUSLM_LICENSE_FILE': '/apps/brussel/licenses/abaqus/license.lic'})
+
     ##########################
-    #------- DATABASES ------#
+    # ------ DATABASES ----- #
     ##########################
 
     apps_with_dbs = ["AlphaFold", "BUSCO", "ColabFold", "OpenFold"]
