@@ -80,6 +80,12 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
             ec['osdependencies'] = [d for d in ec['osdependencies'] if d != pkg_ibverbs]
             ec.log.info("[parse hook] Removed IB from OS dependencies on non-IB system: %s", ec['osdependencies'])
 
+    # OpenFabrics support
+    if ec.name == 'OpenMPI':
+        # remove libfabric from OpenMPI on all partitions
+        ec['dependencies'] = [d for d in ec['dependencies'] if 'libfabric' not in d]
+        ec.log.info("[parse hook] Removed libfabric from dependency list")
+
     if ec.name == 'Gurobi':
         # use centrally installed Gurobi license file, and don't copy to installdir
         ec['license_file'] = '/apps/brussel/licenses/gurobi/gurobi.lic'
