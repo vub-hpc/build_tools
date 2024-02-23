@@ -106,11 +106,17 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # set optarch for intel compilers on AMD nodes
     local_arch = os.getenv('VSC_ARCH_LOCAL')
-    if local_arch in ['zen2', 'zen3'] and ec.toolchain.name in ['intel-compilers', 'iimpi', 'iimkl', 'intel']:
+    optarchs_intel = {
+        'zen2': 'march=core-avx2',
+        # common-avx512 gives test failure for scipy
+        # see https://github.com/easybuilders/easybuild-easyconfigs/pull/18875
+        'zen4': 'march=rocketlake',
+    }
+    if local_arch in optarchs_intel and ec.toolchain.name in ['intel-compilers', 'iimpi', 'iimkl', 'intel']:
         optarch = ec.toolchain.options.get('optarch')
         # only set if not set in the easyconfig or if set to default value (i.e. True)
         if not optarch or optarch is True:
-            ec.toolchain.options['optarch'] = 'march=core-avx2'
+            ec.toolchain.options['optarch'] = optarchs_intel[local_arch]
             ec.log.info(f"[parse hook] Set optarch in parameter toolchainopts: {ec.toolchain.options['optarch']}")
 
 
@@ -169,7 +175,7 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     self.cfg.enable_templating = False
 
     ##########################
-    #------- MPI ------------#
+    # ------ MPI ----------- #
     ##########################
 
     if self.name == 'OpenMPI':
