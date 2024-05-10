@@ -262,26 +262,6 @@ end
 setenv("MCR_CACHE_ROOT", os.getenv("TMPDIR") or pathJoin("/tmp", os.getenv("USER")))
 """
 
-    # Set single MODULEPATH in JupyterHub
-    if self.name == 'JupyterHub':
-        mod_install_path = os.path.join(install_path('mod'), "all")
-        self.log.info("[parse hook] Setting single MODULEPATH on module load to: %s", mod_install_path[-9:])
-
-        # cannot know MODULEPATH in advance for archs with IB variants, use environment at load time
-        local_arch = os.getenv('VSC_ARCH_LOCAL') + os.getenv("VSC_ARCH_SUFFIX")
-        archless_path = [f'"{p}"' for p in mod_install_path.split(local_arch)]
-        if len(archless_path) > 1:
-            archless_path.insert(1, 'os.getenv("VSC_ARCH_LOCAL") .. os.getenv("VSC_ARCH_SUFFIX")')
-        modulepath = ", ".join(archless_path)
-
-        self.cfg['modluafooter'] = f"""
--- restrict MODULEPATH to current software generation
-if ( mode() ~= "spider" ) then
-    pushenv("MODULEPATH", "/etc/modulefiles/vsc")
-    prepend_path("MODULEPATH", pathJoin({modulepath}))
-end
-"""
-
     ##########################
     # ------ LICENSES ------ #
     ##########################
