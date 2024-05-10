@@ -23,7 +23,6 @@ import os
 from distutils.version import LooseVersion
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
-from easybuild.tools.config import install_path
 
 from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
