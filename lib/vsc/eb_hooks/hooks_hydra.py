@@ -132,7 +132,9 @@ def pre_fetch_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     if IS_CUDA_SOFTWARE and os.environ['VSC_ARCH_LOCAL'] not in GPU_ARCHS:
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
         self.cfg['module_only'] = True
+        self.log.info(f"[pre-fetch hook] Set parameter module_only: {self.cfg['module_only']}")
         self.cfg['skipsteps'] = [SANITYCHECK_STEP]
+        self.log.info(f"[pre-fetch hook] Set parameter skipsteps: {self.cfg['skipsteps']}")
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
