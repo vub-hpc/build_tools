@@ -20,9 +20,10 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 """
 
 import os
-from distutils.version import LooseVersion
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
+from easybuild.tools import LooseVersion
+from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from vsc.eb_hooks.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
@@ -47,6 +48,9 @@ SOFTWARE_GROUPS = {
     'Stata': 'brusselall',  # site license
     'VASP': 'bvasp',
 }
+
+GPU_ARCHS = ['zen2', 'broadwell']
+IS_CUDA_SOFTWARE = False
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
@@ -117,6 +121,20 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         if not optarch or optarch is True:
             ec.toolchain.options['optarch'] = optarchs_intel[local_arch]
             ec.log.info(f"[parse hook] Set optarch in parameter toolchainopts: {ec.toolchain.options['optarch']}")
+
+
+def pre_fetch_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
+    """Hook at pre-fetch level"""
+
+    # skip installation of CUDA software in non-GPU architectures, only create module file
+    global IS_CUDA_SOFTWARE
+    IS_CUDA_SOFTWARE = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
+    if IS_CUDA_SOFTWARE and os.environ['VSC_ARCH_LOCAL'] not in GPU_ARCHS:
+        # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
+        self.cfg['module_only'] = True
+        self.log.info(f"[pre-fetch hook] Set parameter module_only: {self.cfg['module_only']}")
+        self.cfg['skipsteps'] = [SANITYCHECK_STEP]
+        self.log.info(f"[pre-fetch hook] Set parameter skipsteps: {self.cfg['skipsteps']}")
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
@@ -326,5 +344,26 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
             self.cfg['docurls'].append(usage_info['link'])
         else:
             self.cfg['docurls'] = [usage_info['link']]
+
+    #################################
+    # ------ DUMMY MODULES -------- #
+    #################################
+
+    if IS_CUDA_SOFTWARE and os.environ['VSC_ARCH_LOCAL'] not in GPU_ARCHS:
+        self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
+        self.cfg['modluafooter'] = """
+if mode() == "load" and not os.getenv("VUB_HPC_BUILD") then
+    LmodError([[
+This module is only available on nodes with a GPU.
+Jobs can request GPUs with the command 'srun --gpus-per-node=1' or 'sbatch --gpus-per-node=1'.
+
+More information in the VUB-HPC docs:
+https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
+    ]])
+end"""
+
+    ############################
+    # ------ FINALIZE -------- #
+    ############################
 
     self.cfg.enable_templating = en_templ
