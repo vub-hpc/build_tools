@@ -349,7 +349,7 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
     # ------ DUMMY MODULES -------- #
     #################################
 
-    if IS_CUDA_SOFTWARE:
+    if IS_CUDA_SOFTWARE and os.environ['VSC_ARCH_LOCAL'] not in GPU_ARCHS:
         self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
         self.cfg['modluafooter'] = """
 if mode() == "load" and not os.getenv("VUB_HPC_BUILD") then
