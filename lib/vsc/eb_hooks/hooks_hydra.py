@@ -49,8 +49,17 @@ SOFTWARE_GROUPS = {
     'VASP': 'bvasp',
 }
 
-GPU_ARCHS = ['zen2', 'broadwell']
-IS_CUDA_SOFTWARE = False
+GPU_ARCHS = {
+    'broadwell': {
+        'cuda_cc': ['6.0', '6.1']  # Tesla P100, GeForce 1080Ti
+    },
+    'zen2': {
+        'cuda_cc': ['8.0'],  # A100
+    },
+}
+
+LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
+LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
@@ -78,7 +87,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     # InfiniBand support
     if ec.name in IB_MODULE_SOFTWARE:
         # remove any OS dependency on libverbs in non-IB nodes
-        if os.getenv('VSC_ARCH_SUFFIX') != IB_MODULE_SUFFIX:
+        if LOCAL_ARCH_SUFFIX != IB_MODULE_SUFFIX:
             pkg_ibverbs = EASYCONFIG_CONSTANTS['OS_PKG_IBVERBS_DEV'][0]
             ec['osdependencies'] = [d for d in ec['osdependencies'] if d != pkg_ibverbs]
             ec.log.info("[parse hook] Removed IB from OS dependencies on non-IB system: %s", ec['osdependencies'])
@@ -108,33 +117,32 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
 
     # set optarch for intel compilers on AMD nodes
-    local_arch = os.getenv('VSC_ARCH_LOCAL')
     optarchs_intel = {
         'zen2': 'march=core-avx2',
         # common-avx512 gives test failure for scipy
         # see https://github.com/easybuilders/easybuild-easyconfigs/pull/18875
         'zen4': 'march=rocketlake',
     }
-    if local_arch in optarchs_intel and ec.toolchain.name in ['intel-compilers', 'iimpi', 'iimkl', 'intel']:
+    if LOCAL_ARCH in optarchs_intel and ec.toolchain.name in ['intel-compilers', 'iimpi', 'iimkl', 'intel']:
         optarch = ec.toolchain.options.get('optarch')
         # only set if not set in the easyconfig or if set to default value (i.e. True)
         if not optarch or optarch is True:
-            ec.toolchain.options['optarch'] = optarchs_intel[local_arch]
+            ec.toolchain.options['optarch'] = optarchs_intel[LOCAL_ARCH]
             ec.log.info(f"[parse hook] Set optarch in parameter toolchainopts: {ec.toolchain.options['optarch']}")
 
-
-def pre_fetch_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
-    """Hook at pre-fetch level"""
-
     # skip installation of CUDA software in non-GPU architectures, only create module file
-    global IS_CUDA_SOFTWARE
-    IS_CUDA_SOFTWARE = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
-    if IS_CUDA_SOFTWARE and os.environ['VSC_ARCH_LOCAL'] not in GPU_ARCHS:
+    is_cuda_software = 'CUDA' in ec.name or 'CUDA' in ec['versionsuffix']
+    if is_cuda_software and LOCAL_ARCH not in GPU_ARCHS:
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
-        self.cfg['module_only'] = True
-        self.log.info(f"[pre-fetch hook] Set parameter module_only: {self.cfg['module_only']}")
-        self.cfg['skipsteps'] = [SANITYCHECK_STEP]
-        self.log.info(f"[pre-fetch hook] Set parameter skipsteps: {self.cfg['skipsteps']}")
+        ec['module_only'] = True
+        ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
+        ec['skipsteps'] = [SANITYCHECK_STEP]
+        ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
+
+    # set cuda compute capabilities
+    elif is_cuda_software:
+        ec['cuda_compute_capabilities'] = GPU_ARCHS[LOCAL_ARCH]['cuda_cc']
+        ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
@@ -152,7 +160,6 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
 
     # InfiniBand support:
     if self.name in IB_MODULE_SOFTWARE:
-        local_arch_suffix = os.getenv('VSC_ARCH_SUFFIX')
         ec_param = IB_MODULE_SOFTWARE[self.name][0]
 
         # convert any non-list parameters to a list
@@ -165,7 +172,7 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
         ib_free_config = [opt for opt in ec_config if not any(mark in opt for mark in IB_OPT_MARK)]
 
         # update IB settings
-        if local_arch_suffix == IB_MODULE_SUFFIX:
+        if LOCAL_ARCH_SUFFIX == IB_MODULE_SUFFIX:
             self.log.info("[pre-configure hook] Enabling verbs in %s", self.name)
             ib_opt = IB_MODULE_SOFTWARE[self.name][1]
         else:
@@ -349,7 +356,8 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
     # ------ DUMMY MODULES -------- #
     #################################
 
-    if IS_CUDA_SOFTWARE and os.environ['VSC_ARCH_LOCAL'] not in GPU_ARCHS:
+    is_cuda_software = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
+    if is_cuda_software and LOCAL_ARCH not in GPU_ARCHS:
         self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
         self.cfg['modluafooter'] = """
 if mode() == "load" and not os.getenv("VUB_HPC_BUILD") then
