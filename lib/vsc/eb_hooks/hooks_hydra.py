@@ -58,8 +58,8 @@ GPU_ARCHS = {
     },
 }
 
-LOCAL_ARCH = os.environ['VSC_ARCH_LOCAL']
-LOCAL_ARCH_SUFFIX = os.environ['VSC_ARCH_SUFFIX']
+LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
+LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
