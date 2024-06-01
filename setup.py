@@ -3,7 +3,7 @@
 # Copyright 2017-2024 Vrije Universiteit Brussel
 # All rights reserved.
 #
-# This file is part of eb_hooks,
+# This file is part of build_tools (https://github.com/vub-hpc/build_tools),
 # originally created by the HPC team of Vrije Universiteit Brussel (https://hpc.vub.be),
 # with support of Vrije Universiteit Brussel (https://www.vub.be),
 # the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
@@ -12,30 +12,49 @@
 #
 ##
 """
-eb_hooks base distribution setup.py
+build_tools base distribution setup.py
 
 @author: Alex Domingo (Vrije Universiteit Brussel)
-@author: Samuel Moors (Vrije Universiteit Brussel)
 """
-from vsc.install import shared_setup
-from vsc.install.shared_setup import ad, sm, wp
 
+import setuptools
 
-PACKAGE = {
-    'version': '1.6.0',
-    'author': [ad, sm, wp],
-    'maintainer': [ad, sm, wp],
-    'setup_requires': [
-        'vsc-install >= 0.15.3',
+PKG = {}
+with open("src/build_tools/package.py", encoding='utf-8') as fh:
+    exec(fh.read(), PKG)
+
+with open("README.md", "r", encoding='utf-8') as fh:
+    long_description = fh.read()
+
+setuptools.setup(
+    name="build_tools",
+    version=PKG["VERSION"],
+    author=', '.join(PKG["AUTHOR"].values()),
+    author_email=', '.join(PKG["AUTHOR_EMAIL"].values()),
+    description="Tools to build and install software",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://vub-hpc/build_tools",
+
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
+    scripts=[
+        'bin/submit_build.py',
+        'bin/install_dummy_module.py',
+        'bin/get_module_from_easyconfig.py',
     ],
-    'install_requires': [
+
+    python_requires='~=3.6',
+    install_requires=[
+        'vsc-base',
+        'vsc-utils',
         'easybuild',
     ],
-    'python_requires': '~=3.6',
-    'zip_safe': False,
-    'url': "https://vub-hpc/eb_hooks",
-}
-
-
-if __name__ == '__main__':
-    shared_setup.action_target(PACKAGE)
+    tests_require=[
+        'pytest',
+    ],
+    package_data={
+        "build_tools": ["footers/*.footer"],
+    },
+    zip_safe=False,
+)

@@ -1,0 +1,3 @@
+if mode() == "load" then
+    LmodError("This module is only available for Nvidia Ampere GPUs.\n Jobs can request a GPU in the ampere_gpu partition with the sbatch options '--gpus-per-node=1 --partition=ampere_gpu'\n\nMore information in the VUB-HPC docs:\nhttps://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs\n")
+end

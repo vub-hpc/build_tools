@@ -1,0 +1,3 @@
+if mode() == "load" then
+    LmodError("This module is only available on nodes with a GPU.\n Jobs can request GPUs with the command 'srun --gpus-per-node=1' or 'sbatch --gpus-per-node=1'\n")
+end
