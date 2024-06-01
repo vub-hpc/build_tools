@@ -1,28 +1,58 @@
-# .github/workflows/unittest.yml: configuration file for github actions worflow
-# This file was automatically generated using 'python -m vsc.install.ci'
-# DO NOT EDIT MANUALLY
+name: Test Build Tools
+
+on: [push, pull_request]
+env:
+  LMOD_VERSION: 8.7.32
+
 jobs:
-  python_unittests:
+  TestBuildTools:
+    name: Test build-tools
     runs-on: ubuntu-20.04
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python }}
-    - name: install tox
-      run: pip install 'virtualenv<20.22.0' 'tox<4.5.0'
-    - name: add mandatory git remote
-      run: git remote add hpcugent https://github.com/vub-hpc/eb_hooks.git
-    - name: Run tox
-      run: tox -e py$(echo ${{ matrix.python }} | sed 's/\.//g')
+
     strategy:
       matrix:
-        python:
-        - 3.6
-        - 3.9
-name: run python tests
-'on':
-- push
-- pull_request
+        python-version: [3.6, 3.9]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.3 lua-bit32 lua-posix lua-posix-dev liblua5.3-0 liblua5.3-dev tcl tcl-dev tcl8.6 tcl8.6-dev libtcl8.6
+
+      - name: Download and install Lmod
+        run: |
+          wget https://github.com/TACC/Lmod/archive/refs/tags/${{ env.LMOD_VERSION }}.tar.gz
+          tar -xf ${{ env.LMOD_VERSION }}.tar.gz
+          cd Lmod-${{ env.LMOD_VERSION }}
+          ./configure --prefix=/opt/apps
+          make install
+          cd $GITHUB_WORKSPACE
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade PIP
+        run: python -m pip install --upgrade pip
+
+      - name: Install wheel
+        run: python -m pip install wheel
+
+      - name: Install pytest
+        run: python -m pip install pytest
+
+      - name: Install vsc-install
+        run: python -m pip install vsc-install
+
+      - name: Install build-tools
+        run: python -m pip install .
+
+      - name: Run tests
+        run: |
+          source /opt/apps/lmod/lmod/init/profile
+          pytest
+
