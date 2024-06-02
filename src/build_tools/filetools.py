@@ -11,7 +11,7 @@
 #
 ##
 """
-Helper functions to handle temp files and dummy modules
+Helper functions to handle temp files
 
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
@@ -94,36 +94,6 @@ def poke(filename):
         sys.exit(1)
     else:
         return True
-
-
-def install_dummy_module(easyconfig, module_path, footer, robot_paths, install_cmd='install_dummy_module.py',
-                         dry_run=False):
-    """
-    Install a dummy module with provided footer
-    """
-    # let EB find the easyconfig and copy it to a tmp file
-    temp_ec = write_tempfile('')
-    copy_cmd = f"eb {easyconfig} --copy-ec {temp_ec} --robot-paths {robot_paths}"
-    log_msg = f"Copying easyconfig {easyconfig} to {temp_ec}..."
-    if dry_run:
-        logger.info("(DRY RUN) %s", log_msg)
-        ec, out = 0, log_msg
-    else:
-        logger.debug(log_msg)
-        ec, out = RunNoShell.run(copy_cmd)
-
-    # use EB functions to obtain module name/version and install it
-    # this must be an external script due to option parsing conflicts between EB and submit_build.py
-    install_cmd += f" {temp_ec} {module_path} {footer}"
-    log_msg = f"Installing dummy module to {module_path}..."
-    if dry_run:
-        logger.info("(DRY RUN) %s", log_msg)
-        ec, out = 0, log_msg
-    else:
-        logger.info(log_msg)
-        ec, out = RunNoShell.run(install_cmd)
-
-    return ec, out
 
 
 def get_module(easyconfig, cmd='get_module_from_easyconfig.py'):

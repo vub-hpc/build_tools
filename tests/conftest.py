@@ -26,15 +26,6 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def dummy_install_cmd(request):
-    fromsource = request.config.getoption('fromsource')
-    if fromsource:
-        return '../bin/install_dummy_module.py'
-    else:
-        return 'install_dummy_module.py'
-
-
-@pytest.fixture
 def get_module_cmd(request):
     fromsource = request.config.getoption('fromsource')
     if fromsource:

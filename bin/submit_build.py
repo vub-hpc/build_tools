@@ -27,10 +27,10 @@ from vsc.utils import fancylogger
 from vsc.utils.script_tools import SimpleOption
 from vsc.utils.run import RunNoShell
 
-from build_tools import hooks_hydra, path_footer
+from build_tools import hooks_hydra
 from build_tools.bwraptools import bwrap_prefix, rsync_copy
 from build_tools.clusters import ARCHS, PARTITIONS
-from build_tools.filetools import APPS_BRUSSEL, install_dummy_module, get_module
+from build_tools.filetools import APPS_BRUSSEL, get_module
 from build_tools.lmodtools import LMOD_CACHE_CLUSTERS, submit_lmod_cache_job
 from build_tools.softinstall import mk_job_name, set_toolchain_generation, submit_build_job
 
@@ -63,7 +63,6 @@ def main():
         'langcode': 'en_US.utf8',
         'cluster': 'hydra',
         'target_arch': None,
-        'gpu_mod_footer': path_footer('dummy-gpu-module.footer'),
         'extra_mod_footer': None,
         'tmp': '/dev/shm',
         'postinstall': '',
@@ -90,7 +89,7 @@ def main():
         "extra-flags": ("Extra flags to pass to EasyBuild", None, "store", None, 'e'),
         "extra-sub-flags": ("Extra flags to pass to Slurm", None, "store", '', 'q'),
         "extra-mod-footer": ("Path to extra footer for module file", None, "store", None, 'f'),
-        "gpu": ("Only build on nodes with GPUs", None, "store_true", None, 'g'),
+        "gpu": ("Request a GPU in the GPU partitions", None, "store_true", None, 'g'),
         "local": ("Do not submit as job, run locally", None, "store_true", False, 'l'),
         "keep": ("Do not delete the job file at the end", None, "store_true", False, 'k'),
         "clang": ("Set LANG=C in the build (instead of unicode)", None, "store_true", False, 'c'),
@@ -191,11 +190,6 @@ def main():
             job['extra_mod_footer'] = opts.options.extra_mod_footer
         else:
             logger.error("Could not find extra footer: %s", opts.options.extra_mod_footer)
-            sys.exit(1)
-    elif opts.options.gpu:
-        # with --gpu option for installation of dummy module
-        if not os.path.exists(job['gpu_mod_footer']):
-            logger.error("Could not find footer for dummy GPU modules: %s", job['gpu_mod_footer'])
             sys.exit(1)
 
     if opts.options.skip_fetch:
@@ -306,21 +300,6 @@ def main():
                 job_options['gpus'] = 1
                 cuda_cc = PARTITIONS[job_options['partition']]['cuda_cc']
                 job_options['eb_options'] += f" --cuda-compute-capabilities={cuda_cc}"
-            else:
-                # install dummy module for GPU builds on non-GPU archs
-                job_options['partition'] = None
-                module_path = os.path.join(ebconf['installpath'], 'modules', job_options['tc_gen'])
-                ec, out = install_dummy_module(
-                    easyconfig,
-                    module_path,
-                    job_options['gpu_mod_footer'],
-                    ebconf['robot-paths'],
-                    dry_run=dry_run,
-                )
-
-                if ec != 0:
-                    logger.error("Failed to install dummy module for '%s' in: %s", easyconfig, module_path)
-                    sys.exit(1)
 
         # add extra footer if requested
         if opts.options.extra_mod_footer:
@@ -333,7 +312,7 @@ def main():
             rsync_cmds = rsync_copy(job_options, module[0], module[1], install_dir)
             job_options['postinstall'] = '\n'.join([rsync_cmds, job_options['postinstall']])
 
-        # submit build job (for non-dummy modules)
+        # submit build job
         buildjob_out = None
 
         if job_options['partition']:

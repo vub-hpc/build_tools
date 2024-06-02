@@ -71,24 +71,6 @@ hide_version("GCCcore/4")
     assert modrc_text == ref_modrc_text
 
 
-def test_install_dummy_module(inputdir, dummy_install_cmd, tmpdir):
-    module_path = tmpdir.strpath
-    easyconfig = os.path.join(inputdir, 'zlib-1.2.11.eb')
-    footer = os.path.join(inputdir, 'dummy-gpu-module.footer')
-    robot_paths = ':'
-
-    filetools.install_dummy_module(easyconfig, module_path, footer, robot_paths, install_cmd=dummy_install_cmd, dry_run=False)
-
-    dummy_module = os.path.join(module_path, 'all', 'zlib', '1.2.11.lua')
-    with open(dummy_module) as mf:
-        dummy_module_contents = mf.read()
-
-    with open(footer) as ff:
-        footer_contents = ff.read()
-
-    assert dummy_module_contents == footer_contents
-
-
 def test_get_module(inputdir, get_module_cmd):
     easyconfig = os.path.join(inputdir, 'zlib-1.2.11.eb')
     _, module = filetools.get_module(easyconfig, cmd=get_module_cmd)

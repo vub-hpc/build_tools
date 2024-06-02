@@ -40,7 +40,6 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     scripts=[
         'bin/submit_build.py',
-        'bin/install_dummy_module.py',
         'bin/get_module_from_easyconfig.py',
     ],
 

@@ -17,15 +17,3 @@ Tools to build and deploy installations with EasyBuild
 @author: Samuel Moors (Vrije Universiteit Brussel)
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
-
-import os
-
-_ROOT = os.path.abspath(os.path.dirname(__file__))
-
-
-def path_module_file(path):
-    return os.path.join(_ROOT, path)
-
-
-def path_footer(path):
-    return os.path.join(_ROOT, 'footers', path)
