@@ -32,8 +32,8 @@ ARCHS = {
         'partition': {
             'cpu': 'broadwell',
             'gpu': 'pascal_gpu',
-        'cuda_cc': '6.0,6.1',  # Tesla P100, GeForce 1080Ti
         },
+        'cuda_cc': '6.0,6.1',  # Tesla P100, GeForce 1080Ti
     },
     'haswell-ib': {
         'default': False,
@@ -65,8 +65,8 @@ ARCHS = {
         'partition': {
             'cpu': 'ampere_gpu',  # no non-gpu partition available yet
             'gpu': 'ampere_gpu',
-        'cuda_cc': '8.0',  # A100
         },
+        'cuda_cc': '8.0',  # A100
     },
     'zen3': {
         'default': False,
