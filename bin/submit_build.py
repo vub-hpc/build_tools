@@ -298,8 +298,6 @@ def main():
                 # install on GPU partition on archs with GPUs
                 job_options['partition'] = ARCHS[host_arch]['partition']['gpu']
                 job_options['gpus'] = 1
-                cuda_cc = PARTITIONS[job_options['partition']]['cuda_cc']
-                job_options['eb_options'] += f" --cuda-compute-capabilities={cuda_cc}"
 
         # add extra footer if requested
         if opts.options.extra_mod_footer:
