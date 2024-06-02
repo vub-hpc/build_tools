@@ -20,6 +20,7 @@ import os
 
 from build_tools.lmodtools import submit_lmod_cache_job
 
+
 def test_submit_lmod_cache_job(inputdir):
     job_script = 'lmod_cache_job_01.sh'
 

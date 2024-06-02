@@ -54,7 +54,7 @@ def clean_append(filepath, new_content):
     try:
         with open(filepath, 'r', encoding='utf-8') as handle:
             existing_content = handle.read()
-    except IOError as err:
+    except IOError:
         existing_content = ''
         logger.debug("File does not exits, creating it: %s", filepath)
 

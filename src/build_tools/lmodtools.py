@@ -65,7 +65,8 @@ def submit_lmod_cache_job(partition, jobids_depend=None, *args, **kwargs):
 
     job_file = write_tempfile(cache_job)
 
-    logger.info("Refreshing Lmod cache on partition %s for architecture %s", partition or 'default', archdir or 'default')
+    logger.info(
+        "Refreshing Lmod cache on partition %s for architecture %s", partition or 'default', archdir or 'default')
     ec, out = submit_job_script(job_file, cluster=cluster, *args, **kwargs)
 
     if ec != 0:
