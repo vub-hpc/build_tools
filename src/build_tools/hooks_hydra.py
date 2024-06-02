@@ -23,6 +23,7 @@ from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.tools import LooseVersion
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
+from build_tools.clusters import ARCHS
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
 # permission groups for licensed software
@@ -47,14 +48,7 @@ SOFTWARE_GROUPS = {
     'VASP': 'bvasp',
 }
 
-GPU_ARCHS = {
-    'broadwell': {
-        'cuda_cc': ['6.0', '6.1']  # Tesla P100, GeForce 1080Ti
-    },
-    'zen2': {
-        'cuda_cc': ['8.0'],  # A100
-    },
-}
+GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
 
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
@@ -139,7 +133,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # set cuda compute capabilities
     elif is_cuda_software:
-        ec['cuda_compute_capabilities'] = GPU_ARCHS[LOCAL_ARCH]['cuda_cc']
+        ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
 

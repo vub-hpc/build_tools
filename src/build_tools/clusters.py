@@ -23,6 +23,7 @@ Cluster parameters for build submission script
 # opt: optimization level of each architecture for cross-compilation
 # eb: extra options for EasyBuild in this architecture
 # partition: dict with default CPU and GPU partitions for this arch
+# cuda_cc: suported CUDA compute capabilities in the GPU partition
 
 ARCHS = {
     'broadwell': {
@@ -31,6 +32,7 @@ ARCHS = {
         'partition': {
             'cpu': 'broadwell',
             'gpu': 'pascal_gpu',
+        'cuda_cc': '6.0,6.1',  # Tesla P100, GeForce 1080Ti
         },
     },
     'haswell-ib': {
@@ -63,6 +65,7 @@ ARCHS = {
         'partition': {
             'cpu': 'ampere_gpu',  # no non-gpu partition available yet
             'gpu': 'ampere_gpu',
+        'cuda_cc': '8.0',  # A100
         },
     },
     'zen3': {
@@ -93,13 +96,11 @@ ARCHS = {
 
 # The key name should match the partition name in Slurm
 # cluster: name of the cluster
-# cuda_cc: suported CUDA compute capabilities in the partition
 
 PARTITIONS = {
     'ampere_gpu': {
         'cluster': 'hydra',
         'arch': 'zen2-ib',
-        'cuda_cc': '8.0',  # A100
     },
     'broadwell': {
         'cluster': 'hydra',
@@ -112,7 +113,6 @@ PARTITIONS = {
     'pascal_gpu': {
         'cluster': 'hydra',
         'arch': 'broadwell',
-        'cuda_cc': '6.0,6.1',  # Tesla P100, GeForce 1080Ti
     },
     'skylake': {
         'cluster': 'hydra',
