@@ -52,6 +52,7 @@ GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
 
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
+LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
@@ -124,7 +125,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # skip installation of CUDA software in non-GPU architectures, only create module file
     is_cuda_software = 'CUDA' in ec.name or 'CUDA' in ec['versionsuffix']
-    if is_cuda_software and LOCAL_ARCH not in GPU_ARCHS:
+    if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
         ec['module_only'] = True
         ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
@@ -133,7 +134,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # set cuda compute capabilities
     elif is_cuda_software:
-        ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH]['cuda_cc']
+        ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH_FULL]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
 
@@ -349,7 +350,7 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
     #################################
 
     is_cuda_software = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
-    if is_cuda_software and LOCAL_ARCH not in GPU_ARCHS:
+    if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
         self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
         self.cfg['modluafooter'] = """
 if mode() == "load" and not os.getenv("VUB_HPC_BUILD") then
