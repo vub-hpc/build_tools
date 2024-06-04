@@ -206,7 +206,7 @@ def main():
         if dry_run:
             fetch_opts.append('-x')  # extended dry-run
 
-        fetch_cmd = "eb %s %s" % (" ".join(fetch_opts), easyconfig)
+        fetch_cmd = "VUB_HPC_BUILD=1 eb %s %s" % (" ".join(fetch_opts), easyconfig)
 
         logger.info("Fetching missing sources for %s and its dependencies..." % easyconfig)
         ec, out = RunNoShell.run(fetch_cmd)
