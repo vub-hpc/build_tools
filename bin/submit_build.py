@@ -48,7 +48,7 @@ logger = fancylogger.getLogger()
 fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
 
-DEFAULT_ARCHS = [arch for arch in ARCHS if ARCHS[arch]['default']]
+DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS.items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
 if LOCAL_ARCH not in ARCHS:
     logger.error("Local system has unsupported architeture: '%s'", LOCAL_ARCH)
@@ -154,7 +154,7 @@ def main():
     # remove duplicates and clean-up list of build hosts
     build_hosts = {(arch, part) for (arch, part) in build_hosts if arch and part}
 
-    logger.debug("Initial target build hosts: %s", ', '.join(["%s (%s)" % (p, a) for (a, p) in build_hosts]))
+    logger.debug("Initial target build hosts: %s", ', '.join([f'{p} ({a})' for (a, p) in build_hosts]))
 
     # Cross compilation
     if opts.options.cross_compile:
@@ -202,13 +202,16 @@ def main():
         for opt, path in ebconf.items():
             # exclude hooks and empty options from the fetch command
             if opt not in ['hooks'] and path is not None:
-                fetch_opts.append('--%s=%s' % (opt, path))
+                fetch_opts.append(f'--{opt}={path}')
         if dry_run:
             fetch_opts.append('-x')  # extended dry-run
 
-        fetch_cmd = "VUB_HPC_BUILD=1 eb %s %s" % (" ".join(fetch_opts), easyconfig)
+        # make sure CUDA modules can be loaded in non-CUDA architectures
+        os.environ['VUB_HPC_BUILD'] = '1'
 
-        logger.info("Fetching missing sources for %s and its dependencies..." % easyconfig)
+        fetch_cmd = f'eb {" ".join(fetch_opts)} {easyconfig}'
+
+        logger.info("Fetching missing sources for %s and its dependencies...", easyconfig)
         ec, out = RunNoShell.run(fetch_cmd)
 
         if dry_run:
@@ -274,7 +277,7 @@ def main():
         install_dir = job_options['target_arch']
         ebconf['installpath'] = os.path.join(APPS_BRUSSEL, os.getenv('VSC_OS_LOCAL'), install_dir)
         for opt, path in ebconf.items():
-            eb_options.append('--%s=%s' % (opt, path))
+            eb_options.append(f'--{opt}={path}')
 
         # set Slurm directives in job file
         job_options.update(
