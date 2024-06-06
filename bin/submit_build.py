@@ -206,9 +206,6 @@ def main():
         if dry_run:
             fetch_opts.append('-x')  # extended dry-run
 
-        # make sure CUDA modules can be loaded in non-CUDA architectures
-        os.environ['VUB_HPC_BUILD'] = '1'
-
         fetch_cmd = f'eb {" ".join(fetch_opts)} {easyconfig}'
 
         logger.info("Fetching missing sources for %s and its dependencies...", easyconfig)

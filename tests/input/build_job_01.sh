@@ -14,7 +14,6 @@ if [ -z $PREFIX_EB ]; then
 fi
 
 # set environment
-export VUB_HPC_BUILD=1
 export LANG=C
 export PATH=$PREFIX_EB/easybuild-framework:$PATH
 export PYTHONPATH=$PREFIX_EB/easybuild-easyconfigs:$PREFIX_EB/easybuild-easyblocks:$PREFIX_EB/easybuild-framework:$PREFIX_EB/vsc-base/lib

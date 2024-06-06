@@ -353,7 +353,7 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
     if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
         self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
         self.cfg['modluafooter'] = """
-if mode() == "load" and not os.getenv("VUB_HPC_BUILD") then
+if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
     LmodError([[
 This module is only available on nodes with a GPU.
 Jobs can request GPUs with the command 'srun --gpus-per-node=1' or 'sbatch --gpus-per-node=1'.
