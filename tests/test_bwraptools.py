@@ -41,7 +41,7 @@ echo "destination module file: /apps/brussel/$VSC_OS_LOCAL/skylake/modules/2022a
 if [ ! -d /apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/ ]; then echo "ERROR: bwrap install dir does not exist"; exit 1; fi
 if [ ! "$(ls -A /apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/)" ]; then echo "ERROR: bwrap install dir empty"; exit 1; fi
 if [ ! -s /apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/modules/2022a/all/HPL/2.3-foss-2022a.lua ]; then echo "ERROR: bwrap module file does not exist or empty"; exit 1; fi
-rsync -a --delete-after --link-dest=/apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/ /apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/ /apps/brussel/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/
+rsync -a --link-dest=/apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/ /apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/ /apps/brussel/$VSC_OS_LOCAL/skylake/software/HPL/2.3-foss-2022a/
 if [ $? -ne 0 ]; then echo "ERROR: failed to copy bwrap install dir"; exit 1; fi
 rsync -a --link-dest=/apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/modules/2022a/all/HPL /apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/modules/2022a/all/HPL/2.3-foss-2022a.lua /apps/brussel/$VSC_OS_LOCAL/skylake/modules/2022a/all/HPL/2.3-foss-2022a.lua
 if [ $? -ne 0 ]; then echo "ERROR: failed to copy bwrap module file"; exit 1; fi
