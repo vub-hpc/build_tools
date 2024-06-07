@@ -87,7 +87,7 @@ def rsync_copy(job_options, modname, modversion, install_dir):
     dest_mod_file = os.path.join(dest_path, rel_mod_file)
 
     rsync_software = ' '.join([
-        'rsync -a --delete-after',
+        'rsync -a',
         '--link-dest=%s' % source_soft_path,
         source_soft_path,
         dest_soft_path,
