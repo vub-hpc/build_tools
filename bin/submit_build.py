@@ -31,7 +31,7 @@ from build_tools import hooks_hydra
 from build_tools.bwraptools import bwrap_prefix, rsync_copy
 from build_tools.clusters import ARCHS, PARTITIONS
 from build_tools.filetools import APPS_BRUSSEL, get_module
-from build_tools.lmodtools import LMOD_CACHE_CLUSTERS, submit_lmod_cache_job
+from build_tools.lmodtools import submit_lmod_cache_job
 from build_tools.softinstall import mk_job_name, set_toolchain_generation, submit_build_job
 
 # repositories with easyconfigs
@@ -100,7 +100,6 @@ def main():
         "dry-run": ("Do not fetch/install, set debug log level", None, "store_true", False, 'D'),
         "skip-fetch": ("Do not fetch the sources, fail if they are missing", None, "store_true", False, 'n'),
         "bwrap": ("Reinstall via new namespace with bwrap", None, "store_true", False, 'b'),
-        "skip-lmod-cache": ("Do not run Lmod cache after installation", None, "store_true", False, 's'),
         "lmod-cache-only": ("Run Lmod cache and exit, no software installation", None, "store_true", False, 'o'),
     }
     opts = SimpleOption(options)
@@ -229,10 +228,6 @@ def main():
             logger.error("Failed to get module name/version for %s", easyconfig)
             sys.exit(1)
 
-    lmod_cache = not opts.options.skip_lmod_cache
-    if not lmod_cache:
-        logger.info("Not running Lmod cache after installation")
-
     # ---> main build + lmod cache loop <--- #
     # submit build jobs for each micro-architecture
     for (host_arch, host_partition) in build_hosts:
@@ -326,7 +321,7 @@ def main():
 
             ec, buildjob_out = submit_build_job(
                 job_options,
-                opts.options.keep,
+                keep_job=opts.options.keep,
                 sub_options=opts.options.extra_sub_flags,
                 cluster=job_options['cluster'],
                 local_exec=local_exec,
@@ -336,13 +331,6 @@ def main():
             if ec != 0:
                 logger.error("Failed to submit or run build job for '%s': %s", easyconfig, buildjob_out)
                 sys.exit(1)
-
-        # submit lmod cache job(s)
-        if lmod_cache and job_options['cluster'] in LMOD_CACHE_CLUSTERS:
-            jobids_depend = None
-            if buildjob_out and not dry_run and not local_exec:
-                jobids_depend = [buildjob_out.rstrip().split(';')[0]]
-            submit_lmod_cache_job(host_partition, jobids_depend, dry_run=dry_run)
 
 
 if __name__ == '__main__':

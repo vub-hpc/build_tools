@@ -38,16 +38,20 @@ LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 """
 
 
-def submit_lmod_cache_job(partition, jobids_depend=None, *args, **kwargs):
+def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs):
     """
     Run Lmod cache in a Slurm job
-    :param jobids_depend: list of strings: jobids on with to set job dependency
-    :param mod_basedir: the module basedir
     :param partition: the partition to submit the job to
+    :param jobids_depend: list of strings: jobids on with to set job dependency
+    :param cluster: the Slurm cluster to submit the job to.
+
+    if cluster is None, load the cluster module corresponding to the current partition
+    if cluster is False, don’t purge/load a cluster module (use the currently active cluster)
     """
 
     archdir = PARTITIONS[partition]['arch']
-    cluster = PARTITIONS[partition]['cluster']
+    if cluster is None:
+        cluster = PARTITIONS[partition]['cluster']
 
     cache_cmd = [
         '/usr/libexec/lmod/run_lmod_cache.py',
@@ -67,7 +71,7 @@ def submit_lmod_cache_job(partition, jobids_depend=None, *args, **kwargs):
 
     logger.info(
         "Refreshing Lmod cache on partition %s for architecture %s", partition or 'default', archdir or 'default')
-    ec, out = submit_job_script(job_file, cluster=cluster, *args, **kwargs)
+    ec, out = submit_job_script(job_file, cluster=cluster, **kwargs)
 
     if ec != 0:
         logger.error("Failed to submit Lmod cache job: %s", out)

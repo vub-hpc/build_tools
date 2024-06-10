@@ -16,7 +16,7 @@ Package information of build_tools
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
-VERSION = '3.0.0'
+VERSION = '3.1.0'
 
 AUTHOR = {
     'wp': 'Ward Poelmans',

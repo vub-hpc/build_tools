@@ -106,28 +106,30 @@ def submit_job_script(job_file, sub_options='', cluster='hydra', local_exec=Fals
     :param dry_run: print submit command
     """
 
+    submit_cmd = []
     # switch to corresponding cluster and submit
-    submit_cmd = ["module --force purge"]
-    submit_cmd.append("module load cluster/%s" % cluster)
-    submit_cmd.append("sbatch --parsable %s %s" % (sub_options, job_file))
+    if cluster:
+        submit_cmd.append("module --force purge")
+        submit_cmd.append(f"module load cluster/{cluster}")
 
+    submit_cmd.append(f"sbatch --parsable {sub_options} {job_file}")
     submit_cmd = " && ".join(submit_cmd)
 
     if dry_run:
-        log_msg = "(DRY RUN) Job submission command: %s" % submit_cmd
+        log_msg = f"(DRY RUN) Job submission command: {submit_cmd}"
         logger.info(log_msg)
         ec, out = 0, log_msg
     elif local_exec:
         logger.debug("Local execution of job script: %s", job_file)
-        ec, out = RunLoopStdout.run("bash %s" % job_file)
+        ec, out = RunLoopStdout.run(f"bash {job_file}")
     else:
         logger.debug("Job submission command: %s", submit_cmd)
-        ec, out = RunNoShell.run('bash -c "%s"' % submit_cmd)
+        ec, out = RunNoShell.run(f'bash -c "{submit_cmd}"')
 
     return ec, out
 
 
-def submit_build_job(job_options, keep_job=False, *args, **kargs):
+def submit_build_job(job_options, keep_job=False, **kwargs):
     """
     Generate job script from BUILD_JOB template and submit it with Slurm to target cluster
     :param job_options: dict with options to pass to job template
@@ -138,7 +140,7 @@ def submit_build_job(job_options, keep_job=False, *args, **kargs):
     job_file = write_tempfile(job_script)
     logger.debug("Job script written to %s", job_file)
 
-    ec, out = submit_job_script(job_file, *args, **kargs)
+    ec, out = submit_job_script(job_file, **kwargs)
 
     if not keep_job:
         try:

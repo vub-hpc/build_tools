@@ -122,7 +122,7 @@ def test_submit_build_job(inputdir, test_job):
     cluster = 'hydra'
 
     ec, out = softinstall.submit_build_job(
-        job_options, True, sub_options, cluster=cluster, local_exec=False, dry_run=True
+        job_options, keep_job=True, sub_options=sub_options, cluster=cluster, local_exec=False, dry_run=True
     )
 
     new_job = out.split(' ')[-1]
