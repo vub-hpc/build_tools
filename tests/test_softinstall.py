@@ -96,6 +96,7 @@ def test_mk_job_name(test_name):
             'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/skylake',
             'tmp': '/tmp/eb-test-build',
             'postinstall': '',
+            'lmod_cache': '1',
         }),
         ('build_job_02.sh', {
             'job_name': 'test-job-gpu',
@@ -113,6 +114,7 @@ def test_mk_job_name(test_name):
             'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/zen2-ib',
             'tmp': '/tmp/eb-test-build',
             'postinstall': 'rsync src dest',
+            'lmod_cache': '',
         }),
     ]
 )

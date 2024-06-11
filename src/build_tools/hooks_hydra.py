@@ -381,9 +381,11 @@ def end_hook():
     fancylogger.setLogLevelInfo()
 
     # submit Lmod cache job
-    if os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE'):
+    if os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '1'):
         partition = os.getenv('SLURM_JOB_PARTITION')
-
-        logger.info('[end hook] Submitting Lmod cache job for partition %s', partition)
-        # set cluster=False to avoid loading cluster module in job
-        submit_lmod_cache_job(partition, cluster=False)
+        if partition:
+            logger.info('[end hook] Submitting Lmod cache job for partition %s', partition)
+            # set cluster=False to avoid loading cluster module in job
+            submit_lmod_cache_job(partition, cluster=False)
+        else:
+            logger.info('[end hook] Skipping Lmod cache job: not in a Slurm job')

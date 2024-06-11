@@ -60,6 +60,7 @@ def main():
 
     # Default job options
     job = {
+        'lmod_cache': '1',
         'langcode': 'en_US.utf8',
         'cluster': 'hydra',
         'target_arch': None,
@@ -72,6 +73,7 @@ def main():
     # Easybuild default paths
     # start using environment from local machine, job scripts get custom paths
     ebconf = {
+        'accept-eula-for': 'Intel-oneAPI,CUDA',
         'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
         'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
         'sourcepath': '/apps/brussel/sources:/apps/gent/source',
@@ -100,6 +102,7 @@ def main():
         "dry-run": ("Do not fetch/install, set debug log level", None, "store_true", False, 'D'),
         "skip-fetch": ("Do not fetch the sources, fail if they are missing", None, "store_true", False, 'n'),
         "bwrap": ("Reinstall via new namespace with bwrap", None, "store_true", False, 'b'),
+        "skip-lmod-cache": ("Do not run Lmod cache after installation", None, "store_true", False, 's'),
         "lmod-cache-only": ("Run Lmod cache and exit, no software installation", None, "store_true", False, 'o'),
     }
     opts = SimpleOption(options)
@@ -227,6 +230,10 @@ def main():
         if ec != 0:
             logger.error("Failed to get module name/version for %s", easyconfig)
             sys.exit(1)
+
+    if opts.options.skip_lmod_cache:
+        job['lmod_cache'] = ''
+        logger.info("Not running Lmod cache after installation")
 
     # ---> main build + lmod cache loop <--- #
     # submit build jobs for each micro-architecture
