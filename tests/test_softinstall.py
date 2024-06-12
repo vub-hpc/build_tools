@@ -96,6 +96,7 @@ def test_mk_job_name(test_name):
             'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/skylake',
             'tmp': '/tmp/eb-test-build',
             'postinstall': '',
+            'lmod_cache': '1',
         }),
         ('build_job_02.sh', {
             'job_name': 'test-job-gpu',
@@ -113,6 +114,7 @@ def test_mk_job_name(test_name):
             'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/zen2-ib',
             'tmp': '/tmp/eb-test-build',
             'postinstall': 'rsync src dest',
+            'lmod_cache': '',
         }),
     ]
 )
@@ -122,7 +124,7 @@ def test_submit_build_job(inputdir, test_job):
     cluster = 'hydra'
 
     ec, out = softinstall.submit_build_job(
-        job_options, True, sub_options, cluster=cluster, local_exec=False, dry_run=True
+        job_options, keep_job=True, sub_options=sub_options, cluster=cluster, local_exec=False, dry_run=True
     )
 
     new_job = out.split(' ')[-1]

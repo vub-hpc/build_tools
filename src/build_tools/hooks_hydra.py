@@ -19,12 +19,15 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 
 import os
 
+from vsc.utils import fancylogger
+
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.tools import LooseVersion
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
+from build_tools.lmodtools import submit_lmod_cache_job
 
 # permission groups for licensed software
 SOFTWARE_GROUPS = {
@@ -368,3 +371,21 @@ end"""
     ############################
 
     self.cfg.enable_templating = en_templ
+
+
+def end_hook():
+    """Hook to run shortly before EasyBuild completes"""
+
+    logger = fancylogger.getLogger()
+    fancylogger.logToScreen(True, stdout=True)
+    fancylogger.setLogLevelInfo()
+
+    # submit Lmod cache job
+    if os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '1') == '1':
+        partition = os.getenv('SLURM_JOB_PARTITION')
+        if partition:
+            logger.info('[end hook] Submitting Lmod cache job for partition %s', partition)
+            # set cluster=False to avoid loading cluster module in job
+            submit_lmod_cache_job(partition, cluster=False)
+        else:
+            logger.info('[end hook] Skipping Lmod cache job: not in a Slurm job')

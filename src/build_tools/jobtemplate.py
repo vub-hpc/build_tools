@@ -36,6 +36,8 @@ if [ -z $$PREFIX_EB ]; then
 fi
 
 # set environment
+export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
+export BUILD_TOOLS_RUN_LMOD_CACHE=${lmod_cache}
 export LANG=${langcode}
 export PATH=$$PREFIX_EB/easybuild-framework:$$PATH
 export PYTHONPATH=$$PREFIX_EB/easybuild-easyconfigs:$$PREFIX_EB/easybuild-easyblocks:$$PREFIX_EB/easybuild-framework:$$PREFIX_EB/vsc-base/lib
