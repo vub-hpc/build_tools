@@ -18,11 +18,16 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 """
 
 import os
+import time
 
 from vsc.utils import fancylogger
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
+from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
+from easybuild.tools.build_log import EasyBuildError
+from easybuild.tools.config import source_paths
+from easybuild.tools.filetools import mkdir, remove_dir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS
@@ -139,6 +144,46 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     elif is_cuda_software:
         ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH_FULL]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
+
+
+def pre_fetch_hook(self):
+    """Hook at pre-fetch level"""
+
+    # check/wait for fetch lock
+    source_path = source_paths()[0]
+    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
+    lock_name = full_source_path.replace('/', '_') + '.lock'
+    lock_path = os.path.join(source_path, '.locks', lock_name)
+    self.fetch_hook_lock_path = lock_path
+
+    wait_interval = 60
+    wait_time = 0
+    wait_limit = 60 * 30
+
+    if os.path.exists(lock_path):
+        self.log.debug("[pre-fetch hook] Lock %s exists, waiting max %d seconds...", lock_path, wait_limit)
+        while os.path.exists(lock_path) and wait_time < wait_limit:
+            time.sleep(wait_interval)
+            wait_time += wait_interval
+
+        if os.path.exists(lock_path) and wait_time >= wait_limit:
+            error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
+            raise EasyBuildError(error_msg, lock_path, wait_time, wait_limit)
+
+        self.log.info("[pre-fetch hook] Lock %s was released", lock_path)
+
+    # create fetch lock
+    mkdir(lock_path, parents=True)
+    self.log.info("[pre-fetch hook] Lock created: %s", lock_path)
+
+
+def post_fetch_hook(self):
+    """Hook at post-fetch level"""
+
+    # remove fetch lock
+    lock_path = self.fetch_hook_lock_path
+    remove_dir(lock_path)
+    self.log.info("[post-fetch hook] Lock removed: %s", lock_path)
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
