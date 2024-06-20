@@ -43,11 +43,12 @@ setuptools.setup(
         'bin/get_module_from_easyconfig.py',
     ],
 
-    python_requires='~=3.6',
+    python_requires='~=3.9',
     install_requires=[
         'vsc-base',
         'vsc-utils',
         'easybuild',
+        'flufl.lock',
     ],
     tests_require=[
         'pytest',
