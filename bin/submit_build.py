@@ -146,7 +146,7 @@ def main():
         partition_stack = [part for part in opts.options.partition if part in PARTITIONS]
         if opts.options.arch:
             logger.warning("Overwriting given architectures with the architectures of given partitions")
-        arch_stack = [part['arch'] for part in partition_stack]
+        arch_stack = [PARTITIONS[part]['arch'] for part in partition_stack]
         build_hosts = list(zip(arch_stack, partition_stack))
     else:
         # initially target default CPU partitions for all selected architectures
