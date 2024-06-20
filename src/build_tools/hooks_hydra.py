@@ -20,6 +20,8 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 import os
 import time
 
+from flufl.lock import Lock, TimeOutError, NotLockedError
+
 from vsc.utils import fancylogger
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
@@ -27,7 +29,7 @@ from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
 from easybuild.tools.config import source_paths
-from easybuild.tools.filetools import mkdir, remove_dir
+from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS
@@ -149,41 +151,50 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 def pre_fetch_hook(self):
     """Hook at pre-fetch level"""
 
-    # check/wait for fetch lock
+    # acquire fetch lock
     source_path = source_paths()[0]
     full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
     lock_name = full_source_path.replace('/', '_') + '.lock'
-    lock_path = os.path.join(source_path, '.locks', lock_name)
-    self.fetch_hook_lock_path = lock_path
 
-    wait_interval = 60
+    lock_dir = os.path.join(source_path, '.locks')
+    mkdir(lock_dir, parents=True)
+
     wait_time = 0
-    wait_limit = 60 * 30
+    wait_interval = 60
+    wait_limit = 3600
 
-    if os.path.exists(lock_path):
-        self.log.debug("[pre-fetch hook] Lock %s exists, waiting max %d seconds...", lock_path, wait_limit)
-        while os.path.exists(lock_path) and wait_time < wait_limit:
+    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=wait_limit, default_timeout=1)
+    self.fetch_hook_lock = lock
+
+    while True:
+        try:
+            # try to acquire the lock
+            lock.lock()
+            self.log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
+            break
+
+        except TimeOutError as err:
+            if wait_time >= wait_limit:
+                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
+                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
+
+            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
+            self.log.debug(msg, lock.lockfile, wait_interval)
             time.sleep(wait_interval)
             wait_time += wait_interval
-
-        if os.path.exists(lock_path) and wait_time >= wait_limit:
-            error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
-            raise EasyBuildError(error_msg, lock_path, wait_time, wait_limit)
-
-        self.log.info("[pre-fetch hook] Lock %s was released", lock_path)
-
-    # create fetch lock
-    mkdir(lock_path, parents=True)
-    self.log.info("[pre-fetch hook] Lock created: %s", lock_path)
 
 
 def post_fetch_hook(self):
     """Hook at post-fetch level"""
 
-    # remove fetch lock
-    lock_path = self.fetch_hook_lock_path
-    remove_dir(lock_path)
-    self.log.info("[post-fetch hook] Lock removed: %s", lock_path)
+    # release fetch lock
+    lock = self.fetch_hook_lock
+    try:
+        lock.unlock()
+        self.log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
+
+    except NotLockedError:
+        self.log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
