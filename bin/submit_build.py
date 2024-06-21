@@ -100,7 +100,7 @@ def main():
         "tmp": ("Use /tmp as temporary disk instead of /dev/shm", None, "store_true", False, 'm'),
         "tmp-scratch": ("Use $VSC_SCRATCH as temporary disk instead of /dev/shm", None, "store_true", False, 'M'),
         "dry-run": ("Do not fetch/install, set debug log level", None, "store_true", False, 'D'),
-        "skip-fetch": ("Do not fetch the sources, fail if they are missing", None, "store_true", False, 'n'),
+        "pre-fetch": ("Pre-fetch sources before submitting build jobs", None, "store_true", False, 'n'),
         "bwrap": ("Reinstall via new namespace with bwrap", None, "store_true", False, 'b'),
         "skip-lmod-cache": ("Do not run Lmod cache after installation", None, "store_true", False, 's'),
         "lmod-cache-only": ("Run Lmod cache and exit, no software installation", None, "store_true", False, 'o'),
@@ -194,15 +194,13 @@ def main():
             logger.error("Could not find extra footer: %s", opts.options.extra_mod_footer)
             sys.exit(1)
 
-    if opts.options.skip_fetch:
-        logger.info('Not fetching any sources')
-    else:
+    if opts.options.pre_fetch:
         # fetch sources before submitting build jobs
         fetch_opts = ['--stop=fetch', '--robot', '--ignore-locks']
         if opts.options.extra_flags:
             fetch_opts.append(opts.options.extra_flags)
         for opt, path in ebconf.items():
-            # exclude hooks and empty options from the fetch command
+            # exclude --hooks and empty options from the fetch command
             if opt not in ['hooks'] and path is not None:
                 fetch_opts.append(f'--{opt}={path}')
         if dry_run:
@@ -264,11 +262,6 @@ def main():
         # extra settings from user
         if opts.options.extra_flags:
             eb_options.append(opts.options.extra_flags)
-
-        if opts.options.skip_fetch:
-            # EB does not have an option for skipping the fetch step
-            # as a workaround, fail hard when it tries to download missing sources
-            eb_options.append('--download-timeout=-1')
 
         eb_options.append(easyconfig)
 
