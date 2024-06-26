@@ -30,7 +30,7 @@ ARCHS = {
         'default': True,
         'opt': 'mavx2',
         'partition': {
-            'cpu': 'broadwell',
+            'cpu': 'pascal_gpu',
             'gpu': 'pascal_gpu',
         },
         'cuda_cc': '6.0,6.1',  # Tesla P100, GeForce 1080Ti
@@ -101,10 +101,6 @@ PARTITIONS = {
     'ampere_gpu': {
         'cluster': 'hydra',
         'arch': 'zen2-ib',
-    },
-    'broadwell': {
-        'cluster': 'hydra',
-        'arch': 'broadwell',
     },
     'haswell_mpi': {
         'cluster': 'chimera',
