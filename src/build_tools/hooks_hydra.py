@@ -429,8 +429,8 @@ end"""
     self.cfg.enable_templating = en_templ
 
 
-def end_hook():
-    """Hook to run shortly before EasyBuild completes"""
+def post_build_and_install_loop_hook(ecs_with_res):
+    """Hook to run after all easyconfigs are built and installed"""
 
     logger = fancylogger.getLogger()
     fancylogger.logToScreen(True, stdout=True)
@@ -438,10 +438,14 @@ def end_hook():
 
     # submit Lmod cache job
     if os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '1') == '1':
+        if not any(x[1]['success'] for x in ecs_with_res):
+            logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: no builds succeeded')
+            return
+
         partition = os.getenv('SLURM_JOB_PARTITION')
         if partition:
-            logger.info('[end hook] Submitting Lmod cache job for partition %s', partition)
+            logger.info('[post_build_and_install_loop hook] Submitting Lmod cache job for partition %s', partition)
             # set cluster=False to avoid loading cluster module in job
             submit_lmod_cache_job(partition, cluster=False)
         else:
-            logger.info('[end hook] Skipping Lmod cache job: not in a Slurm job')
+            logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: not in a Slurm job')
