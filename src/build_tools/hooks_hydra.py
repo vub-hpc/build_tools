@@ -63,7 +63,6 @@ GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
-SLURM_JOB_PARTITION = os.getenv('SLURM_JOB_PARTITION')
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
@@ -437,24 +436,25 @@ def post_build_and_install_loop_hook(ecs_with_res):
     fancylogger.logToScreen(True, stdout=True)
     fancylogger.setLogLevelInfo()
 
-    do_lmod_cache = True
+    # by default we do not run the lmod cache
+    # only vsc10001 sets BUILD_TOOLS_RUN_LMOD_CACHE (via submit_build.py) to enable it
+    build_tools_lmod = os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '0').lower() not in ('0', 'false', 'off', 'no')
+    builds_succeeded = any(x[1]['success'] for x in ecs_with_res)
+    slurm_job_partition = os.getenv('SLURM_JOB_PARTITION')
 
-    if os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '1') != '1':
-        logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: '
-                    'BUILD_TOOLS_RUN_LMOD_CACHE not set to 1')
-        do_lmod_cache = False
-
-    elif not any(x[1]['success'] for x in ecs_with_res):
-        logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: no builds succeeded')
-        do_lmod_cache = False
-
-    elif not SLURM_JOB_PARTITION:
-        logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: not in a Slurm job')
-        do_lmod_cache = False
-
-    # submit Lmod cache job
-    if do_lmod_cache:
+    if all([build_tools_lmod, builds_succeeded, slurm_job_partition]):
         logger.info('[post_build_and_install_loop hook] Submitting Lmod cache job '
-                    'for partition %s', SLURM_JOB_PARTITION)
+                    'for partition %s', slurm_job_partition)
+        # submit Lmod cache job
         # set cluster=False to avoid loading cluster module in job
-        submit_lmod_cache_job(SLURM_JOB_PARTITION, cluster=False)
+        submit_lmod_cache_job(slurm_job_partition, cluster=False)
+
+    else:
+        log_msg = ['[post_build_and_install_loop hook] Not running Lmod cache job:']
+        if not build_tools_lmod:
+            log_msg.append('(BUILD_TOOLS_RUN_LMOD_CACHE not set)')
+        if not builds_succeeded:
+            log_msg.append('(no builds succeeded)')
+        if not slurm_job_partition:
+            log_msg.append('(SLURM_JOB_PARTITION not set)')
+        logger.info(' '.join(log_msg))
