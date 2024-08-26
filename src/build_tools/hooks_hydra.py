@@ -63,6 +63,7 @@ GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
+SLURM_JOB_PARTITION = os.getenv('SLURM_JOB_PARTITION')
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
@@ -429,19 +430,31 @@ end"""
     self.cfg.enable_templating = en_templ
 
 
-def end_hook():
-    """Hook to run shortly before EasyBuild completes"""
+def post_build_and_install_loop_hook(ecs_with_res):
+    """Hook to run after all easyconfigs have been built and installed"""
 
     logger = fancylogger.getLogger()
     fancylogger.logToScreen(True, stdout=True)
     fancylogger.setLogLevelInfo()
 
+    do_lmod_cache = True
+
+    if os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '1') != '1':
+        logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: '
+                    'BUILD_TOOLS_RUN_LMOD_CACHE not set to 1')
+        do_lmod_cache = False
+
+    elif not any(x[1]['success'] for x in ecs_with_res):
+        logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: no builds succeeded')
+        do_lmod_cache = False
+
+    elif not SLURM_JOB_PARTITION:
+        logger.info('[post_build_and_install_loop hook] Skipping Lmod cache job: not in a Slurm job')
+        do_lmod_cache = False
+
     # submit Lmod cache job
-    if os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '1') == '1':
-        partition = os.getenv('SLURM_JOB_PARTITION')
-        if partition:
-            logger.info('[end hook] Submitting Lmod cache job for partition %s', partition)
-            # set cluster=False to avoid loading cluster module in job
-            submit_lmod_cache_job(partition, cluster=False)
-        else:
-            logger.info('[end hook] Skipping Lmod cache job: not in a Slurm job')
+    if do_lmod_cache:
+        logger.info('[post_build_and_install_loop hook] Submitting Lmod cache job '
+                    'for partition %s', SLURM_JOB_PARTITION)
+        # set cluster=False to avoid loading cluster module in job
+        submit_lmod_cache_job(SLURM_JOB_PARTITION, cluster=False)
