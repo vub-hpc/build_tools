@@ -437,8 +437,8 @@ def post_build_and_install_loop_hook(ecs_with_res):
     fancylogger.setLogLevelInfo()
 
     # by default we do not run the lmod cache
-    # only vsc10001 sets BUILD_TOOLS_RUN_LMOD_CACHE to 1 (via submit_build.py) to enable it
-    build_tools_lmod = os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '0') == '1'
+    # only vsc10001 sets BUILD_TOOLS_RUN_LMOD_CACHE (via submit_build.py) to enable it
+    build_tools_lmod = os.getenv('BUILD_TOOLS_RUN_LMOD_CACHE', '0').lower() not in ('0', 'false', 'off', 'no')
     builds_succeeded = any(x[1]['success'] for x in ecs_with_res)
     slurm_job_partition = os.getenv('SLURM_JOB_PARTITION')
 
@@ -452,7 +452,7 @@ def post_build_and_install_loop_hook(ecs_with_res):
     else:
         log_msg = ['[post_build_and_install_loop hook] Not running Lmod cache job:']
         if not build_tools_lmod:
-            log_msg.append('(BUILD_TOOLS_RUN_LMOD_CACHE not set to 1)')
+            log_msg.append('(BUILD_TOOLS_RUN_LMOD_CACHE not set)')
         if not builds_succeeded:
             log_msg.append('(no builds succeeded)')
         if not slurm_job_partition:
