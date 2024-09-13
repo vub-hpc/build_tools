@@ -25,22 +25,32 @@ from build_tools import softinstall
 @pytest.mark.parametrize(
     'toolchain',
     [
-        ('GCCcore-10.2.0.eb', False, '2020b'),
-        ('GCCcore-10.2.0.eb', '2020b', '2020b'),
-        ('GCCcore-10.2.0.eb', '1920c', False),
-        ('UCX-1.8.0-GCCcore-9.3.0-CUDA-11.0.2.eb', False, '2020a'),
-        ('R-4.0.3-foss-2020b.eb', False, '2020b'),
-        ('R-4.0.3-foss-2020b.eb', '2019a', '2019a'),
-        ('TensorFlow-2.3.1-foss-2020a-Python-3.8.2.eb', False, '2020a'),
-        ('TensorFlow-2.3.1-fosscuda-2020a-Python-3.8.2.eb', False, '2020a'),
-        ('SAMtools-1.9-GCC-8.2.0-2.31.1.eb', False, '2019a'),
-        ('SAMtools-1.9-iccifort-2019.1.144-GCC-8.2.0-2.31.1.eb', False, '2019a'),
+        # user-specified generation
+        ('GCCcore-11.3.0.eb', '2022a', '2022a'),
+        ('GCCcore-11.3.0.eb', '2021b', False),
+        ('R-4.3.2-gfbf-2023a.eb', '2022a', '2022a'),
+        # toolchains with custom version
+        ('GCCcore-11.3.0.eb', None, '2022a'),
+        ('GCCcore-10.2.0.eb', None, False),
+        ('UCX-CUDA-1.14.1-GCCcore-12.3.0-CUDA-12.1.1.eb', None, '2023a'),
+        ('bwa-mem2-2.2.1-intel-compilers-2023.1.0.eb', None, '2023a'),
+        ('SAMtools-1.18-GCC-12.3.0.eb', None, '2023a'),
+        # toolchains with generation as their version
+        ('foss-2023a.eb', None, '2023a'),
+        ('foss-2021a.eb', None, False),
+        ('PyTorch-2.1.2-foss-2023a-CUDA-12.1.1.eb', None, '2023a'),
+        ('R-4.3.2-gfbf-2023a.eb', None, '2023a'),
+        # system toolchains
+        ('zlib-1.2.11.eb', None, '2023a'),
+        ('MATLAB-2023b.eb', None, '2023a'),
+        # disallowed toolchains
+        ('torchvision-0.9.1-fosscuda-2020b-PyTorch-1.8.1.eb', None, False),
     ],
 )
 def test_set_toolchain_generation(toolchain):
     easyconfig, user_toolchain, expected_generation = toolchain
 
-    generation = softinstall.set_toolchain_generation(easyconfig, user_toolchain=user_toolchain)
+    generation = softinstall.set_toolchain_generation(easyconfig, tc_gen=user_toolchain)
 
     assert generation == expected_generation
 
