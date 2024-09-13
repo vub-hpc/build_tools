@@ -29,52 +29,70 @@ from build_tools.jobtemplate import BuildJob
 
 logger = fancylogger.getLogger()
 
-TOOLCHAIN_FORMAT = r"20[1-2][0-9][ab]"
+# toolchains having the generation as their version
+GEN_TCS = ['gfbf', 'gompi', 'foss', 'iimpi', 'iimkl', 'intel', 'gomkl', 'gimkl', 'gimpi']
 
-SUBTOOLCHAINS = {
-    '2023a': ['GCCcore-12.3.0', 'GCC-12.3.0', 'intel-compilers-2023.1.0'],
-    '2022b': ['GCCcore-12.2.0', 'GCC-12.2.0', 'intel-compilers-2022.2.1'],
-    '2022a': ['GCCcore-11.3.0', 'GCC-11.3.0', 'intel-compilers-2022.1.0'],
-    '2021b': ['GCCcore-11.2.0', 'GCC-11.2.0', 'intel-compilers-2021.4.0'],
-    '2021a': ['GCCcore-10.3.0', 'GCC-10.3.0', 'intel-compilers-2021.2.0'],
-    '2020b': ['GCCcore-10.2.0', 'GCC-10.2.0', 'iccifort-2020.4.304'],
-    '2020a': ['GCCcore-9.3.0', 'GCC-9.3.0', 'iccifort-2020.1.217'],
-    '2019b': ['GCCcore-8.3.0', 'GCC-8.3.0', 'iccifort-2019.5.281'],
-    '2019a': ['GCCcore-8.2.0', 'GCC-8.2.0-2.31.1', 'iccifort-2019.1.144-GCC-8.2.0-2.31.1'],
-    '2018b': ['GCCcore-7.3.0', 'GCC-7.3.0-2.30', 'iccifort-2018.3.222-GCC-7.3.0-2.30'],
+# toolchains with custom versions
+NON_GEN_TCS = ['GCCcore', 'GCC', 'intel-compilers']
+
+# all toolchains
+TCS = GEN_TCS + NON_GEN_TCS
+
+BANNED_TCS = ['fosscuda', 'intelcuda', 'gompic', 'iimpic']
+
+# https://docs.easybuild.io/common-toolchains/#common_toolchains_overview
+# allowed toolchain generations and corresponding toolchain-versions
+TC_GENS = {
+    '2022a': ['GCCcore-11.3.0', 'GCC-11.3.0', 'intel-compilers-2022.1.0'] + [f'{x}-2022a' for x in GEN_TCS],
+    '2023a': ['GCCcore-12.3.0', 'GCC-12.3.0', 'intel-compilers-2023.1.0'] + [f'{x}-2023a' for x in GEN_TCS],
+    # hold off 2024a until EB-5 branch is merged into develop
+    # '2024a': ['GCCcore-13.3.0', 'GCC-13.3.0', 'intel-compilers-2024.2.0'] + [f'{x}-2024a' for x in GEN_TCS],
 }
 
 
-def set_toolchain_generation(easyconfig, user_toolchain=False):
+def set_toolchain_generation(easyconfig, tc_gen=None):
     """
     Determine toolchain generation from easyconfig
-    Use user_toolchain if it is a valid toolchain_generation
-    :param easyconfig: filename of the target easyconfig
-    :param easycinfig: string with toolchain specification
+    Return tc_gen if provided and allowed
+    Return False if toolchain or toolchain-version is disallowed
+
+    :param easyconfig (string): filename of the target easyconfig
+    :param tc_gen (string): toolchain generation (e.g. '2024a')
     """
-    toolchain_generation = None
+    allowed_tcgens = TC_GENS.keys()
 
-    if user_toolchain:
-        if re.match('^' + TOOLCHAIN_FORMAT + '$', user_toolchain):
-            toolchain_generation = user_toolchain
-        else:
-            logger.error("Specified toolchain generation is not valid: %s", user_toolchain)
-            return False
-    else:
-        found_tc = re.findall(TOOLCHAIN_FORMAT, easyconfig)
-        found_tc = set(found_tc)  # remove duplicates (multiple toolchain labels might present in long paths)
-        if len(found_tc) == 1:
-            toolchain_generation = found_tc.pop()
-        else:
-            # Try to determine toolchain generation based on sub-toolchain
-            for main_tc, sub_tc in SUBTOOLCHAINS.items():
-                if any([re.search(tc, easyconfig) for tc in sub_tc]):
-                    toolchain_generation = main_tc
-                    break
+    if tc_gen:
+        if tc_gen in allowed_tcgens:
+            return tc_gen
 
-    logger.debug("Toolchain generation: %s", toolchain_generation)
+        logger.error("Specified toolchain generation %s is not allowed. Choose one of %s.",
+                     tc_gen, list(allowed_tcgens))
+        return False
 
-    return toolchain_generation
+    # try to determine toolchain generation from matching toolchain-version in TC_GENS
+    for main_tc, sub_tc in TC_GENS.items():
+        if any(re.search(rf'(-|^){tc}(-|.eb$)', easyconfig) for tc in sub_tc):
+            logger.debug("Determined toolchain generation: %s", main_tc)
+            return main_tc
+
+    # block known toolchain if toolchain-version is not in TC_GENS
+    matches = [re.search(rf'(-|^)({x}-.*?)(-|.eb$)', easyconfig) for x in TCS]
+    tc_versions = [x.group(2) for x in matches if x]
+    if tc_versions:
+        logger.error("Determined toolchain-version is banned: %s", tc_versions)
+        return False
+
+    # block banned toolchains
+    matches = [re.search(rf'(-|^)({x})-.*?(-|.eb$)', easyconfig) for x in BANNED_TCS]
+    tcs = [x.group(2) for x in matches if x]
+    if tcs:
+        logger.error("Determined toolchain is banned: %s", tcs)
+        return False
+
+    # assume SYSTEM toolchain, use latest generation
+    tc_gen = sorted(allowed_tcgens)[-1]
+    logger.debug("Unable to determine toolchain, assuming SYSTEM toolchain, using %s", tc_gen)
+    return tc_gen
 
 
 def mk_job_name(easyconfig, host_arch, target_arch=None):
@@ -88,10 +106,10 @@ def mk_job_name(easyconfig, host_arch, target_arch=None):
     job_name = re.sub('.eb$', '', os.path.basename(easyconfig))
 
     if host_arch:
-        job_name += '-%s' % host_arch
+        job_name = f'{job_name}-{host_arch}'
 
     if target_arch and target_arch != host_arch:
-        job_name += '-%s' % target_arch
+        job_name = f'{job_name}-{target_arch}'
 
     return job_name
 

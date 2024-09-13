@@ -174,9 +174,8 @@ def main():
         job['langcode'] = 'C'
 
     # Set target toolchain generation
-    job['tc_gen'] = set_toolchain_generation(easyconfig, user_toolchain=opts.options.toolchain)
+    job['tc_gen'] = set_toolchain_generation(easyconfig, tc_gen=opts.options.toolchain)
     if not job['tc_gen']:
-        logger.error("Unable to determine the toolchain generation, specify it with --toolchain")
         sys.exit(1)
 
     ebconf['subdir-modules'] = os.path.join('modules', job['tc_gen'])
