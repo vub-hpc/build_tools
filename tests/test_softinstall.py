@@ -47,8 +47,9 @@ from build_tools import softinstall
         ('torchvision-0.9.1-fosscuda-2020b-PyTorch-1.8.1.eb', None, False),
         ('fosscuda-2020b.eb', None, False),
     ],
+
 )
-def test_set_toolchain_generation(toolchain):
+def test_set_toolchain_generation(toolchain, mock_supported_tcgens):
     easyconfig, user_toolchain, expected_generation = toolchain
 
     generation = softinstall.set_toolchain_generation(easyconfig, tc_gen=user_toolchain)
