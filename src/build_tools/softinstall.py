@@ -21,78 +21,97 @@ Functions related to the software installation
 import os
 import re
 
+from easybuild.framework.easyconfig.easyconfig import get_toolchain_hierarchy
+from easybuild.framework.easyconfig.parser import EasyConfigParser
+from easybuild.framework.easyconfig.tools import det_easyconfig_paths
+from easybuild.tools.build_log import EasyBuildError
+from easybuild.tools.options import set_up_configuration
 from vsc.utils import fancylogger
 from vsc.utils.run import RunNoShell, RunLoopStdout
 
 from build_tools.filetools import write_tempfile
 from build_tools.jobtemplate import BuildJob
 
+SUPPORTED_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
+SUPPORTED_TCGENS = ['2022a', '2023a']
+
+SUPPORTED_FULL_TCS = {}
+EB_CFG = None
+
 logger = fancylogger.getLogger()
-
-# toolchains having the generation as their version
-GEN_TCS = ['gfbf', 'gompi', 'foss', 'iimpi', 'iimkl', 'intel', 'gomkl', 'gimkl', 'gimpi']
-
-# toolchains with custom versions
-NON_GEN_TCS = ['GCCcore', 'GCC', 'intel-compilers']
-
-# all toolchains
-TCS = GEN_TCS + NON_GEN_TCS
-
-BANNED_TCS = ['fosscuda', 'intelcuda', 'gompic', 'iimpic']
-
-# https://docs.easybuild.io/common-toolchains/#common_toolchains_overview
-# allowed toolchain generations and corresponding toolchain-versions
-TC_GENS = {
-    '2022a': ['GCCcore-11.3.0', 'GCC-11.3.0', 'intel-compilers-2022.1.0'] + [f'{x}-2022a' for x in GEN_TCS],
-    '2023a': ['GCCcore-12.3.0', 'GCC-12.3.0', 'intel-compilers-2023.1.0'] + [f'{x}-2023a' for x in GEN_TCS],
-    # hold off 2024a until EB-5 branch is merged into develop
-    # '2024a': ['GCCcore-13.3.0', 'GCC-13.3.0', 'intel-compilers-2024.2.0'] + [f'{x}-2024a' for x in GEN_TCS],
-}
 
 
 def set_toolchain_generation(easyconfig, tc_gen=None):
     """
     Determine toolchain generation from easyconfig
-    Return tc_gen if provided and allowed
-    Return False if toolchain or toolchain-version is disallowed
+    if specified tc_gen is unsupported: return False
+    if unsupported generation: return False
+    if unsupported toolchain: return False
+    if system toolchain: use latest generation
+    if unable to determine: return False
 
     :param easyconfig (string): filename of the target easyconfig
     :param tc_gen (string): toolchain generation (e.g. '2024a')
     """
-    allowed_tcgens = TC_GENS.keys()
-
     if tc_gen:
-        if tc_gen in allowed_tcgens:
+        if tc_gen in SUPPORTED_TCGENS:
             return tc_gen
 
-        logger.error("Specified toolchain generation %s is not allowed. Choose one of %s.",
-                     tc_gen, list(allowed_tcgens))
+        logger.error("Specified toolchain generation %s is not supported. Choose one of %s.",
+                     tc_gen, SUPPORTED_TCGENS)
         return False
 
-    # try to determine toolchain generation from matching toolchain-version in TC_GENS
-    for main_tc, sub_tc in TC_GENS.items():
-        if any(re.search(rf'(-|^){tc}(-|.eb$)', easyconfig) for tc in sub_tc):
-            logger.debug("Determined toolchain generation: %s", main_tc)
-            return main_tc
+    global EB_CFG
+    if not EB_CFG:
+        EB_CFG = set_up_configuration(silent=True)
 
-    # block known toolchain if toolchain-version is not in TC_GENS
-    matches = [re.search(rf'(-|^)({x}-.*?)(-|.eb$)', easyconfig) for x in TCS]
-    tc_versions = [x.group(2) for x in matches if x]
-    if tc_versions:
-        logger.error("Determined toolchain-version is banned: %s", tc_versions)
+    ec_path = det_easyconfig_paths([easyconfig])[0]
+    parser = EasyConfigParser(ec_path)
+    config_dict = parser.get_config_dict()
+    toolchain = config_dict['toolchain']
+    name = config_dict['name']
+    version = config_dict['version']
+    name_version = {'name': name, 'version': version}
+    print(toolchain, name_version)
+
+    global SUPPORTED_FULL_TCS
+    if not SUPPORTED_FULL_TCS:
+        for toolcgen in SUPPORTED_TCGENS:
+            SUPPORTED_FULL_TCS[toolcgen] = []
+            for toolc in SUPPORTED_TCS:
+                try:
+                    SUPPORTED_FULL_TCS[toolcgen].extend(get_toolchain_hierarchy({'name': toolc, 'version': toolcgen}))
+                except EasyBuildError:
+                    # skip if no easyconfig found (Could not find easyconfig for %s toolchain version %s)
+                    pass
+
+    # (software with) supported (sub)toolchain and version
+    for toolcgen in SUPPORTED_TCGENS:
+        if toolchain in SUPPORTED_FULL_TCS[toolcgen] or name_version in SUPPORTED_FULL_TCS[toolcgen]:
+            logger.info("Determined toolchain generation %s for %s", toolcgen, easyconfig)
+            return toolcgen
+
+    # (software with) supported (sub)toolchain but unsupported version
+    for toolcgen in SUPPORTED_TCGENS:
+        tcnames = [x['name'] for x in SUPPORTED_FULL_TCS[toolcgen]]
+        if toolchain['name'] in tcnames or name in tcnames:
+            logger.error("Determined toolchain generation %s for %s is not supported. Choose one of %s.",
+                         tc_gen, easyconfig, SUPPORTED_TCGENS)
+            return False
+
+    # unsupported toolchains
+    # all toolchains have system toolchain, so we need to handle them separately
+    # all toolchains have Toolchain easyblock, so checking the easyblock is sufficient
+    if config_dict.get('easyblock', '') == 'Toolchain':
+        logger.error("Unsupported toolchain %s for %s", name, easyconfig)
         return False
 
-    # block banned toolchains
-    matches = [re.search(rf'(-|^)({x})-.*?(-|.eb$)', easyconfig) for x in BANNED_TCS]
-    tcs = [x.group(2) for x in matches if x]
-    if tcs:
-        logger.error("Determined toolchain is banned: %s", tcs)
-        return False
+    # software with system toolchain: install in latest generation
+    if toolchain['name'] == 'system':
+        return sorted(SUPPORTED_TCGENS)[-1]
 
-    # assume SYSTEM toolchain, use latest generation
-    tc_gen = sorted(allowed_tcgens)[-1]
-    logger.debug("Unable to determine toolchain, assuming SYSTEM toolchain, using %s", tc_gen)
-    return tc_gen
+    logger.error("Unsupported toolchain for %s", easyconfig)
+    return False
 
 
 def mk_job_name(easyconfig, host_arch, target_arch=None):

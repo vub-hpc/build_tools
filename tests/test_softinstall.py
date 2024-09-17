@@ -40,11 +40,12 @@ from build_tools import softinstall
         ('foss-2021a.eb', None, False),
         ('PyTorch-2.1.2-foss-2023a-CUDA-12.1.1.eb', None, '2023a'),
         ('R-4.3.2-gfbf-2023a.eb', None, '2023a'),
-        # system toolchains
+        # system toolchain
         ('zlib-1.2.11.eb', None, '2023a'),
         ('MATLAB-2023b.eb', None, '2023a'),
-        # disallowed toolchains
+        # unsupported toolchains
         ('torchvision-0.9.1-fosscuda-2020b-PyTorch-1.8.1.eb', None, False),
+        ('fosscuda-2020b.eb', None, False),
     ],
 )
 def test_set_toolchain_generation(toolchain):
