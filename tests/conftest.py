@@ -21,6 +21,7 @@ import pytest
 
 from build_tools import softinstall
 
+
 def pytest_addoption(parser):
     parser.addoption(
         '--fromsource', action='store_true', help='run the tests on the source tree without installing first')
