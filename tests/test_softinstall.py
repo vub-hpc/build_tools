@@ -48,7 +48,7 @@ from build_tools import softinstall
         ('fosscuda-2020b.eb', None, False),
     ],
 )
-def test_set_toolchain_generation(toolchain, mock_supported_tcgens):
+def test_set_toolchain_generation(toolchain):
     easyconfig, user_toolchain, expected_generation = toolchain
 
     generation = softinstall.set_toolchain_generation(easyconfig, tc_gen=user_toolchain)

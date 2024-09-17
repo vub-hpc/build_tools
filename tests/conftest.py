@@ -19,8 +19,6 @@ Unit tests configuration file
 import os
 import pytest
 
-from build_tools import softinstall
-
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -53,8 +51,3 @@ def realpath_apps_brussel(path):
 @pytest.fixture
 def mock_realpath_apps_brussel(monkeypatch):
     monkeypatch.setattr('os.path.realpath', realpath_apps_brussel)
-
-
-@pytest.fixture
-def mock_supported_tcgens(monkeypatch):
-    monkeypatch.setattr(softinstall, 'SUPPORTED_TCGENS', ['2022a', '2023a'])
