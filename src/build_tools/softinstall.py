@@ -72,7 +72,7 @@ def set_toolchain_generation(easyconfig, tc_gen=None):
     name = config_dict['name']
     version = config_dict['version']
     name_version = {'name': name, 'version': version}
-    print(toolchain, name_version)
+    logger.debug('toolchain=%s, name,version=%s', toolchain, name_version)
 
     global SUPPORTED_FULL_TCS
     if not SUPPORTED_FULL_TCS:
