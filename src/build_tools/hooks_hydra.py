@@ -65,6 +65,51 @@ LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
 
+def acquire_fetch_lock(self):
+    " acquire fetch lock "
+    source_path = source_paths()[0]
+    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
+    lock_name = full_source_path.replace('/', '_') + '.lock'
+
+    lock_dir = os.path.join(source_path, '.locks')
+    mkdir(lock_dir, parents=True)
+
+    wait_time = 0
+    wait_interval = 60
+    wait_limit = 3600
+
+    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=wait_limit, default_timeout=1)
+    self.fetch_hook_lock = lock
+
+    while True:
+        try:
+            # try to acquire the lock
+            lock.lock()
+            self.log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
+            break
+
+        except TimeOutError as err:
+            if wait_time >= wait_limit:
+                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
+                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
+
+            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
+            self.log.debug(msg, lock.lockfile, wait_interval)
+            time.sleep(wait_interval)
+            wait_time += wait_interval
+
+
+def release_fetch_lock(self):
+    " release fetch lock "
+    lock = self.fetch_hook_lock
+    try:
+        lock.unlock()
+        self.log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
+
+    except NotLockedError:
+        self.log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)
+
+
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     """Alter the parameters of easyconfigs"""
 
@@ -150,51 +195,12 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
 def pre_fetch_hook(self):
     """Hook at pre-fetch level"""
-
-    # acquire fetch lock
-    source_path = source_paths()[0]
-    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
-    lock_name = full_source_path.replace('/', '_') + '.lock'
-
-    lock_dir = os.path.join(source_path, '.locks')
-    mkdir(lock_dir, parents=True)
-
-    wait_time = 0
-    wait_interval = 60
-    wait_limit = 3600
-
-    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=wait_limit, default_timeout=1)
-    self.fetch_hook_lock = lock
-
-    while True:
-        try:
-            # try to acquire the lock
-            lock.lock()
-            self.log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
-            break
-
-        except TimeOutError as err:
-            if wait_time >= wait_limit:
-                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
-                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
-
-            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
-            self.log.debug(msg, lock.lockfile, wait_interval)
-            time.sleep(wait_interval)
-            wait_time += wait_interval
+    acquire_fetch_lock(self)
 
 
 def post_fetch_hook(self):
     """Hook at post-fetch level"""
-
-    # release fetch lock
-    lock = self.fetch_hook_lock
-    try:
-        lock.unlock()
-        self.log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
-
-    except NotLockedError:
-        self.log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)
+    release_fetch_lock(self)
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
