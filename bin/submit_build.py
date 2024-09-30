@@ -32,7 +32,7 @@ from build_tools.bwraptools import bwrap_prefix, rsync_copy
 from build_tools.clusters import ARCHS, PARTITIONS
 from build_tools.filetools import APPS_BRUSSEL, get_module
 from build_tools.lmodtools import submit_lmod_cache_job
-from build_tools.softinstall import mk_job_name, set_toolchain_generation, submit_build_job
+from build_tools.softinstall import mk_job_name, submit_build_job
 
 # repositories with easyconfigs
 VSCSOFTSTACK_ROOT = os.path.expanduser("~/vsc-software-stack")
@@ -79,7 +79,6 @@ def main():
         'sourcepath': '/apps/brussel/sources:/apps/gent/source',
         'installpath': os.path.join(APPS_BRUSSEL, os.getenv('VSC_OS_LOCAL'), LOCAL_ARCH),
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
-        'subdir-modules': 'modules',
         'hooks': hooks_hydra.__file__,
     }
 
@@ -87,7 +86,6 @@ def main():
     options = {
         "arch": ("CPU architecture of the host system and the build", 'strlist', 'add', None, 'a'),
         "partition": ("Slurm partition for the build", 'strlist', 'add', None, 'P'),
-        "toolchain": ("Toolchain generation of the installation", None, "store", None, 't'),
         "extra-flags": ("Extra flags to pass to EasyBuild", None, "store", None, 'e'),
         "extra-sub-flags": ("Extra flags to pass to Slurm", None, "store", '', 'q'),
         "extra-mod-footer": ("Path to extra footer for module file", None, "store", None, 'f'),
@@ -172,14 +170,6 @@ def main():
     # Switch build language to C
     if opts.options.clang:
         job['langcode'] = 'C'
-
-    # Set target toolchain generation
-    job['tc_gen'] = set_toolchain_generation(easyconfig, user_toolchain=opts.options.toolchain)
-    if not job['tc_gen']:
-        logger.error("Unable to determine the toolchain generation, specify it with --toolchain")
-        sys.exit(1)
-
-    ebconf['subdir-modules'] = os.path.join('modules', job['tc_gen'])
 
     # Set robot paths
     if opts.options.pwd_robot_append:
