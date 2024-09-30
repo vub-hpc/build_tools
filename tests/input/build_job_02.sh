@@ -28,15 +28,9 @@ mkdir -p $TMPDIR
 mkdir -p /tmp/eb-test-build
 
 # update MODULEPATH for cross-compilations
-if [ "zen2" != "$VSC_ARCH_LOCAL" ]; then
-    moddir="/apps/brussel/${VSC_OS_LOCAL}/zen2-ib/modules"
-    # use modules from target arch and toolchain generation
-    CC_MODULEPATH=${moddir}/2020b/all
-    # also add last 3 years of modules in case out-of-toolchain deps are needed
-    for modpath in $(ls -1dr ${moddir}/*/all | head -n 6); do
-        CC_MODULEPATH="$CC_MODULEPATH:$modpath"
-    done
-    export MODULEPATH=$CC_MODULEPATH
+local_arch="$VSC_ARCH_LOCAL$VSC_ARCH_SUFFIX"
+if [ "zen2-ib" != "$local_arch" ]; then
+    export MODULEPATH=${MODULEPATH//$local_arch/zen2-ib}
 fi
 
 bwrap eb  --cuda-compute-capabilities=8.0

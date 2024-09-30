@@ -28,15 +28,9 @@ mkdir -p $TMPDIR
 mkdir -p /tmp/eb-test-build
 
 # update MODULEPATH for cross-compilations
-if [ "skylake" != "$VSC_ARCH_LOCAL" ]; then
-    moddir="/apps/brussel/${VSC_OS_LOCAL}/skylake/modules"
-    # use modules from target arch and toolchain generation
-    CC_MODULEPATH=${moddir}/2019a/all
-    # also add last 3 years of modules in case out-of-toolchain deps are needed
-    for modpath in $(ls -1dr ${moddir}/*/all | head -n 6); do
-        CC_MODULEPATH="$CC_MODULEPATH:$modpath"
-    done
-    export MODULEPATH=$CC_MODULEPATH
+local_arch="$VSC_ARCH_LOCAL$VSC_ARCH_SUFFIX"
+if [ "skylake" != "$local_arch" ]; then
+    export MODULEPATH=${MODULEPATH//$local_arch/skylake}
 fi
 
  eb 
