@@ -103,14 +103,6 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
             log_msg = f"Determined toolchain generation {toolcgen} for {software}"
             return toolcgen, log_msg
 
-    # (software with) valid (sub)toolchain but invalid version
-    for toolcgen in VALID_TCGENS:
-        tcnames = [x['name'] for x in tc_versions[toolcgen]]
-        if toolchain['name'] in tcnames or name in tcnames:
-            log_msg = (f"Determined toolchain generation {toolcgen} for {software} is not valid."
-                       f" Choose one of {VALID_TCGENS}.")
-            return False, log_msg
-
     # invalid toolchains
     # all toolchains have 'system' toolchain, so we need to handle the invalid toolchains separately
     # all toolchains have 'Toolchain' easyblock, so checking the easyblock is sufficient
