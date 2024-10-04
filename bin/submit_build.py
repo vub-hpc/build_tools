@@ -28,7 +28,7 @@ from vsc.utils.script_tools import SimpleOption
 from vsc.utils.run import RunNoShell
 
 from build_tools import hooks_hydra
-from build_tools.bwraptools import bwrap_prefix, rsync_copy
+from build_tools.bwraptools import bwrap_prefix, rsync_copy, SUBDIR_MODULES_BWRAP
 from build_tools.clusters import ARCHS, PARTITIONS
 from build_tools.filetools import APPS_BRUSSEL, get_module
 from build_tools.lmodtools import submit_lmod_cache_job
@@ -99,7 +99,7 @@ def main():
         "tmp-scratch": ("Use $VSC_SCRATCH as temporary disk instead of /dev/shm", None, "store_true", False, 'M'),
         "dry-run": ("Do not fetch/install, set debug log level", None, "store_true", False, 'D'),
         "pre-fetch": ("Pre-fetch sources before submitting build jobs", None, "store_true", False, 'n'),
-        "bwrap": ("Reinstall via new namespace with bwrap", None, "store_true", False, 'b'),
+        "bwrap": ("Reinstall in 2 steps via new namespace with bwrap (no robot)", None, "store_true", False, 'b'),
         "skip-lmod-cache": ("Do not run Lmod cache after installation", None, "store_true", False, 's'),
         "lmod-cache-only": ("Run Lmod cache and exit, no software installation", None, "store_true", False, 'o'),
     }
@@ -213,7 +213,7 @@ def main():
 
     bwrap = opts.options.bwrap
     if bwrap:
-        logger.info('Reinstalling in 2 steps via new namespace under %s/bwrap', APPS_BRUSSEL)
+        logger.info('Calculating module name and version for bwrap')
         ec, module = get_module(easyconfig)
         if ec != 0:
             logger.error("Failed to get module name/version for %s", easyconfig)
@@ -239,15 +239,17 @@ def main():
             job['tmp'] = os.path.join('$VSC_SCRATCH', job_options['target_arch'])
         ebconf['buildpath'] = os.path.join(job['tmp'], 'eb-submit-build')
 
-        # generate EB command line options
-        eb_options = ['--robot', '--logtostdout', '--debug', '--module-extensions', '--zip-logs=bzip2']
+        # common EB command line options
+        eb_options = ['--logtostdout', '--debug', '--module-extensions', '--zip-logs=bzip2', '--module-depends-on']
+
+        if bwrap:
+            eb_options.extend([' --rebuild', f'--subdir-modules={SUBDIR_MODULES_BWRAP}'])
+        else:
+            eb_options.append('--robot')  # not supported with bwrap
 
         # cross-compilation
         if job_options['target_arch'] != host_arch:
             eb_options.extend(['--optarch', ARCHS[job_options['target_arch']]['opt']])
-
-        # use depends_on in Lmod
-        eb_options.append("--module-depends-on")
 
         # extra settings from user
         if opts.options.extra_flags:
@@ -290,7 +292,6 @@ def main():
 
         # install in new namespace if requested
         if bwrap:
-            job_options['eb_options'] += ' --rebuild'
             job_options['pre_eb_options'] = bwrap_prefix(job_options, module[0], install_dir)
             rsync_cmds = rsync_copy(job_options, module[0], module[1], install_dir)
             job_options['postinstall'] = '\n'.join([rsync_cmds, job_options['postinstall']])

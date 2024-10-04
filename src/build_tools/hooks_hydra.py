@@ -36,6 +36,7 @@ from easybuild.tools.hooks import SANITYCHECK_STEP
 from build_tools.clusters import ARCHS
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 from build_tools.lmodtools import submit_lmod_cache_job
+from build_tools.bwraptools import MOD_FILEPATH_FILENAME, SUBDIR_MODULES_BWRAP
 
 # permission groups for licensed software
 SOFTWARE_GROUPS = {
@@ -71,7 +72,7 @@ VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
 
 
 def get_tc_versions():
-    " build dict of (sub)toolchain-versions per valid generation "
+    " build dict of valid (sub)toolchain-version combinations per valid generation "
     tc_versions = {}
     for toolcgen in VALID_TCGENS:
         tc_versions[toolcgen] = []
@@ -96,7 +97,7 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
 
     tc_versions = get_tc_versions()
 
-    # (software with) valid (sub)toolchain and version
+    # (software with) valid (sub)toolchain-version combination
     for toolcgen in VALID_TCGENS:
         if toolchain in tc_versions[toolcgen] or name_version in tc_versions[toolcgen]:
             log_msg = f"Determined toolchain generation {toolcgen} for {software}"
@@ -127,39 +128,67 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
 
 
 def update_module_install_paths(self):
-    " update module install paths unless subdir-modules uption is specified "
+    """
+    update module install paths unless subdir-modules uption is specified "
+    default subdir_modules config var = 'modules'
+    here we set it to 'modules/<subdir>', where subdir can be any of VALID_MODULES_SUBDIRS
+    exception: with bwrap it is set to SUBDIR_MODULES_BWRAP
+    """
+    configvars = ConfigurationVariables()
+    subdir_modules = list(Path(configvars['subdir_modules']).parts)
 
-    # default subdir_modules config var = 'modules'
-    # in hydra we change it to 'modules/<subdir>'
-    subdir_modules = Path(ConfigurationVariables()['subdir_modules']).parts
+    do_bwrap = subdir_modules == [SUBDIR_MODULES_BWRAP]
 
-    if len(subdir_modules) not in [1, 2] or subdir_modules[0] != 'modules':
-        log_msg = '[pre-fetch hook] Format of option subdir-modules %s is not valid. Must be modules/<subdir>.'
-        raise EasyBuildError(log_msg, os.path.join(*subdir_modules))
+    log_format_msg = '[pre-fetch hook] Format of option subdir-modules %s is not valid. Must be modules/<subdir>'
+    if len(subdir_modules) not in [1, 2]:
+        raise EasyBuildError(log_format_msg, os.path.join(*subdir_modules))
+
+    if not (subdir_modules[0] == 'modules' or subdir_modules != ['modules'] or do_bwrap):
+        raise EasyBuildError(log_format_msg, os.path.join(*subdir_modules))
 
     if len(subdir_modules) == 2:
         subdir = subdir_modules[1]
+
         if subdir not in VALID_MODULES_SUBDIRS:
-            log_msg = "[pre-fetch hook] Specified modules subdir %s is not valid. Choose one of %s."
+            log_msg = "[pre-fetch hook] Specified modules subdir %s is not valid. Choose one of %s"
             raise EasyBuildError(log_msg, subdir, VALID_MODULES_SUBDIRS)
-        log_msg = "[pre-fetch hook] Option subdir-modules was set to %s, not updating module install paths."
+
+        log_msg = "[pre-fetch hook] Option subdir-modules was set to %s, not updating module install paths"
         self.log.info(log_msg, subdir_modules)
         return
 
     subdir, log_msg = calc_tc_gen(
         self.name, self.version, self.toolchain.name, self.toolchain.version, self.cfg.easyblock)
+
     if not subdir:
         raise EasyBuildError("[pre-fetch hook] " + log_msg)
+
     self.log.info("[pre-fetch hook] " + log_msg)
 
-    # insert subdir in module install path strings (normally between 'modules' and 'all')
+    mod_filepath = Path(self.mod_filepath).parts
+
+    if do_bwrap:
+        self.log.info("[pre-fetch hook] Installing in new namespace with bwrap")
+        real_mod_filepath = Path().joinpath(*mod_filepath[:-4], 'modules', subdir, *mod_filepath[-3:]).as_posix()
+        modversion = mod_filepath[-1].removesuffix('.lua')
+        mod_filepath_file = Path().joinpath(
+            *mod_filepath[:-1], MOD_FILEPATH_FILENAME.format(modversion=modversion)).as_posix()
+
+        # create file containing the real module file path, in the same dir as the module file
+        # after installation, the module file is copied to the real path
+        with open(mod_filepath_file, 'w') as f:
+            f.write(real_mod_filepath)
+        self.log.info("Created file %s containing real module file path", mod_filepath_file)
+        return
+
+    # insert subdir into self.installdir_mod and self.mod_filepath
     installdir_mod = Path(self.installdir_mod).parts
     self.installdir_mod = Path().joinpath(*installdir_mod[:-1], subdir, installdir_mod[-1]).as_posix()
-    self.log.info('[pre-fetch hook] Updated installdir_mod to %s.', self.installdir_mod)
+    self.log.info('[pre-fetch hook] Updated installdir_mod to %s', self.installdir_mod)
 
-    mod_filepath = Path(self.mod_filepath).parts
-    self.mod_filepath = Path().joinpath(*mod_filepath[:-3], subdir, *mod_filepath[-3:]).as_posix()
-    self.log.info('[pre-fetch hook] Updated mod_filepath to %s.', self.mod_filepath)
+    real_mod_filepath = Path().joinpath(*mod_filepath[:-3], subdir, *mod_filepath[-3:]).as_posix()
+    self.mod_filepath = real_mod_filepath
+    self.log.info('[pre-fetch hook] Updated mod_filepath to %s', self.mod_filepath)
 
 
 def acquire_fetch_lock(self):
