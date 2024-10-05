@@ -115,7 +115,7 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
         log_msg = f"Determined toolchain {tcname} for {software}"
         return tcname, log_msg
 
-    log_msg = f"Invalid toolchain {tcname} for {software}"
+    log_msg = f"Invalid toolchain {tcname} and/or toolchain version {tcversion} for {software}"
     return False, log_msg
 
 
