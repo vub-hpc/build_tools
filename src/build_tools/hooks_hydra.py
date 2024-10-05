@@ -18,6 +18,7 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 """
 
 import os
+from pathlib import Path
 import time
 
 from flufl.lock import Lock, TimeOutError, NotLockedError
@@ -25,16 +26,17 @@ from flufl.lock import Lock, TimeOutError, NotLockedError
 from vsc.utils import fancylogger
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
-from easybuild.framework.easyconfig.easyconfig import letter_dir_for
+from easybuild.framework.easyconfig.easyconfig import letter_dir_for, get_toolchain_hierarchy
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
-from easybuild.tools.config import source_paths
+from easybuild.tools.config import source_paths, ConfigurationVariables
 from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 from build_tools.lmodtools import submit_lmod_cache_job
+from build_tools.bwraptools import MOD_FILEPATH_FILENAME, SUBDIR_MODULES_BWRAP
 
 # permission groups for licensed software
 SOFTWARE_GROUPS = {
@@ -63,6 +65,167 @@ GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
+
+VALID_TCGENS = ['2022a', '2023a']
+VALID_MODULES_SUBDIRS = VALID_TCGENS + ['system']
+VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
+
+
+def get_tc_versions():
+    " build dict of valid (sub)toolchain-version combinations per valid generation "
+    tc_versions = {}
+    for toolcgen in VALID_TCGENS:
+        tc_versions[toolcgen] = []
+        for toolc in VALID_TCS:
+            try:
+                tc_versions[toolcgen].extend(get_toolchain_hierarchy({'name': toolc, 'version': toolcgen}))
+            except EasyBuildError:
+                # skip if no easyconfig found for toolchain-version
+                pass
+
+    return tc_versions
+
+
+def calc_tc_gen(name, version, tcname, tcversion, easyblock):
+    """
+    calculate the toolchain generation
+    return False if not valid
+    """
+    name_version = {'name': name, 'version': version}
+    toolchain = {'name': tcname, 'version': tcversion}
+    software = [name, version, tcname, tcversion, easyblock]
+
+    tc_versions = get_tc_versions()
+
+    # (software with) valid (sub)toolchain-version combination
+    for toolcgen in VALID_TCGENS:
+        if toolchain in tc_versions[toolcgen] or name_version in tc_versions[toolcgen]:
+            log_msg = f"Determined toolchain generation {toolcgen} for {software}"
+            return toolcgen, log_msg
+
+    # invalid toolchains
+    # all toolchains have 'system' toolchain, so we need to handle the invalid toolchains separately
+    # all toolchains have 'Toolchain' easyblock, so checking the easyblock is sufficient
+    if easyblock == 'Toolchain':
+        log_msg = f"Invalid toolchain {name} for {software}"
+        return False, log_msg
+
+    # software with 'system' toolchain: return 'system'
+    if tcname == 'system':
+        log_msg = f"Determined toolchain {tcname} for {software}"
+        return tcname, log_msg
+
+    log_msg = f"Invalid toolchain {tcname} and/or toolchain version {tcversion} for {software}"
+    return False, log_msg
+
+
+def update_module_install_paths(self):
+    """
+    update module install paths unless subdir-modules uption is specified "
+    default subdir_modules config var = 'modules'
+    here we set it to 'modules/<subdir>', where subdir can be any of VALID_MODULES_SUBDIRS
+    exception: with bwrap it is set to SUBDIR_MODULES_BWRAP
+    """
+    configvars = ConfigurationVariables()
+    subdir_modules = list(Path(configvars['subdir_modules']).parts)
+
+    do_bwrap = subdir_modules == [SUBDIR_MODULES_BWRAP]
+
+    log_format_msg = '[pre-fetch hook] Format of option subdir-modules %s is not valid. Must be modules/<subdir>'
+    if len(subdir_modules) not in [1, 2]:
+        raise EasyBuildError(log_format_msg, os.path.join(*subdir_modules))
+
+    if not (subdir_modules[0] == 'modules' or subdir_modules != ['modules'] or do_bwrap):
+        raise EasyBuildError(log_format_msg, os.path.join(*subdir_modules))
+
+    if len(subdir_modules) == 2:
+        subdir = subdir_modules[1]
+
+        if subdir not in VALID_MODULES_SUBDIRS:
+            log_msg = "[pre-fetch hook] Specified modules subdir %s is not valid. Choose one of %s"
+            raise EasyBuildError(log_msg, subdir, VALID_MODULES_SUBDIRS)
+
+        log_msg = "[pre-fetch hook] Option subdir-modules was set to %s, not updating module install paths"
+        self.log.info(log_msg, subdir_modules)
+        return
+
+    subdir, log_msg = calc_tc_gen(
+        self.name, self.version, self.toolchain.name, self.toolchain.version, self.cfg.easyblock)
+
+    if not subdir:
+        raise EasyBuildError("[pre-fetch hook] " + log_msg)
+
+    self.log.info("[pre-fetch hook] " + log_msg)
+
+    mod_filepath = Path(self.mod_filepath).parts
+
+    if do_bwrap:
+        self.log.info("[pre-fetch hook] Installing in new namespace with bwrap")
+        real_mod_filepath = Path().joinpath(*mod_filepath[:-4], 'modules', subdir, *mod_filepath[-3:]).as_posix()
+        modversion = mod_filepath[-1].removesuffix('.lua')
+        mod_filepath_file = Path().joinpath(
+            *mod_filepath[:-1], MOD_FILEPATH_FILENAME.format(modversion=modversion)).as_posix()
+
+        # create file containing the real module file path, in the same dir as the module file
+        # after installation, the module file is copied to the real path
+        with open(mod_filepath_file, 'w') as f:
+            f.write(real_mod_filepath)
+        self.log.info("Created file %s containing real module file path", mod_filepath_file)
+        return
+
+    # insert subdir into self.installdir_mod and self.mod_filepath
+    installdir_mod = Path(self.installdir_mod).parts
+    self.installdir_mod = Path().joinpath(*installdir_mod[:-1], subdir, installdir_mod[-1]).as_posix()
+    self.log.info('[pre-fetch hook] Updated installdir_mod to %s', self.installdir_mod)
+
+    real_mod_filepath = Path().joinpath(*mod_filepath[:-3], subdir, *mod_filepath[-3:]).as_posix()
+    self.mod_filepath = real_mod_filepath
+    self.log.info('[pre-fetch hook] Updated mod_filepath to %s', self.mod_filepath)
+
+
+def acquire_fetch_lock(self):
+    " acquire fetch lock "
+    source_path = source_paths()[0]
+    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
+    lock_name = full_source_path.replace('/', '_') + '.lock'
+
+    lock_dir = os.path.join(source_path, '.locks')
+    mkdir(lock_dir, parents=True)
+
+    wait_time = 0
+    wait_interval = 60
+    wait_limit = 3600
+
+    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=wait_limit, default_timeout=1)
+    self.fetch_hook_lock = lock
+
+    while True:
+        try:
+            # try to acquire the lock
+            lock.lock()
+            self.log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
+            break
+
+        except TimeOutError as err:
+            if wait_time >= wait_limit:
+                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
+                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
+
+            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
+            self.log.debug(msg, lock.lockfile, wait_interval)
+            time.sleep(wait_interval)
+            wait_time += wait_interval
+
+
+def release_fetch_lock(self):
+    " release fetch lock "
+    lock = self.fetch_hook_lock
+    try:
+        lock.unlock()
+        self.log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
+
+    except NotLockedError:
+        self.log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
@@ -150,51 +313,13 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
 def pre_fetch_hook(self):
     """Hook at pre-fetch level"""
-
-    # acquire fetch lock
-    source_path = source_paths()[0]
-    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
-    lock_name = full_source_path.replace('/', '_') + '.lock'
-
-    lock_dir = os.path.join(source_path, '.locks')
-    mkdir(lock_dir, parents=True)
-
-    wait_time = 0
-    wait_interval = 60
-    wait_limit = 3600
-
-    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=wait_limit, default_timeout=1)
-    self.fetch_hook_lock = lock
-
-    while True:
-        try:
-            # try to acquire the lock
-            lock.lock()
-            self.log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
-            break
-
-        except TimeOutError as err:
-            if wait_time >= wait_limit:
-                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
-                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
-
-            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
-            self.log.debug(msg, lock.lockfile, wait_interval)
-            time.sleep(wait_interval)
-            wait_time += wait_interval
+    update_module_install_paths(self)
+    acquire_fetch_lock(self)
 
 
 def post_fetch_hook(self):
     """Hook at post-fetch level"""
-
-    # release fetch lock
-    lock = self.fetch_hook_lock
-    try:
-        lock.unlock()
-        self.log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
-
-    except NotLockedError:
-        self.log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)
+    release_fetch_lock(self)
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument

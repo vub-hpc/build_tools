@@ -19,6 +19,8 @@ Unit tests configuration file
 import os
 import pytest
 
+from easybuild.tools.options import set_up_configuration
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -51,3 +53,9 @@ def realpath_apps_brussel(path):
 @pytest.fixture
 def mock_realpath_apps_brussel(monkeypatch):
     monkeypatch.setattr('os.path.realpath', realpath_apps_brussel)
+
+
+@pytest.fixture
+def set_up_config():
+    set_up_configuration(silent=True)
+    yield

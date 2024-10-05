@@ -26,42 +26,45 @@ from build_tools.filetools import APPS_BRUSSEL
 
 logger = fancylogger.getLogger()
 
+BWRAP_PATH = os.path.join(APPS_BRUSSEL, 'bwrap', '$VSC_OS_LOCAL')
+SUBDIR_MODULES_BWRAP = '.modules_bwrap'
+MOD_FILEPATH_FILENAME = '{modversion}_fp.txt'
 
-def bwrap_prefix(job_options, modname, install_dir):
+
+def bwrap_prefix(job_options, modname, arch):
     """
     Create the bwrap prefix command string
     :param job_options: dict with options to pass to job template
-    :param modname: module name
-    :param install_dir: architecture-specific installation subdirectory
+    :param modname: module name (without the version)
+    :param arch: architecture-specific installation subdirectory
     """
-
-    bwrap_path = os.path.join(APPS_BRUSSEL, 'bwrap', '$VSC_OS_LOCAL', install_dir)
     real_installpath = os.path.realpath(job_options['eb_installpath'])
-    mod_subdir = os.path.join('modules', job_options['tc_gen'], 'all', modname)
+    mod_subdir = os.path.join(SUBDIR_MODULES_BWRAP, 'all', modname)
+    # cannot use 'software/<modname>/<modversion>' here, otherwise EB cannot "remove" the old installation
     soft_subdir = os.path.join('software', modname)
 
-    soft_source = os.path.join(bwrap_path, soft_subdir)
+    soft_source = os.path.join(BWRAP_PATH, arch, soft_subdir)
     soft_dest = os.path.join(real_installpath, soft_subdir)
 
-    mod_source = os.path.join(bwrap_path, mod_subdir)
-    mod_dest = os.path.join(real_installpath, mod_subdir)
+    mod_source = os.path.join(real_installpath, mod_subdir)
 
     if not os.path.isdir(soft_dest):
         logger.error("Bind destination does not exist: %s", soft_dest)
 
+    # create a temporary dir for the module, but don’t bind it with bwrap:
+    # the final location is not known yet, and module files don’t need a new namespace anyway
     return ' '.join([
-        'mkdir -p %s &&' % soft_source,
-        'mkdir -p %s &&' % mod_source,
+        f'mkdir -p "{soft_source}" &&',
+        f'mkdir -p "{mod_source}" &&',
         'bwrap',
         '--bind / /',
-        '--bind %s %s' % (soft_source, soft_dest),
-        '--bind %s %s' % (mod_source, mod_dest),
+        f'--bind "{soft_source}" "{soft_dest}"',
         '--dev /dev',
         '--bind /dev/log /dev/log',
     ])
 
 
-def rsync_copy(job_options, modname, modversion, install_dir):
+def rsync_copy(job_options, modname, modversion, arch):
     """
     Create command string to copy the bwrap installation dir and module file to the real installation dir
     If the source and destination dirs are in the same filesystem,
@@ -69,46 +72,40 @@ def rsync_copy(job_options, modname, modversion, install_dir):
     :param job_options: dict with options to pass to job template
     :param modname: module name
     :param modversion: module version
-    :param install_dir: architecture-specific installation subdirectory
+    :param arch: architecture-specific installation subdirectory
     """
-    source_path = os.path.join(APPS_BRUSSEL, 'bwrap', '$VSC_OS_LOCAL', install_dir)
     dest_path = job_options['eb_installpath']
 
     rel_soft_path = os.path.join('software', modname, modversion, '')  # trailing slash is required!
 
-    source_soft_path = os.path.join(source_path, rel_soft_path)
+    source_soft_path = os.path.join(BWRAP_PATH, arch, rel_soft_path)
     dest_soft_path = os.path.join(dest_path, rel_soft_path)
 
-    rel_mod_path = os.path.join('modules', job_options['tc_gen'], 'all', modname)
-    rel_mod_file = os.path.join(rel_mod_path, '%s.lua' % modversion)
-
-    source_mod_path = os.path.join(source_path, rel_mod_path)
-    source_mod_file = os.path.join(source_path, rel_mod_file)
-    dest_mod_file = os.path.join(dest_path, rel_mod_file)
+    source_mod_path = os.path.join(dest_path, SUBDIR_MODULES_BWRAP, 'all', modname)
+    source_mod_file = os.path.join(source_mod_path, f'{modversion}.lua')
+    mod_filepath_file = os.path.join(source_mod_path, MOD_FILEPATH_FILENAME.format(modversion=modversion))
 
     rsync_software = ' '.join([
         'rsync -a',
-        '--link-dest=%s' % source_soft_path,
+        f'--link-dest="{source_soft_path}"',
         source_soft_path,
         dest_soft_path,
     ])
     rsync_module = ' '.join([
         'rsync -a',
-        '--link-dest=%s' % source_mod_path,
+        f'--link-dest="{source_mod_path}"',
         source_mod_file,
-        dest_mod_file,
     ])
     return '\n'.join([
-        'echo "bwrap install dir: %s"' % source_soft_path,
-        'echo "destination install dir: %s"' % dest_soft_path,
-        'echo "bwrap module file: %s"' % source_mod_file,
-        'echo "destination module file: %s"' % dest_mod_file,
-        'if [ ! -d %s ]; then echo "ERROR: bwrap install dir does not exist"; exit 1; fi' % source_soft_path,
-        'if [ ! "$(ls -A %s)" ]; then echo "ERROR: bwrap install dir empty"; exit 1; fi' % source_soft_path,
-        'if [ ! -s %s ]; then echo "ERROR: bwrap module file does not exist or empty"; exit 1; fi' % source_mod_file,
-        rsync_software,
-        'if [ $? -ne 0 ]; then echo "ERROR: failed to copy bwrap install dir"; exit 1; fi',
-        rsync_module,
-        'if [ $? -ne 0 ]; then echo "ERROR: failed to copy bwrap module file"; exit 1; fi',
-        'rm -rf %s %s' % (source_soft_path, source_mod_file),
+        f'dest_mod_file=$(<"{mod_filepath_file}")',
+        f'echo "source install dir: {source_soft_path}"',
+        f'echo "destination install dir: {dest_soft_path}"',
+        f'echo "source module file: {source_mod_file}"',
+        'echo "destination module file: $dest_mod_file"',
+        f'test -d "{source_soft_path}" || {{ echo "ERROR: source install dir does not exist"; exit 1; }}',
+        f'test -n "$(ls -A {source_soft_path})" || {{ echo "ERROR: source install dir is empty"; exit 1; }}',
+        f'test -s "{source_mod_file}" || {{ echo "ERROR: source module file does not exist or is empty"; exit 1; }}',
+        f'{rsync_software} || {{ echo "ERROR: failed to copy source install dir"; exit 1; }}',
+        f'{rsync_module} "$dest_mod_file" || {{ echo "ERROR: failed to copy source module file"; exit 1; }}',
+        f'rm -rf "{source_soft_path}" "{source_mod_file}" "{mod_filepath_file}"',
     ])

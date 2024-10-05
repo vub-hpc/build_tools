@@ -50,15 +50,9 @@ mkdir -p $$TMPDIR
 mkdir -p ${eb_buildpath}
 
 # update MODULEPATH for cross-compilations
-if [ "${target_arch}" != "$$VSC_ARCH_LOCAL" ]; then
-    moddir="${eb_installpath}/modules"
-    # use modules from target arch and toolchain generation
-    CC_MODULEPATH=$${moddir}/${tc_gen}/all
-    # also add last 3 years of modules in case out-of-toolchain deps are needed
-    for modpath in $$(ls -1dr $${moddir}/*/all | head -n 6); do
-        CC_MODULEPATH="$$CC_MODULEPATH:$$modpath"
-    done
-    export MODULEPATH=$$CC_MODULEPATH
+local_arch="$$VSC_ARCH_LOCAL$$VSC_ARCH_SUFFIX"
+if [ "${target_arch}" != "$$local_arch" ]; then
+    export MODULEPATH=$${MODULEPATH//$$local_arch/${target_arch}}
 fi
 
 ${pre_eb_options} eb ${eb_options}
