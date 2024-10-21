@@ -25,8 +25,6 @@ from build_tools.softinstall import submit_job_script
 
 logger = fancylogger.getLogger()
 
-LMOD_CACHE_LICENSE = 'lmod_cache'
-LMOD_CACHE_CLUSTERS = ['hydra', 'manticore']
 LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 #SBATCH --time=1:0:0
 #SBATCH --mem=1g

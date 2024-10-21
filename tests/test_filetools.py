@@ -69,11 +69,3 @@ hide_version("GCCcore/4")
 %s""" % MODULERC
 
     assert modrc_text == ref_modrc_text
-
-
-def test_get_module(inputdir, get_module_cmd):
-    easyconfig = os.path.join(inputdir, 'zlib-1.2.11.eb')
-    _, module = filetools.get_module(easyconfig, cmd=get_module_cmd)
-
-    assert module[0] == 'zlib'
-    assert module[1] == '1.2.11'
