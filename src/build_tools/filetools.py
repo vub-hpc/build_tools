@@ -22,7 +22,6 @@ import sys
 import tempfile
 
 from vsc.utils import fancylogger
-from vsc.utils.run import RunNoShell
 
 
 logger = fancylogger.getLogger()
