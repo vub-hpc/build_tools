@@ -559,6 +559,6 @@ end"""
 def post_build_and_install_loop_hook(ecs_with_res):
     """Hook to run after all easyconfigs have been built and installed"""
 
-    if any(x[1]['success'] for x in ecs_with_res):
-        # write message to stderr indicating that some builds succeeded, which may trigger an Lmod cache job
-        sys.stderr.write('BUILD_TOOLS: builds_succeeded\n')
+    installed_modules = [x[0]['full_mod_name'] for x in ecs_with_res if x[1]['success']]
+    if installed_modules:
+        sys.stderr.write(f'BUILD_TOOLS: builds_succeeded {" ".join(installed_modules)}\n')
