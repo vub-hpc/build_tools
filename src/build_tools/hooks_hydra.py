@@ -557,7 +557,12 @@ end"""
 
 
 def post_build_and_install_loop_hook(ecs_with_res):
-    """Hook to run after all easyconfigs have been built and installed"""
+    """
+    Hook to run after all easyconfigs have been built and installed
+
+    :param ecs_with_res: list of easyconfig tuples, where each tuple consists of 2 dicts:
+                         the easyconfig data and the build status data.
+    """
 
     installed_modules = [x[0]['full_mod_name'] for x in ecs_with_res if x[1]['success']]
     if installed_modules:

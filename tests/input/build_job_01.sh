@@ -33,7 +33,7 @@ EB='eb'
 
 if [ "0" == 1 ]; then
     echo "BUILD_TOOLS: installing with bwrap"
-    output=$(EASYBUILD_ROBOT_PATHS=/some/path get_module_from_easyconfig.py zlib-1.2.11.eb) || { echo "ERROR: get_module_from_easyconfig.py failed"; exit 1; }
+    output=$(EASYBUILD_ROBOT_PATHS=/some/path EASYBUILD_IGNORE_INDEX=1 get_module_from_easyconfig.py zlib-1.2.11.eb) || { echo "ERROR: get_module_from_easyconfig.py failed"; exit 1; }
     echo "BUILD_TOOLS: get_module_from_easyconfig.py output: $output"
     while read -r key value; do
         [ "$key" == "==" ] && continue
