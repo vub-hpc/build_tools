@@ -55,12 +55,10 @@ EB='eb'
 
 if [ "${bwrap}" == 1 ]; then
     echo "BUILD_TOOLS: installing with bwrap"
-    output=$$(EASYBUILD_ROBOT_PATHS=${robot_paths} EASYBUILD_IGNORE_INDEX=1 get_module_from_easyconfig.py ${easyconfig}) || { echo "ERROR: get_module_from_easyconfig.py failed"; exit 1; }
+    output=$$(EASYBUILD_ROBOT_PATHS=${robot_paths} EASYBUILD_IGNORE_INDEX=1 ec2ml.py ${easyconfig}) || { echo "ERROR: ec2ml.py failed"; exit 1; }
     echo "BUILD_TOOLS: get_module_from_easyconfig.py output: $$output"
     while read -r key value; do
-        [ "$$key" == "==" ] && continue
-        [ "$$key" == "modname" ] && modname="$$value"
-        [ "$$key" == "modversion" ] && modversion="$$value"
+        [ "$$key" == "full_mod_name" ] && { modname=$${value%/*}; modversion=$${value#*/}; }
     done <<< "$$output"
     echo "BUILD_TOOLS: modname $$modname modversion $$modversion"
     [[ -n $$modname && -n $$modversion ]] || { echo "ERROR: failed to get modname and/or modversion"; exit 1; }

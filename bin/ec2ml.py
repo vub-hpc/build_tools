@@ -21,15 +21,14 @@ import sys
 from easybuild.framework.easyconfig.tools import det_easyconfig_paths, parse_easyconfigs
 from easybuild.tools.options import set_up_configuration
 
-
-easyconfig = sys.argv[1]
-
 set_up_configuration(silent=True)
 
-ec_path = det_easyconfig_paths([easyconfig])[0]
+ecs = sys.argv[1:]
 
-easyconfigs, generated_ecs = parse_easyconfigs([(ec_path, False)])
-module = easyconfigs[0]['full_mod_name']
-modname, modversion = module.split('/')
-print('modname', modname)
-print('modversion', modversion)
+ec_paths = [det_easyconfig_paths([x])[0] for x in ecs]
+
+easyconfigs, generated_ecs = parse_easyconfigs(list(zip(ec_paths, [False] * len(ec_paths))))
+
+full_mod_names = [x['full_mod_name'] for x in easyconfigs]
+
+print('\n'.join([f'full_mod_name {mod}' for mod in full_mod_names]))
