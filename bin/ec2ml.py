@@ -16,15 +16,19 @@ Helper script to extract the full module name from an easyconfig
 
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
-
-from easybuild.framework.easyconfig.tools import parse_easyconfigs
-from easybuild.tools.options import set_up_configuration
-
 import sys
 
-easyconfig = sys.argv[1]
+from easybuild.framework.easyconfig.tools import det_easyconfig_paths, parse_easyconfigs
+from easybuild.tools.options import set_up_configuration
 
-set_up_configuration()
+set_up_configuration(silent=True)
 
-easyconfigs, generated_ecs = parse_easyconfigs([(easyconfig, False)])
-print(easyconfigs[0]['full_mod_name'])  # the output contains logging stuff from EB as well
+ecs = sys.argv[1:]
+
+ec_paths = [det_easyconfig_paths([x])[0] for x in ecs]
+
+easyconfigs, generated_ecs = parse_easyconfigs(list(zip(ec_paths, [False] * len(ec_paths))))
+
+full_mod_names = [x['full_mod_name'] for x in easyconfigs]
+
+print('\n'.join([f'full_mod_name {mod}' for mod in full_mod_names]))

@@ -27,12 +27,13 @@ from vsc.utils import fancylogger
 from vsc.utils.script_tools import SimpleOption
 from vsc.utils.run import RunNoShell
 
-from build_tools import hooks_hydra
-from build_tools.bwraptools import bwrap_prefix, rsync_copy
 from build_tools.clusters import ARCHS, PARTITIONS
-from build_tools.filetools import APPS_BRUSSEL, get_module
+from build_tools.filetools import APPS_BRUSSEL
+from build_tools import hooks_hydra
+from build_tools.hooks_hydra import SUBDIR_MODULES_BWRAP
 from build_tools.lmodtools import submit_lmod_cache_job
-from build_tools.softinstall import mk_job_name, set_toolchain_generation, submit_build_job
+from build_tools.softinstall import mk_job_name, submit_build_job
+
 
 # repositories with easyconfigs
 VSCSOFTSTACK_ROOT = os.path.expanduser("~/vsc-software-stack")
@@ -60,14 +61,14 @@ def main():
 
     # Default job options
     job = {
-        'lmod_cache': '1',
-        'langcode': 'en_US.utf8',
+        'bwrap': '0',
         'cluster': 'hydra',
-        'target_arch': None,
         'extra_mod_footer': None,
+        'langcode': 'en_US.utf8',
+        'lmod_cache': '1',
+        'subdir_modules_bwrap': SUBDIR_MODULES_BWRAP,
+        'target_arch': None,
         'tmp': '/dev/shm',
-        'postinstall': '',
-        'pre_eb_options': '',
     }
 
     # Easybuild default paths
@@ -79,7 +80,6 @@ def main():
         'sourcepath': '/apps/brussel/sources:/apps/gent/source',
         'installpath': os.path.join(APPS_BRUSSEL, os.getenv('VSC_OS_LOCAL'), LOCAL_ARCH),
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
-        'subdir-modules': 'modules',
         'hooks': hooks_hydra.__file__,
     }
 
@@ -87,7 +87,6 @@ def main():
     options = {
         "arch": ("CPU architecture of the host system and the build", 'strlist', 'add', None, 'a'),
         "partition": ("Slurm partition for the build", 'strlist', 'add', None, 'P'),
-        "toolchain": ("Toolchain generation of the installation", None, "store", None, 't'),
         "extra-flags": ("Extra flags to pass to EasyBuild", None, "store", None, 'e'),
         "extra-sub-flags": ("Extra flags to pass to Slurm", None, "store", '', 'q'),
         "extra-mod-footer": ("Path to extra footer for module file", None, "store", None, 'f'),
@@ -101,7 +100,7 @@ def main():
         "tmp-scratch": ("Use $VSC_SCRATCH as temporary disk instead of /dev/shm", None, "store_true", False, 'M'),
         "dry-run": ("Do not fetch/install, set debug log level", None, "store_true", False, 'D'),
         "pre-fetch": ("Pre-fetch sources before submitting build jobs", None, "store_true", False, 'n'),
-        "bwrap": ("Reinstall via new namespace with bwrap", None, "store_true", False, 'b'),
+        "bwrap": ("Reinstall in 2 steps via new namespace with bwrap (no robot)", None, "store_true", False, 'b'),
         "skip-lmod-cache": ("Do not run Lmod cache after installation", None, "store_true", False, 's'),
         "lmod-cache-only": ("Run Lmod cache and exit, no software installation", None, "store_true", False, 'o'),
     }
@@ -122,6 +121,7 @@ def main():
         sys.exit(1)
 
     easyconfig = ' '.join(opts.args)
+    job['easyconfig'] = easyconfig
     logger.info("Preparing to install %s", easyconfig)
 
     # Set host archs: define arch_stack
@@ -173,17 +173,10 @@ def main():
     if opts.options.clang:
         job['langcode'] = 'C'
 
-    # Set target toolchain generation
-    job['tc_gen'] = set_toolchain_generation(easyconfig, user_toolchain=opts.options.toolchain)
-    if not job['tc_gen']:
-        logger.error("Unable to determine the toolchain generation, specify it with --toolchain")
-        sys.exit(1)
-
-    ebconf['subdir-modules'] = os.path.join('modules', job['tc_gen'])
-
     # Set robot paths
     if opts.options.pwd_robot_append:
         ebconf['robot-paths'] += ':' + os.getcwd()
+    job['robot_paths'] = ebconf['robot-paths']
 
     # Add extra footer
     if opts.options.extra_mod_footer:
@@ -223,14 +216,10 @@ def main():
 
     bwrap = opts.options.bwrap
     if bwrap:
-        logger.info('Reinstalling in 2 steps via new namespace under %s/bwrap', APPS_BRUSSEL)
-        ec, module = get_module(easyconfig)
-        if ec != 0:
-            logger.error("Failed to get module name/version for %s", easyconfig)
-            sys.exit(1)
+        job['bwrap'] = 1
 
     if opts.options.skip_lmod_cache:
-        job['lmod_cache'] = ''
+        job['lmod_cache'] = '0'
         logger.info("Not running Lmod cache after installation")
 
     # ---> main build + lmod cache loop <--- #
@@ -249,21 +238,22 @@ def main():
             job['tmp'] = os.path.join('$VSC_SCRATCH', job_options['target_arch'])
         ebconf['buildpath'] = os.path.join(job['tmp'], 'eb-submit-build')
 
-        # generate EB command line options
-        eb_options = ['--robot', '--logtostdout', '--debug', '--module-extensions', '--zip-logs=bzip2']
+        # common EB command line options
+        eb_options = ['--logtostdout', '--debug', '--module-extensions', '--zip-logs=bzip2', '--module-depends-on']
+
+        if bwrap:
+            eb_options.extend([' --rebuild', f'--subdir-modules={job_options["subdir_modules_bwrap"]}'])
+        else:
+            # robot is not supported with bwrap
+            eb_options.append('--robot')
 
         # cross-compilation
         if job_options['target_arch'] != host_arch:
             eb_options.extend(['--optarch', ARCHS[job_options['target_arch']]['opt']])
 
-        # use depends_on in Lmod
-        eb_options.append("--module-depends-on")
-
         # extra settings from user
         if opts.options.extra_flags:
             eb_options.append(opts.options.extra_flags)
-
-        eb_options.append(easyconfig)
 
         # update build and install paths of the EB job
         install_dir = job_options['target_arch']
@@ -297,13 +287,6 @@ def main():
         # add extra footer if requested
         if opts.options.extra_mod_footer:
             job_options['eb_options'] += f' --modules-footer={job_options["extra_mod_footer"]}'
-
-        # install in new namespace if requested
-        if bwrap:
-            job_options['eb_options'] += ' --rebuild'
-            job_options['pre_eb_options'] = bwrap_prefix(job_options, module[0], install_dir)
-            rsync_cmds = rsync_copy(job_options, module[0], module[1], install_dir)
-            job_options['postinstall'] = '\n'.join([rsync_cmds, job_options['postinstall']])
 
         # submit build job
         buildjob_out = None

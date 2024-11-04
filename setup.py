@@ -40,7 +40,7 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     scripts=[
         'bin/submit_build.py',
-        'bin/get_module_from_easyconfig.py',
+        'bin/ec2ml.py',
     ],
 
     python_requires='~=3.9',

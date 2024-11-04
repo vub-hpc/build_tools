@@ -22,7 +22,6 @@ import sys
 import tempfile
 
 from vsc.utils import fancylogger
-from vsc.utils.run import RunNoShell
 
 
 logger = fancylogger.getLogger()
@@ -94,23 +93,3 @@ def poke(filename):
         sys.exit(1)
     else:
         return True
-
-
-def get_module(easyconfig, cmd='get_module_from_easyconfig.py'):
-    """
-    Get module name and version from an easyconfig file
-    @return: (exit_code, [module_name, module_version])
-    """
-    # let EB find the easyconfig and copy it to a tmp file
-    temp_ec = write_tempfile('')
-    copy_cmd = "eb %s --copy-ec %s" % (easyconfig, temp_ec)
-    log_msg = "Copying easyconfig %s to %s..." % (easyconfig, temp_ec)
-    logger.debug(log_msg)
-    ec, out = RunNoShell.run(copy_cmd)
-
-    # use EB functions to obtain module name/version
-    # this must be an external script due to option parsing conflicts between EB and submit_build.py
-    cmd += " %s" % temp_ec
-    ec, out = RunNoShell.run(cmd)
-
-    return ec, out.splitlines()[-1].split('/')

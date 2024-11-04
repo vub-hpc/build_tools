@@ -23,29 +23,6 @@ from build_tools import softinstall
 
 
 @pytest.mark.parametrize(
-    'toolchain',
-    [
-        ('GCCcore-10.2.0.eb', False, '2020b'),
-        ('GCCcore-10.2.0.eb', '2020b', '2020b'),
-        ('GCCcore-10.2.0.eb', '1920c', False),
-        ('UCX-1.8.0-GCCcore-9.3.0-CUDA-11.0.2.eb', False, '2020a'),
-        ('R-4.0.3-foss-2020b.eb', False, '2020b'),
-        ('R-4.0.3-foss-2020b.eb', '2019a', '2019a'),
-        ('TensorFlow-2.3.1-foss-2020a-Python-3.8.2.eb', False, '2020a'),
-        ('TensorFlow-2.3.1-fosscuda-2020a-Python-3.8.2.eb', False, '2020a'),
-        ('SAMtools-1.9-GCC-8.2.0-2.31.1.eb', False, '2019a'),
-        ('SAMtools-1.9-iccifort-2019.1.144-GCC-8.2.0-2.31.1.eb', False, '2019a'),
-    ],
-)
-def test_set_toolchain_generation(toolchain):
-    easyconfig, user_toolchain, expected_generation = toolchain
-
-    generation = softinstall.set_toolchain_generation(easyconfig, user_toolchain=user_toolchain)
-
-    assert generation == expected_generation
-
-
-@pytest.mark.parametrize(
     'test_name',
     [
         (
@@ -81,40 +58,45 @@ def test_mk_job_name(test_name):
     'test_job',
     [
         ('build_job_01.sh', {
-            'job_name': 'test-job',
-            'walltime': '23:59:59',
-            'nodes': 1,
-            'tasks': 4,
-            'gpus': 0,
-            'target_arch': 'skylake',
-            'partition': 'skylake_mpi',
-            'tc_gen': '2019a',
-            'langcode': 'C',
-            'eb_options': '',
-            'pre_eb_options': '',
+            'bwrap': '0',
+            'easyconfig': 'zlib-1.2.11.eb',
             'eb_buildpath': '/tmp/eb-test-build',
             'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/skylake',
-            'tmp': '/tmp/eb-test-build',
-            'postinstall': '',
+            'eb_options': '',
+            'gpus': 0,
+            'job_name': 'test-job',
+            'langcode': 'C',
             'lmod_cache': '1',
+            'nodes': 1,
+            'partition': 'skylake_mpi',
+            'postinstall': '',
+            'pre_eb_options': '',
+            'robot_paths': '/some/path',
+            'subdir_modules_bwrap': '.modules_bwrap',
+            'target_arch': 'skylake',
+            'tasks': 4,
+            'tmp': '/tmp/eb-test-build',
+            'walltime': '23:59:59',
         }),
         ('build_job_02.sh', {
-            'job_name': 'test-job-gpu',
-            'walltime': '23:59:59',
-            'nodes': 1,
-            'tasks': 4,
-            'gpus': 1,
-            'target_arch': 'zen2',
-            'partition': 'ampere_gpu',
-            'tc_gen': '2020b',
-            'langcode': 'C',
-            'eb_options': ' --cuda-compute-capabilities=8.0',
-            'pre_eb_options': 'bwrap',
+            'bwrap': 1,
+            'easyconfig': 'zlib-1.2.11.eb',
             'eb_buildpath': '/tmp/eb-test-build',
             'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/zen2-ib',
-            'tmp': '/tmp/eb-test-build',
+            'eb_options': '--cuda-compute-capabilities=8.0',
+            'gpus': 1,
+            'job_name': 'test-job-gpu',
+            'langcode': 'C',
+            'lmod_cache': '0',
+            'nodes': 1,
+            'partition': 'ampere_gpu',
             'postinstall': 'rsync src dest',
-            'lmod_cache': '',
+            'robot_paths': '/some/path',
+            'subdir_modules_bwrap': '.modules_bwrap',
+            'target_arch': 'zen2-ib',
+            'tasks': 4,
+            'tmp': '/tmp/eb-test-build',
+            'walltime': '23:59:59',
         }),
     ]
 )
