@@ -29,7 +29,7 @@ from easybuild.framework.easyconfig.easyconfig import letter_dir_for, get_toolch
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
 from easybuild.tools.config import BuildOptions, ConfigurationVariables, source_paths, update_build_option
-from easybuild.tools.filetools import mkdir
+from easybuild.tools.filetools import mkdir, remove_dir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS
@@ -68,6 +68,23 @@ VALID_MODULES_SUBDIRS = VALID_TCGENS + ['system']
 VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
 
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
+
+
+def update_configuration_variable(key, value):
+    """
+    Update configuration variable with specified name to given value.
+
+    WARNING: Use this with care, the configuration variables are not expected to be changed during an EasyBuild session!
+    """
+    # ConfigurationVariables() is a (singleton) frozen dict, so this is less straightforward that it seems...
+    variables = ConfigurationVariables()
+    orig_value = variables._FrozenDict__dict[key]
+    variables._FrozenDict__dict[key] = value
+    # _log.warning("Configuration variable '%s' was updated to: %s", key, ConfigurationVariables()[key])
+    print("Configuration variable '%s' was updated to: %s", key, ConfigurationVariables()[key])
+
+    # Return original value, so it can be restored later if needed
+    return orig_value
 
 
 def get_tc_versions():
@@ -167,7 +184,12 @@ def update_module_install_paths(self):
         sys.stderr.write(f'BUILD_TOOLS: real_mod_filepath {real_mod_filepath}\n')
         return
 
-    # insert subdir into self.installdir_mod and self.mod_filepath
+    # remove wrong module installdir, which is created before the fetch step
+    if os.path.isdir(self.installdir_mod) and len(os.listdir(self.installdir_mod)) == 0:
+        remove_dir(self.installdir_mod)
+        self.log.info('[pre-fetch hook] Removed wrong installdir_mod %s', self.installdir_mod)
+
+    # insert subdir into self.installdir_mod and self.mod_filepath, which are defined before the fetch step
     installdir_mod = Path(self.installdir_mod).parts
     self.installdir_mod = Path().joinpath(*installdir_mod[:-1], subdir, installdir_mod[-1]).as_posix()
     self.log.info('[pre-fetch hook] Updated installdir_mod to %s', self.installdir_mod)
@@ -175,6 +197,12 @@ def update_module_install_paths(self):
     real_mod_filepath = Path().joinpath(*mod_filepath[:-3], subdir, *mod_filepath[-3:]).as_posix()
     self.mod_filepath = real_mod_filepath
     self.log.info('[pre-fetch hook] Updated mod_filepath to %s', self.mod_filepath)
+
+    # create updated installdir_mod in case it doesn't exist yet
+    mkdir(self.installdir_mod)
+
+    update_configuration_variable('subdir_modules', os.path.join('modules', subdir))
+    self.log.info('[pre-fetch hook] Updated subdir_modules to %s', os.path.join('modules', subdir))
 
 
 def acquire_fetch_lock(self):
