@@ -70,7 +70,7 @@ VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 
 
-def update_configuration_variable(key, value):
+def update_configuration_variable(key, value, log):
     """
     Update configuration variable with specified name to given value.
 
@@ -80,8 +80,7 @@ def update_configuration_variable(key, value):
     variables = ConfigurationVariables()
     orig_value = variables._FrozenDict__dict[key]
     variables._FrozenDict__dict[key] = value
-    # _log.warning("Configuration variable '%s' was updated to: %s", key, ConfigurationVariables()[key])
-    print("Configuration variable '%s' was updated to: %s", key, ConfigurationVariables()[key])
+    log.warning("Configuration variable '%s' was updated to: %s", key, ConfigurationVariables()[key])
 
     # Return original value, so it can be restored later if needed
     return orig_value
@@ -201,7 +200,7 @@ def update_module_install_paths(self):
     # create updated installdir_mod in case it doesn't exist yet
     mkdir(self.installdir_mod)
 
-    update_configuration_variable('subdir_modules', os.path.join('modules', subdir))
+    update_configuration_variable('subdir_modules', os.path.join('modules', subdir), self.log)
     self.log.info('[pre-fetch hook] Updated subdir_modules to %s', os.path.join('modules', subdir))
 
 
