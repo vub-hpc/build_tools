@@ -18,7 +18,7 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 """
 
 import os
-from pathlib import Path
+import re
 import sys
 import time
 
@@ -28,8 +28,8 @@ from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.framework.easyconfig.easyconfig import letter_dir_for, get_toolchain_hierarchy
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
-from easybuild.tools.config import BuildOptions, ConfigurationVariables, source_paths, update_build_option
-from easybuild.tools.filetools import mkdir, remove_dir
+from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
+from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS
@@ -141,29 +141,6 @@ def update_module_install_paths(self):
     here we set it to 'modules/<subdir>', where subdir can be any of VALID_MODULES_SUBDIRS
     exception: with bwrap it is set to SUBDIR_MODULES_BWRAP
     """
-    configvars = ConfigurationVariables()
-    subdir_modules = list(Path(configvars['subdir_modules']).parts)
-
-    do_bwrap = subdir_modules == [SUBDIR_MODULES_BWRAP]
-
-    log_format_msg = '[pre-fetch hook] Format of option subdir-modules %s is not valid. Must be modules/<subdir>'
-    if len(subdir_modules) not in [1, 2]:
-        raise EasyBuildError(log_format_msg, os.path.join(*subdir_modules))
-
-    if not (subdir_modules[0] == 'modules' or subdir_modules != ['modules'] or do_bwrap):
-        raise EasyBuildError(log_format_msg, os.path.join(*subdir_modules))
-
-    if len(subdir_modules) == 2:
-        subdir = subdir_modules[1]
-
-        if subdir not in VALID_MODULES_SUBDIRS:
-            log_msg = "[pre-fetch hook] Specified modules subdir %s is not valid. Choose one of %s"
-            raise EasyBuildError(log_msg, subdir, VALID_MODULES_SUBDIRS)
-
-        log_msg = "[pre-fetch hook] Option subdir-modules was set to %s, not updating module install paths"
-        self.log.info(log_msg, subdir_modules)
-        return
-
     subdir, log_msg = calc_tc_gen(
         self.name, self.version, self.toolchain.name, self.toolchain.version, self.cfg.easyblock)
 
@@ -172,36 +149,33 @@ def update_module_install_paths(self):
 
     self.log.info("[pre-fetch hook] " + log_msg)
 
-    mod_filepath = Path(self.mod_filepath).parts
+    suffix = build_option('suffix_modules_path')
+    real_subdir_modules = os.path.join('modules', subdir)
+    subdir_modules = ConfigurationVariables()['subdir_modules']
+    real_mod_filepath = re.sub(rf'/{subdir_modules}/{suffix}/', f'/{real_subdir_modules}/{suffix}/', self.mod_filepath)
 
-    if do_bwrap:
+    if subdir_modules == SUBDIR_MODULES_BWRAP:
         self.log.info("[pre-fetch hook] Installing in new namespace with bwrap")
-        real_mod_filepath = Path().joinpath(*mod_filepath[:-4], 'modules', subdir, *mod_filepath[-3:]).as_posix()
 
         # write the real module file path to stderr
         # after installation, the module file is copied to the real path
         sys.stderr.write(f'BUILD_TOOLS: real_mod_filepath {real_mod_filepath}\n')
         return
 
-    # remove wrong module installdir, which is created before the fetch step
-    if os.path.isdir(self.installdir_mod) and len(os.listdir(self.installdir_mod)) == 0:
-        remove_dir(self.installdir_mod)
-        self.log.info('[pre-fetch hook] Removed wrong installdir_mod %s', self.installdir_mod)
-
-    # insert subdir into self.installdir_mod and self.mod_filepath, which are defined before the fetch step
-    installdir_mod = Path(self.installdir_mod).parts
-    self.installdir_mod = Path().joinpath(*installdir_mod[:-1], subdir, installdir_mod[-1]).as_posix()
+    # update self.installdir_mod and self.mod_filepath to ensure modules are installed correctly
+    self.installdir_mod = re.sub(rf'/{subdir_modules}/{suffix}$', f'/{real_subdir_modules}/{suffix}',
+                                 self.installdir_mod)
     self.log.info('[pre-fetch hook] Updated installdir_mod to %s', self.installdir_mod)
 
-    real_mod_filepath = Path().joinpath(*mod_filepath[:-3], subdir, *mod_filepath[-3:]).as_posix()
     self.mod_filepath = real_mod_filepath
     self.log.info('[pre-fetch hook] Updated mod_filepath to %s', self.mod_filepath)
 
     # create updated installdir_mod in case it doesn't exist yet
     mkdir(self.installdir_mod)
 
-    update_configuration_variable('subdir_modules', os.path.join('modules', subdir), self.log)
-    self.log.info('[pre-fetch hook] Updated subdir_modules to %s', os.path.join('modules', subdir))
+    # update subdir_modules configuration variable to ensure moduleclass symlinks are installed correctly
+    update_configuration_variable('subdir_modules', real_subdir_modules, self.log)
+    self.log.info('[pre-fetch hook] Updated subdir_modules to %s', real_subdir_modules)
 
 
 def acquire_fetch_lock(self):
@@ -255,7 +229,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     # disable robot for bwrap
     # must be done in a hook in case robot is set in an easystack, which takes precedence over cmd line options
     subdir_modules = ConfigurationVariables()['subdir_modules']
-    robot = BuildOptions()['robot']
+    robot = build_option('robot')
     if subdir_modules == SUBDIR_MODULES_BWRAP and robot is not None:
         update_build_option('robot', None)
         ec.log.warning("[parse hook] Disabled robot for bwrap")

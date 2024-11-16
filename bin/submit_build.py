@@ -239,13 +239,27 @@ def main():
         ebconf['buildpath'] = os.path.join(job['tmp'], 'eb-submit-build')
 
         # common EB command line options
-        eb_options = ['--logtostdout', '--debug', '--module-extensions', '--zip-logs=bzip2', '--module-depends-on']
+        eb_options = [
+            '--logtostdout',
+            '--debug',
+            '--module-extensions',
+            '--zip-logs=bzip2',
+            '--module-depends-on',
+        ]
 
         if bwrap:
-            eb_options.extend([' --rebuild', f'--subdir-modules={job_options["subdir_modules_bwrap"]}'])
+            eb_options.extend([
+                '--rebuild',
+                f'--subdir-modules={job_options["subdir_modules_bwrap"]}',
+            ])
         else:
-            # robot is not supported with bwrap
-            eb_options.append('--robot')
+            eb_options.extend([
+                # robot is not supported with bwrap
+                '--robot',
+                # set subdir_modules to an initial value corresponding to a module path that already exists,
+                # to avoid that EB creates a nonexisting path before subdir_modules gets updated in the hooks
+                '--subdir-modules=modules/system',
+            ])
 
         # cross-compilation
         if job_options['target_arch'] != host_arch:

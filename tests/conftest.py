@@ -31,9 +31,9 @@ def pytest_addoption(parser):
 def get_module_cmd(request):
     fromsource = request.config.getoption('fromsource')
     if fromsource:
-        return '../bin/get_module_from_easyconfig.py'
+        return '../bin/ec2ml.py'
     else:
-        return 'get_module_from_easyconfig.py'
+        return 'ec2ml.py'
 
 
 @pytest.fixture
