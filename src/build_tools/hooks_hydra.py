@@ -18,7 +18,6 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 """
 
 import os
-import re
 import sys
 import time
 
@@ -68,26 +67,17 @@ VALID_MODULES_SUBDIRS = VALID_TCGENS + ['system']
 VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
 
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
-
-
-def update_configuration_variable(key, value, log):
-    """
-    Update configuration variable with specified name to given value.
-
-    WARNING: Use this with care, the configuration variables are not expected to be changed during an EasyBuild session!
-    """
-    # ConfigurationVariables() is a (singleton) frozen dict, so this is less straightforward that it seems...
-    variables = ConfigurationVariables()
-    orig_value = variables._FrozenDict__dict[key]
-    variables._FrozenDict__dict[key] = value
-    log.warning("Configuration variable '%s' was updated to: %s", key, ConfigurationVariables()[key])
-
-    # Return original value, so it can be restored later if needed
-    return orig_value
+SUFFIX_MODULES_PATH = 'collection'
+SUFFIX_MODULES_SYMLINK = 'all'
 
 
 def get_tc_versions():
     " build dict of valid (sub)toolchain-version combinations per valid generation "
+
+    # temporarily disable hooks to avoid infinite recursion when calling get_toolchain_hierarchy()
+    hooks = build_option('hooks')
+    update_build_option('hooks', None)
+
     tc_versions = {}
     for toolcgen in VALID_TCGENS:
         tc_versions[toolcgen] = []
@@ -98,6 +88,7 @@ def get_tc_versions():
                 # skip if no easyconfig found for toolchain-version
                 pass
 
+    update_build_option('hooks', hooks)
     return tc_versions
 
 
@@ -134,48 +125,19 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
     return False, log_msg
 
 
-def update_module_install_paths(self):
-    """
-    update module install paths unless subdir-modules uption is specified "
-    default subdir_modules config var = 'modules'
-    here we set it to 'modules/<subdir>', where subdir can be any of VALID_MODULES_SUBDIRS
-    exception: with bwrap it is set to SUBDIR_MODULES_BWRAP
-    """
-    subdir, log_msg = calc_tc_gen(
-        self.name, self.version, self.toolchain.name, self.toolchain.version, self.cfg.easyblock)
+def update_moduleclass(ec):
+    "update the moduleclass of an easyconfig to <tc_gen>/all"
+    tc_gen, log_msg = calc_tc_gen(
+        ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec.easyblock)
 
-    if not subdir:
-        raise EasyBuildError("[pre-fetch hook] " + log_msg)
+    if not tc_gen:
+        raise EasyBuildError("[parse hook] " + log_msg)
 
-    self.log.info("[pre-fetch hook] " + log_msg)
+    ec.log.info("[parse hook] " + log_msg)
 
-    suffix = build_option('suffix_modules_path')
-    real_subdir_modules = os.path.join('modules', subdir)
-    subdir_modules = ConfigurationVariables()['subdir_modules']
-    real_mod_filepath = re.sub(rf'/{subdir_modules}/{suffix}/', f'/{real_subdir_modules}/{suffix}/', self.mod_filepath)
+    ec['moduleclass'] = os.path.join(tc_gen, SUFFIX_MODULES_SYMLINK)
 
-    if subdir_modules == SUBDIR_MODULES_BWRAP:
-        self.log.info("[pre-fetch hook] Installing in new namespace with bwrap")
-
-        # write the real module file path to stderr
-        # after installation, the module file is copied to the real path
-        sys.stderr.write(f'BUILD_TOOLS: real_mod_filepath {real_mod_filepath}\n')
-        return
-
-    # update self.installdir_mod and self.mod_filepath to ensure modules are installed correctly
-    self.installdir_mod = re.sub(rf'/{subdir_modules}/{suffix}$', f'/{real_subdir_modules}/{suffix}',
-                                 self.installdir_mod)
-    self.log.info('[pre-fetch hook] Updated installdir_mod to %s', self.installdir_mod)
-
-    self.mod_filepath = real_mod_filepath
-    self.log.info('[pre-fetch hook] Updated mod_filepath to %s', self.mod_filepath)
-
-    # create updated installdir_mod in case it doesn't exist yet
-    mkdir(self.installdir_mod)
-
-    # update subdir_modules configuration variable to ensure moduleclass symlinks are installed correctly
-    update_configuration_variable('subdir_modules', real_subdir_modules, self.log)
-    self.log.info('[pre-fetch hook] Updated subdir_modules to %s', real_subdir_modules)
+    ec.log.info("[parse hook] updated moduleclass for %s to %s", os.path.basename(ec.path), ec['moduleclass'])
 
 
 def acquire_fetch_lock(self):
@@ -225,6 +187,9 @@ def release_fetch_lock(self):
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     """Alter build options and easyconfig parameters"""
+
+    if not ec['moduleclass'].endswith(f'/{SUFFIX_MODULES_SYMLINK}'):
+        update_moduleclass(ec)
 
     # disable robot for bwrap
     # must be done in a hook in case robot is set in an easystack, which takes precedence over cmd line options
@@ -316,7 +281,6 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
 def pre_fetch_hook(self):
     """Hook at pre-fetch level"""
-    update_module_install_paths(self)
     acquire_fetch_lock(self)
 
 

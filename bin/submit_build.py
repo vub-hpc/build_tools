@@ -30,7 +30,8 @@ from vsc.utils.run import RunNoShell
 from build_tools.clusters import ARCHS, PARTITIONS
 from build_tools.filetools import APPS_BRUSSEL
 from build_tools import hooks_hydra
-from build_tools.hooks_hydra import SUBDIR_MODULES_BWRAP
+from build_tools.hooks_hydra import (SUBDIR_MODULES_BWRAP, SUFFIX_MODULES_PATH, SUFFIX_MODULES_SYMLINK,
+                                     VALID_MODULES_SUBDIRS)
 from build_tools.lmodtools import submit_lmod_cache_job
 from build_tools.softinstall import mk_job_name, submit_build_job
 
@@ -66,7 +67,6 @@ def main():
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
         'lmod_cache': '1',
-        'subdir_modules_bwrap': SUBDIR_MODULES_BWRAP,
         'target_arch': None,
         'tmp': '/dev/shm',
     }
@@ -245,21 +245,18 @@ def main():
             '--module-extensions',
             '--zip-logs=bzip2',
             '--module-depends-on',
+            f'--suffix-modules-path={SUFFIX_MODULES_PATH}',
+            f'--moduleclasses={",".join(os.path.join(x, SUFFIX_MODULES_SYMLINK) for x in VALID_MODULES_SUBDIRS)}',
         ]
 
         if bwrap:
             eb_options.extend([
                 '--rebuild',
-                f'--subdir-modules={job_options["subdir_modules_bwrap"]}',
+                f'--subdir-modules={SUBDIR_MODULES_BWRAP}',
             ])
         else:
-            eb_options.extend([
-                # robot is not supported with bwrap
-                '--robot',
-                # set subdir_modules to an initial value corresponding to a module path that already exists,
-                # to avoid that EB creates a nonexisting path before subdir_modules gets updated in the hooks
-                '--subdir-modules=modules/system',
-            ])
+            # robot is not supported with bwrap
+            eb_options.append('--robot')
 
         # cross-compilation
         if job_options['target_arch'] != host_arch:
