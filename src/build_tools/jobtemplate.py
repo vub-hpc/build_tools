@@ -20,7 +20,8 @@ Job template to submit build jobs
 
 from string import Template
 
-BUILD_JOB = """#!/bin/bash -l
+BUILD_JOB = """\
+#!/bin/bash -l
 #SBATCH --job-name=${job_name}
 #SBATCH --output="%x-%j.out"
 #SBATCH --error="%x-%j.err"
@@ -37,6 +38,12 @@ export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
 export LANG=${langcode}
 export PATH=$$PREFIX_EB/easybuild-framework:$$PATH
 export PYTHONPATH=$$PREFIX_EB/easybuild-easyconfigs:$$PREFIX_EB/easybuild-easyblocks:$$PREFIX_EB/easybuild-framework:$$PREFIX_EB/vsc-base/lib
+
+SUBDIR_MODULES="modules"
+SUBDIR_MODULES_BWRAP=".modules_bwrap"
+SUFFIX_MODULES_PATH="collection"
+SUFFIX_MODULES_SYMLINK="all"
+
 
 # make build directory
 if [ -z $$SLURM_JOB_ID ]; then
@@ -56,7 +63,7 @@ EB='eb'
 if [ "${bwrap}" == 1 ]; then
     echo "BUILD_TOOLS: installing with bwrap"
     output=$$(EASYBUILD_ROBOT_PATHS=${robot_paths} EASYBUILD_IGNORE_INDEX=1 ec2ml.py ${easyconfig}) || { echo "ERROR: ec2ml.py failed"; exit 1; }
-    echo "BUILD_TOOLS: get_module_from_easyconfig.py output: $$output"
+    echo "BUILD_TOOLS: ec2ml.py ${easyconfig} output: $$output"
     while read -r key value; do
         [ "$$key" == "full_mod_name" ] && { modname=$${value%/*}; modversion=$${value#*/}; break; }
     done <<< "$$output"
@@ -65,9 +72,7 @@ if [ "${bwrap}" == 1 ]; then
     appsmnt="/vscmnt/brussel_pixiu_apps/_apps_brussel"
     softbwrap="/apps/brussel/bwrap/$$VSC_OS_LOCAL/${target_arch}/software/$$modname"
     softreal="$$appsmnt/$$VSC_OS_LOCAL/${target_arch}/software/$$modname"
-    modbwrap="/apps/brussel/$$VSC_OS_LOCAL/${target_arch}/${subdir_modules_bwrap}/all/$$modname"
     mkdir -p "$$softbwrap"
-    mkdir -p "$$modbwrap"
     bwrap_cmd=(
         bwrap
         --bind / /
@@ -94,18 +99,28 @@ if [ $$ec -ne 0 ]; then
 fi
 
 if [ "${bwrap}" == 1 ]; then
-    dest_modfile=$$(grep "^BUILD_TOOLS: real_mod_filepath" "$$eb_stderr" | cut -d " " -f 3) || { echo "ERROR: failed to obtain destination module file path"; exit 1; }
     source_installdir="$$softbwrap/$$modversion/"
     dest_installdir="$$softreal/$$modversion/"
-    source_modfile="$$modbwrap/$$modversion.lua"
-    echo "BUILD_TOOLS: source/destination install dir: $$source_installdir $$dest_installdir"
-    echo "BUILD_TOOLS: source/destination module file: $$source_modfile $$dest_modfile"
+    installbase="/apps/brussel/$$VSC_OS_LOCAL/${target_arch}"
+    source_modfile="$$installbase/$$SUBDIR_MODULES_BWRAP/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
+    source_modsymlink=$$(echo $$installbase/$$SUBDIR_MODULES_BWRAP/*/$$SUFFIX_MODULES_SYMLINK/$$modname/$$modversion.lua)
+    dest_modfile="$$installbase/$$SUBDIR_MODULES/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
+    dest_modsymlink=$${source_modsymlink/$$installbase\/$$SUBDIR_MODULES_BWRAP\//$$installbase\/$$SUBDIR_MODULES\/}
+    echo "BUILD_TOOLS: source/dest install dir: $$source_installdir $$dest_installdir"
+    echo "BUILD_TOOLS: source/dest module file: $$source_modfile $$dest_modfile"
+    echo "BUILD_TOOLS: source/dest module symlink: $$source_modsymlink $$dest_modsymlink"
     test -d "$$source_installdir" || { echo "ERROR: source install dir does not exist"; exit 1; }
     test -n "$$(ls -A $$source_installdir)" || { echo "ERROR: source install dir is empty"; exit 1; }
     test -s "$$source_modfile" || { echo "ERROR: source module file does not exist or is empty"; exit 1; }
+    test $$(readlink "$$source_modsymlink") == "$$source_modfile" || { echo "ERROR: source module symlink does not link to correct file"; exit 1; }
+    mkdir -p $$(dirname "$$dest_modfile") $$(dirname "$$dest_modsymlink")
+    tempfile=$$(mktemp -p /tmp)
     rsync -a --link-dest="$$source_installdir" "$$source_installdir" "$$dest_installdir" || { echo "ERROR: failed to copy install dir"; exit 1; }
-    rsync -a --link-dest="$$modbwrap" "$$source_modfile" "$$dest_modfile" || { echo "ERROR: failed to copy module file"; exit 1; }
-    rm -rf "$$source_installdir" "$$source_modfile"
+    cp -p "$$source_modfile" "$$dest_modfile"
+    ln -sf "$$dest_modfile" "$$tempfile"
+    mv -f "$$tempfile" "$$dest_modsymlink"
+    test $$(readlink "$$dest_modsymlink") == "$$dest_modfile" || { echo "ERROR: failed to create symlink to module file"; exit 1; }
+    rm -rf "$$source_installdir" "$$source_modfile" "$$source_modsymlink"
     echo "BUILD_TOOLS: installation moved from bwrap to real location"
 fi
 
