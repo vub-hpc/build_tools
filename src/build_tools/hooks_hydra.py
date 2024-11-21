@@ -137,7 +137,7 @@ def update_moduleclass(ec):
 
     ec['moduleclass'] = os.path.join(tc_gen, SUFFIX_MODULES_SYMLINK)
 
-    ec.log.info("[parse hook] updated moduleclass for %s to %s", os.path.basename(ec.path), ec['moduleclass'])
+    ec.log.info("[parse hook] updated moduleclass to %s", ec['moduleclass'])
 
 
 def acquire_fetch_lock(self):
