@@ -78,12 +78,13 @@ def main():
     # start using environment from local machine, job scripts get custom paths
     ebconf = {
         'accept-eula-for': 'Intel-oneAPI,CUDA',
-        'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
-        'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
-        'sourcepath': '/apps/brussel/sources:/apps/gent/source',
-        'installpath': os.path.join(APPS_BRUSSEL, os.getenv('VSC_OS_LOCAL'), LOCAL_ARCH),
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
         'hooks': hooks_hydra.__file__,
+        'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
+        'installpath': os.path.join(APPS_BRUSSEL, os.getenv('VSC_OS_LOCAL'), LOCAL_ARCH),
+        'prefer-python-search-path': 'EBPYTHONPREFIXES',
+        'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
+        'sourcepath': '/apps/brussel/sources:/apps/gent/source',
     }
 
     # Parse command line arguments
