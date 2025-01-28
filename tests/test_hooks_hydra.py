@@ -26,16 +26,16 @@ from build_tools import hooks_hydra
     [
         # (name, version, tcname, tcversion, easyblock, expected_generation)
         # (software with) toolchains with custom versioning
-        ('GCCcore', '11.3.0', 'system', 'system', 'Toolchain', '2022a'),
+        ('GCCcore', '13.3.0', 'system', 'system', 'Toolchain', '2024a'),
         ('GCCcore', '10.2.0', 'system', 'system', 'Toolchain', False),
-        ('UCX-CUDA', '1.14.1', 'GCCcore', '12.3.0', 'EB_UCX_Plugins', '2023a'),
-        ('bwa-mem2', '2.2.1', 'intel-compilers', '2023.1.0', 'MakeCp', '2023a'),
-        ('SAMtools', '1.18', 'GCC', '12.3.0', 'EB_SAMtools', '2023a'),
+        ('UCX-CUDA', '1.16.0', 'GCCcore', '13.3.0', 'EB_UCX_Plugins', '2024a'),
+        ('STREAM', '5.10', 'intel-compilers', '2024.2.0', 'MakeCp', '2024a'),
+        ('SAMtools', '1.21', 'GCC', '13.3.0', 'EB_SAMtools', '2024a'),
         # (software with) toolchains with generation as their version
-        ('foss', '2023a', 'system', 'system', 'Toolchain', '2023a'),
+        ('foss', '2024a', 'system', 'system', 'Toolchain', '2024a'),
         ('foss', '2021a', 'system', 'system', 'Toolchain', False),
-        ('PyTorch', '2.1.2', 'foss', '2023a', 'EB_PyTorch', '2023a'),
-        ('R', '4.3.2', 'gfbf', '2023a', 'EB_R', '2023a'),
+        ('SciPy-bundle', '2024.05', 'gfbf', '2024a', 'EB_Bundle', '2024a'),
+        ('R-bundle-CRAN', '2024.11', 'foss', '2024a', 'EB_R', '2024a'),
         # software with system toolchain
         ('zlib', '1.2.11', 'system', 'system', 'ConfigureMake', 'system'),
         ('MATLAB', '2023a', 'system', 'system', 'EB_MATLAB', 'system'),
