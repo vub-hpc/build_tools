@@ -2,15 +2,6 @@
 
 Tools to build and install software for VUB-HPC
 
-## Testing
-
-Tests can be carried out with `pytest`:
-
-```
-cd build_tools/src
-python3 -m pytest ../tests --fromsource
-```
-
 ## Installation
 
 Install the EasyBuild dependencies in editable mode and make sure that you use
@@ -58,4 +49,13 @@ python -m pip install flufl.lock pytest
 # Install build_tools
 cd /path/to/build_tools/
 python -m pip install . --no-deps
+```
+
+## Testing
+
+Tests can be carried out with `pytest`:
+
+```
+cd build_tools
+python -m pytest
 ```
