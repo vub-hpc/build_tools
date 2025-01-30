@@ -32,7 +32,7 @@ BUILD_JOB = """\
 #SBATCH --partition=${partition}
 
 # activate build_tools virtual environment
-source "$$VSC_SCRATCH_VO_USER/EB4/eb4env/bin/activate"
+source "$$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"
 
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
