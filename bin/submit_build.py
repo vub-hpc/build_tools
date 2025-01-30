@@ -45,12 +45,6 @@ fancylogger.setLogLevelInfo()
 
 # repositories with easyconfigs
 VSCSOFTSTACK_ROOT = os.path.join(os.path.dirname(os.getenv("VIRTUAL_ENV", "")), "vsc-software-stack")
-if not os.path.isdir(VSCSOFTSTACK_ROOT):
-    logger.error(
-        f"Cannot locate 'vsc-software-stack' repo in: {VSCSOFTSTACK_ROOT} - "
-        "Please clone that repo in the parent folder of your virtual environment directory"
-    )
-    sys.exit(1)
 EASYCONFIG_REPOS = [
     # our site repo (https://github.com/vscentrum/vsc-software-stack/tree/site-vub)
     os.path.join("site-vub", "easyconfigs"),
@@ -129,6 +123,13 @@ def main():
         logger.error("No easyconfig is given...")
         sys.exit(1)
 
+    if not os.path.isdir(VSCSOFTSTACK_ROOT):
+        logger.error(
+            f"Cannot locate 'vsc-software-stack' repo in: {VSCSOFTSTACK_ROOT} - "
+            "Please clone that repo in the parent folder of your virtual environment directory"
+        )
+
+    sys.exit(1)
     easyconfig = ' '.join(opts.args)
     job['easyconfig'] = easyconfig
     logger.info("Preparing to install %s", easyconfig)
