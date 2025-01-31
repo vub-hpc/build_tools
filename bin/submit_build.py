@@ -128,8 +128,8 @@ def main():
             f"Cannot locate 'vsc-software-stack' repo in: {VSCSOFTSTACK_ROOT} - "
             "Please clone that repo in the parent folder of your virtual environment directory"
         )
+        sys.exit(1)
 
-    sys.exit(1)
     easyconfig = ' '.join(opts.args)
     job['easyconfig'] = easyconfig
     logger.info("Preparing to install %s", easyconfig)
