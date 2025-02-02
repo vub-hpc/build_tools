@@ -24,20 +24,27 @@ import re
 import sys
 
 from vsc.utils import fancylogger
-from vsc.utils.script_tools import SimpleOption
 from vsc.utils.run import RunNoShell
+from vsc.utils.script_tools import SimpleOption
 
+from build_tools import hooks_hydra
 from build_tools.clusters import ARCHS, PARTITIONS
 from build_tools.filetools import APPS_BRUSSEL
-from build_tools import hooks_hydra
-from build_tools.hooks_hydra import (SUBDIR_MODULES_BWRAP, SUFFIX_MODULES_PATH, SUFFIX_MODULES_SYMLINK,
-                                     VALID_MODULES_SUBDIRS)
+from build_tools.hooks_hydra import (
+    SUBDIR_MODULES_BWRAP,
+    SUFFIX_MODULES_PATH,
+    SUFFIX_MODULES_SYMLINK,
+    VALID_MODULES_SUBDIRS,
+)
 from build_tools.lmodtools import submit_lmod_cache_job
 from build_tools.softinstall import mk_job_name, submit_build_job
 
+logger = fancylogger.getLogger()
+fancylogger.logToScreen(True)
+fancylogger.setLogLevelInfo()
 
 # repositories with easyconfigs
-VSCSOFTSTACK_ROOT = os.path.expanduser("~/vsc-software-stack")
+VSCSOFTSTACK_ROOT = os.path.join(os.path.dirname(os.getenv("VIRTUAL_ENV", "")), "vsc-software-stack")
 EASYCONFIG_REPOS = [
     # our site repo (https://github.com/vscentrum/vsc-software-stack/tree/site-vub)
     os.path.join("site-vub", "easyconfigs"),
@@ -45,10 +52,6 @@ EASYCONFIG_REPOS = [
     "easybuild",  # main EasyBuild repo (https://github.com/easybuilders/easybuild-easyconfigs)
 ]
 EASYBLOCK_REPO = os.path.join("site-vub", "easyblocks", "*", "*.py")
-
-logger = fancylogger.getLogger()
-fancylogger.logToScreen(True)
-fancylogger.setLogLevelInfo()
 
 DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS.items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
@@ -118,6 +121,13 @@ def main():
 
     if not opts.args:
         logger.error("No easyconfig is given...")
+        sys.exit(1)
+
+    if not os.path.isdir(VSCSOFTSTACK_ROOT):
+        logger.error(
+            f"Cannot locate 'vsc-software-stack' repo in: {VSCSOFTSTACK_ROOT} - "
+            "Please clone that repo in the parent folder of your virtual environment directory"
+        )
         sys.exit(1)
 
     easyconfig = ' '.join(opts.args)

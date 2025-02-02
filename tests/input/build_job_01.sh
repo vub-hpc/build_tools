@@ -8,19 +8,17 @@
 #SBATCH --gpus-per-node=0
 #SBATCH --partition=skylake_mpi
 
-test -n "$PREFIX_EB" || { echo "ERROR: environment variable PREFIX_EB not set"; exit 1; }
+# activate build_tools virtual environment
+source "$VSC_SCRATCH_VO_USER/EB4/eb4env/bin/activate"
 
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
 export LANG=C
-export PATH=$PREFIX_EB/easybuild-framework:$PATH
-export PYTHONPATH=$PREFIX_EB/easybuild-easyconfigs:$PREFIX_EB/easybuild-easyblocks:$PREFIX_EB/easybuild-framework:$PREFIX_EB/vsc-base/lib
 
 SUBDIR_MODULES="modules"
 SUBDIR_MODULES_BWRAP=".modules_bwrap"
 SUFFIX_MODULES_PATH="collection"
 SUFFIX_MODULES_SYMLINK="all"
-
 
 # make build directory
 if [ -z $SLURM_JOB_ID ]; then
