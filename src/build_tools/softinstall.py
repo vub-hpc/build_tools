@@ -32,16 +32,7 @@ logger = fancylogger.getLogger()
 TOOLCHAIN_FORMAT = r"20[1-2][0-9][ab]"
 
 SUBTOOLCHAINS = {
-    '2023a': ['GCCcore-12.3.0', 'GCC-12.3.0', 'intel-compilers-2023.1.0'],
-    '2022b': ['GCCcore-12.2.0', 'GCC-12.2.0', 'intel-compilers-2022.2.1'],
-    '2022a': ['GCCcore-11.3.0', 'GCC-11.3.0', 'intel-compilers-2022.1.0'],
-    '2021b': ['GCCcore-11.2.0', 'GCC-11.2.0', 'intel-compilers-2021.4.0'],
-    '2021a': ['GCCcore-10.3.0', 'GCC-10.3.0', 'intel-compilers-2021.2.0'],
-    '2020b': ['GCCcore-10.2.0', 'GCC-10.2.0', 'iccifort-2020.4.304'],
-    '2020a': ['GCCcore-9.3.0', 'GCC-9.3.0', 'iccifort-2020.1.217'],
-    '2019b': ['GCCcore-8.3.0', 'GCC-8.3.0', 'iccifort-2019.5.281'],
-    '2019a': ['GCCcore-8.2.0', 'GCC-8.2.0-2.31.1', 'iccifort-2019.1.144-GCC-8.2.0-2.31.1'],
-    '2018b': ['GCCcore-7.3.0', 'GCC-7.3.0-2.30', 'iccifort-2018.3.222-GCC-7.3.0-2.30'],
+    '2024a': ['GCCcore-13.3.0', 'GCC-13.3.0', 'intel-compilers-2024.2.0'],
 }
 
 
