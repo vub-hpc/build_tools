@@ -37,6 +37,7 @@ source "$$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
 export LANG=${langcode}
+export MODULEPATH=""  # EB prepends 'modules/collection' to MODULEPATH
 
 SUBDIR_MODULES="modules"
 SUBDIR_MODULES_BWRAP=".modules_bwrap"
