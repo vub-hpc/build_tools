@@ -49,6 +49,7 @@ setuptools.setup(
         'vsc-utils',
         'easybuild',
         'flufl.lock',
+        'pyyaml',
     ],
     tests_require=[
         'pytest',

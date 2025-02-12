@@ -45,7 +45,8 @@ python -m pip install --editable . --config-settings editable_mode=compat
 cd /path/to/easybuild-easyconfigs/
 python -m pip install --editable . --config-settings editable_mode=compat
 # Install other dependencies
-python -m pip install flufl.lock pytest
+# pyyaml is required for parsing easystack files
+python -m pip install flufl.lock pytest pyyaml
 # Install build_tools
 cd /path/to/build_tools/
 python -m pip install . --no-deps
