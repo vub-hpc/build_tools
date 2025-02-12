@@ -48,7 +48,6 @@ VSCSOFTSTACK_ROOT = os.path.join(os.path.dirname(os.getenv("VIRTUAL_ENV", "")), 
 EASYCONFIG_REPOS = [
     # our site repo (https://github.com/vscentrum/vsc-software-stack/tree/site-vub)
     os.path.join("site-vub", "easyconfigs"),
-    "vsc",  # VSC repo (https://github.com/vscentrum/vsc-software-stack/tree/vsc)
     "easybuild",  # main EasyBuild repo (https://github.com/easybuilders/easybuild-easyconfigs)
 ]
 EASYBLOCK_REPO = os.path.join("site-vub", "easyblocks", "*", "*.py")
