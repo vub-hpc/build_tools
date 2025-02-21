@@ -53,7 +53,7 @@ SOFTWARE_GROUPS = {
     'QuantumATK': 'bquantumatk',
     'ReaxFF': 'breaxff',
     'Stata': 'brusselall',  # site license
-    'VASP': 'bvasp',
+    'VASP': {'6': 'bvasp6', '5': 'bvasp'},
 }
 
 GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
@@ -247,7 +247,13 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec.log.info(f"[parse hook] Set parameter postinstallcmds: {ec['postinstallcmds']}")
 
     if ec.name in SOFTWARE_GROUPS:
-        ec['group'] = SOFTWARE_GROUPS[ec.name]
+        if isinstance(SOFTWARE_GROUPS[ec.name], str):
+            ec['group'] = SOFTWARE_GROUPS[ec.name]
+        else:
+            for versionsuffix, group in SOFTWARE_GROUPS[ec.name].items():
+                if ec.version.startswith(versionsuffix):
+                    ec['group'] = group
+                    break
         ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
 
     # set optarch for intel compilers on AMD nodes
