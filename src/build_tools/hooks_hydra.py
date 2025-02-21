@@ -250,8 +250,8 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         if isinstance(SOFTWARE_GROUPS[ec.name], str):
             ec['group'] = SOFTWARE_GROUPS[ec.name]
         else:
-            for versionsuffix, group in SOFTWARE_GROUPS[ec.name].items():
-                if ec.version.startswith(versionsuffix):
+            for version, group in SOFTWARE_GROUPS[ec.name].items():
+                if ec.version.startswith(version):
                     ec['group'] = group
                     break
         ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
