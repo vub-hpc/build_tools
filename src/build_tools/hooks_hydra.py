@@ -42,6 +42,7 @@ SOFTWARE_GROUPS = {
     'CASTEP': 'bcastep',
     'COMSOL': 'bcomsol_users',  # autogroup (bcomsol, bcomsol_efremov)
     'FLUENT': 'bansys',
+    'FreeSurfer': 'bfreesurfer',
     'Gaussian': 'brusselall',  # site license
     'GaussView': 'brusselall',  # site license
     'Gurobi': 'brusselall',  # site license
