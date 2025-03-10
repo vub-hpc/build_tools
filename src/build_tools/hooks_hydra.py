@@ -346,59 +346,58 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
 
     # Must be done this way, updating self.cfg['modextravars']
     # directly doesn't work due to templating.
-    en_templ = self.cfg.enable_templating
-    self.cfg.enable_templating = False
+    with self.cfg.disable_templating():
 
-    ##########################
-    # ------ MPI ----------- #
-    ##########################
+        ##########################
+        # ------ MPI ----------- #
+        ##########################
 
-    if self.name == 'OpenMPI':
-        # set MPI communication type in Slurm (default is none)
-        # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/4706
-        slurm_mpi_type = None
-        if LooseVersion(self.version) >= '3.0.0':
-            slurm_mpi_type = 'pmix'
-        elif LooseVersion(self.version) >= '2.1.0':
-            slurm_mpi_type = 'pmi2'
+        if self.name == 'OpenMPI':
+            # set MPI communication type in Slurm (default is none)
+            # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/4706
+            slurm_mpi_type = None
+            if LooseVersion(self.version) >= '3.0.0':
+                slurm_mpi_type = 'pmix'
+            elif LooseVersion(self.version) >= '2.1.0':
+                slurm_mpi_type = 'pmi2'
 
-        if slurm_mpi_type:
-            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
-            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+            if slurm_mpi_type:
+                self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+                self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
-    if self.name == 'impi':
-        # - use PMI1/2 implementation from Slurm
-        # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
-        # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7588
+        if self.name == 'impi':
+            # - use PMI1/2 implementation from Slurm
+            # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
+            # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7588
 
-        # use PMI1 by default (works with older versions)
-        slurm_mpi_type = None
-        intel_mpi = {
-            'pmi_var': 'I_MPI_PMI2',
-            'pmi_set': 'no',
-            'pmi_lib': '/usr/lib64/slurmpmi/libpmi.so',
-        }
+            # use PMI1 by default (works with older versions)
+            slurm_mpi_type = None
+            intel_mpi = {
+                'pmi_var': 'I_MPI_PMI2',
+                'pmi_set': 'no',
+                'pmi_lib': '/usr/lib64/slurmpmi/libpmi.so',
+            }
 
-        if LooseVersion(self.version) >= '2019.7':
-            # Intel MPI v2019 supports PMI2 with I_MPI_PMI=pmi2, but it only atually works since v2019.7
-            # see https://bugs.schedmd.com/show_bug.cgi?id=6727
-            intel_mpi['pmi_var'] = 'I_MPI_PMI'
-            intel_mpi['pmi_set'] = 'pmi2'
-            intel_mpi['pmi_lib'] = '/usr/lib64/slurmpmi/libpmi2.so'
-            slurm_mpi_type = 'pmi2'
-        elif LooseVersion(self.version) >= '2019.0':
-            # use PMI1 with this buggy releases of Intel MPI
-            # see https://bugs.schedmd.com/show_bug.cgi?id=6727
-            intel_mpi['pmi_var'] = 'I_MPI_PMI'
-            intel_mpi['pmi_set'] = 'pmi1'
-        elif LooseVersion(self.version) >= '2018.0':
-            # Intel MPI v2018 supports PMI2 with I_MPI_PMI2=yes
-            intel_mpi['pmi_set'] = 'yes'
-            intel_mpi['pmi_lib'] = '/usr/lib64/slurmpmi/libpmi2.so'
-            slurm_mpi_type = 'pmi2'
+            if LooseVersion(self.version) >= '2019.7':
+                # Intel MPI v2019 supports PMI2 with I_MPI_PMI=pmi2, but it only atually works since v2019.7
+                # see https://bugs.schedmd.com/show_bug.cgi?id=6727
+                intel_mpi['pmi_var'] = 'I_MPI_PMI'
+                intel_mpi['pmi_set'] = 'pmi2'
+                intel_mpi['pmi_lib'] = '/usr/lib64/slurmpmi/libpmi2.so'
+                slurm_mpi_type = 'pmi2'
+            elif LooseVersion(self.version) >= '2019.0':
+                # use PMI1 with this buggy releases of Intel MPI
+                # see https://bugs.schedmd.com/show_bug.cgi?id=6727
+                intel_mpi['pmi_var'] = 'I_MPI_PMI'
+                intel_mpi['pmi_set'] = 'pmi1'
+            elif LooseVersion(self.version) >= '2018.0':
+                # Intel MPI v2018 supports PMI2 with I_MPI_PMI2=yes
+                intel_mpi['pmi_set'] = 'yes'
+                intel_mpi['pmi_lib'] = '/usr/lib64/slurmpmi/libpmi2.so'
+                slurm_mpi_type = 'pmi2'
 
-        self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
-        self.cfg['modluafooter'] = """
+            self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
+            self.cfg['modluafooter'] = """
 if ( os.getenv("SLURM_JOB_ID") ) then
     setenv("I_MPI_HYDRA_BOOTSTRAP", "slurm")
     setenv("I_MPI_PIN_RESPECT_CPUSET", "0")
@@ -407,43 +406,43 @@ if ( os.getenv("SLURM_JOB_ID") ) then
 end
 """ % intel_mpi
 
-        # set MPI communication type in Slurm (default is none, which works for PMI1)
-        # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
-        # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7588
-        if slurm_mpi_type:
-            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
-            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+            # set MPI communication type in Slurm (default is none, which works for PMI1)
+            # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
+            # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7588
+            if slurm_mpi_type:
+                self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+                self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
-    ##########################
-    # ------ TUNING -------- #
-    ##########################
+        ##########################
+        # ------ TUNING -------- #
+        ##########################
 
-    # set the maximum heap memory for Java applications to 80% of memory allocated to the job
-    # more info: https://projects.cc.vub.ac.be/issues/2940
-    if self.name == 'Java':
-        self.log.info("[pre-module hook] Set max heap memory in Java module")
-        self.cfg['modluafooter'] = """
+        # set the maximum heap memory for Java applications to 80% of memory allocated to the job
+        # more info: https://projects.cc.vub.ac.be/issues/2940
+        if self.name == 'Java':
+            self.log.info("[pre-module hook] Set max heap memory in Java module")
+            self.cfg['modluafooter'] = """
 local mem = get_avail_memory()
 if mem then
     setenv("JAVA_TOOL_OPTIONS",  "-Xmx" .. math.floor(mem*0.8))
 end
 """
 
-    # set MATLAB Runtime Component Cache folder to a local temp dir
-    # this cache directory lies in $HOME by default, which cause binaries compiled with MCC to hang
-    if self.name == 'MATLAB':
-        self.log.info("[pre-module hook] Set MATLAB Runtime Component Cache folder")
-        self.cfg['modluafooter'] = """
+        # set MATLAB Runtime Component Cache folder to a local temp dir
+        # this cache directory lies in $HOME by default, which cause binaries compiled with MCC to hang
+        if self.name == 'MATLAB':
+            self.log.info("[pre-module hook] Set MATLAB Runtime Component Cache folder")
+            self.cfg['modluafooter'] = """
 setenv("MCR_CACHE_ROOT", os.getenv("TMPDIR") or pathJoin("/tmp", os.getenv("USER")))
 """
 
-    ##########################
-    # ------ LICENSES ------ #
-    ##########################
+        ##########################
+        # ------ LICENSES ------ #
+        ##########################
 
-    # set COMSOL licenses
-    if self.name == 'COMSOL':
-        self.cfg['modluafooter'] = """
+        # set COMSOL licenses
+        if self.name == 'COMSOL':
+            self.cfg['modluafooter'] = """
 if userInGroup("bcomsol") then
     setenv("LMCOMSOL_LICENSE_FILE", "/apps/brussel/licenses/comsol/License.dat")
 elseif userInGroup("bcomsol_efremov") then
@@ -451,66 +450,67 @@ elseif userInGroup("bcomsol_efremov") then
 end
 """
 
-    # Morfeo license file
-    if self.name == 'Morfeo':
-        self.cfg['modextravars'].update({'CENAERO_LICENSE_FILE': '/apps/brussel/licenses/morfeo/license.lic'})
+        # Morfeo license file
+        if self.name == 'Morfeo':
+            self.cfg['modextravars'].update({'CENAERO_LICENSE_FILE': '/apps/brussel/licenses/morfeo/license.lic'})
 
-    # ABAQUS license file
-    if self.name == 'ABAQUS':
-        self.cfg['modextravars'].update({'ABAQUSLM_LICENSE_FILE': '/apps/brussel/licenses/abaqus/license.lic'})
+        # ABAQUS license file
+        if self.name == 'ABAQUS':
+            self.cfg['modextravars'].update({'ABAQUSLM_LICENSE_FILE': '/apps/brussel/licenses/abaqus/license.lic'})
 
-    ##########################
-    # ------ DATABASES ----- #
-    ##########################
+        ##########################
+        # ------ DATABASES ----- #
+        ##########################
 
-    apps_with_dbs = ["AlphaFold", "BUSCO", "ColabFold", "OpenFold"]
+        apps_with_dbs = ["AlphaFold", "BUSCO", "ColabFold", "OpenFold"]
 
-    if self.name in apps_with_dbs:
-        self.cfg['modloadmsg'] = "%(name)s databases are located in /databases/bio/%(namelower)s-%(version)s"
+        if self.name in apps_with_dbs:
+            self.cfg['modloadmsg'] = "%(name)s databases are located in /databases/bio/%(namelower)s-%(version)s"
 
-    if self.name == 'BUSCO':
-        if LooseVersion(self.version) >= '5.0.0':
-            self.cfg['modloadmsg'] += """
+        if self.name == 'BUSCO':
+            if LooseVersion(self.version) >= '5.0.0':
+                self.cfg['modloadmsg'] += """
 Use local DBs with command: `busco --offline --download_path /databases/bio/BUSCO-5 ...`
 """
 
-    if self.name == 'AlphaFold':
-        self.cfg['modextravars'] = {
-            'ALPHAFOLD_DATA_DIR': '/databases/bio/%(namelower)s-%(version)s',
-        }
+        if self.name == 'AlphaFold':
+            self.cfg['modextravars'] = {
+                'ALPHAFOLD_DATA_DIR': '/databases/bio/%(namelower)s-%(version)s',
+            }
 
-    # add links to our documentation for software covered in
-    # https://hpc.vub.be/docs/software/usecases/
-    doc_url = 'https://hpc.vub.be/docs/software/usecases/'
-    doc_app = ['MATLAB', 'R', 'Gaussian', 'GaussView', 'matplotlib', ('CESM-deps', 'cesm-cime'), 'GAP', 'Mathematica',
-               'Stata', 'GROMACS', 'CP2K', 'PyTorch', 'ORCA', 'SRA-Toolkit', 'AlphaFold', 'OpenFold', 'GAMESS-US']
+        # add links to our documentation for software covered in
+        # https://hpc.vub.be/docs/software/usecases/
+        doc_url = 'https://hpc.vub.be/docs/software/usecases/'
+        doc_app = ['MATLAB', 'R', 'Gaussian', 'GaussView', 'matplotlib', ('CESM-deps', 'cesm-cime'), 'GAP',
+                   'Mathematica', 'Stata', 'GROMACS', 'CP2K', 'PyTorch', 'ORCA', 'SRA-Toolkit', 'AlphaFold',
+                   'OpenFold', 'GAMESS-US']
 
-    # generate links for documented apps
-    app_anchors = [(app, app.lower()) if isinstance(app, str) else app for app in doc_app]
-    app_links = {app: '#'.join([doc_url, anchor]) for (app, anchor) in app_anchors}
+        # generate links for documented apps
+        app_anchors = [(app, app.lower()) if isinstance(app, str) else app for app in doc_app]
+        app_links = {app: '#'.join([doc_url, anchor]) for (app, anchor) in app_anchors}
 
-    if self.name in app_links:
-        # update usage section
-        usage_info = {'app': self.name, 'link': app_links[self.name]}
-        usage_msg = """
+        if self.name in app_links:
+            # update usage section
+            usage_info = {'app': self.name, 'link': app_links[self.name]}
+            usage_msg = """
 Specific usage instructions for %(app)s are available in VUB-HPC documentation:
 %(link)s
 """ % usage_info
-        self.cfg['usage'] = usage_msg + self.cfg['usage'] if self.cfg['usage'] else usage_msg
-        # update documentation links
-        if self.cfg['docurls']:
-            self.cfg['docurls'].append(usage_info['link'])
-        else:
-            self.cfg['docurls'] = [usage_info['link']]
+            self.cfg['usage'] = usage_msg + self.cfg['usage'] if self.cfg['usage'] else usage_msg
+            # update documentation links
+            if self.cfg['docurls']:
+                self.cfg['docurls'].append(usage_info['link'])
+            else:
+                self.cfg['docurls'] = [usage_info['link']]
 
-    #################################
-    # ------ DUMMY MODULES -------- #
-    #################################
+        #################################
+        # ------ DUMMY MODULES -------- #
+        #################################
 
-    is_cuda_software = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
-    if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
-        self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
-        self.cfg['modluafooter'] = """
+        is_cuda_software = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
+        if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
+            self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
+            self.cfg['modluafooter'] = """
 if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
     LmodError([[
 This module is only available on nodes with a GPU.
@@ -520,12 +520,6 @@ More information in the VUB-HPC docs:
 https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
     ]])
 end"""
-
-    ############################
-    # ------ FINALIZE -------- #
-    ############################
-
-    self.cfg.enable_templating = en_templ
 
 
 def post_build_and_install_loop_hook(ecs_with_res):
