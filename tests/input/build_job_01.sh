@@ -120,3 +120,7 @@ if [[ "1" == 1 && -n "${builds_succeeded}" ]];then
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition skylake_mpi for architecture skylake"
     sbatch "${job_options[@]}" --wrap "${cmd[*]}"
 fi
+
+if [[ -n "${builds_succeeded}" ]]; then
+    logger -t build_tools -p user.notice -- "partition=skylake_mpi architecture=skylake easyconfig=zlib-1.2.11.eb"
+fi
