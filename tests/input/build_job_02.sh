@@ -120,3 +120,7 @@ if [[ "0" == 1 && -n "${builds_succeeded}" ]];then
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition ampere_gpu for architecture zen2-ib"
     sbatch "${job_options[@]}" --wrap "${cmd[*]}"
 fi
+
+if [[ -n "${builds_succeeded}" ]]; then
+    logger -t build_tools -p user.notice -- "partition=ampere_gpu architecture=zen2-ib easyconfig=zlib-1.2.11.eb"
+fi

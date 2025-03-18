@@ -144,6 +144,9 @@ if [[ "${lmod_cache}" == 1 && -n "$${builds_succeeded}" ]];then
     sbatch "$${job_options[@]}" --wrap "$${cmd[*]}"
 fi
 
+if [[ -n "$${builds_succeeded}" ]]; then
+    logger -t build_tools -p user.notice -- "partition=${partition} architecture=${target_arch} easyconfig=${easyconfig}"
+fi
 """  # noqa
 
 BuildJob = Template(BUILD_JOB)
