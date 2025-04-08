@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2025 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -28,27 +28,35 @@ from easybuild.tools.options import set_up_configuration
 
 from build_tools.hooks_hydra import get_group
 
-# avoid warning about invalid index
-os.environ['EASYBUILD_IGNORE_INDEX'] = '1'
 
-es_path = sys.argv[1]
+def main():
+    "main function"
 
-esp = EasyStackParser()
-es_data = esp.parse(es_path).ec_opt_tuples
-easyconfigs = [x[0] for x in es_data]
+    # avoid warning about invalid index
+    os.environ['EASYBUILD_IGNORE_INDEX'] = '1'
 
-groups = set()
+    es_path = sys.argv[1]
 
-with open(os.devnull, 'w') as devnull:
-    # make sure any EB logging output is redirected to /dev/null
-    with contextlib.redirect_stdout(devnull):
-        set_up_configuration(silent=True)
-        for ec in easyconfigs:
-            ec_path = det_easyconfig_paths([ec])[0]
-            parser = EasyConfigParser(ec_path)
-            config = parser.get_config_dict()
-            groups.add(get_group(config['name'], config['version']))
+    esp = EasyStackParser()
+    es_data = esp.parse(es_path).ec_opt_tuples
+    easyconfigs = [x[0] for x in es_data]
 
-if len(groups) != 1:
-    raise ValueError(f'more than 1 user group found: {groups}')
-print(groups.pop())
+    groups = set()
+
+    with open(os.devnull, 'w') as devnull:
+        # make sure any EB logging output is redirected to /dev/null
+        with contextlib.redirect_stdout(devnull):
+            set_up_configuration(silent=True)
+            for ec in easyconfigs:
+                ec_path = det_easyconfig_paths([ec])[0]
+                parser = EasyConfigParser(ec_path)
+                config = parser.get_config_dict()
+                groups.add(get_group(config['name'], config['version']))
+
+    if len(groups) != 1:
+        raise ValueError(f'more than 1 user group found: {groups}')
+    print(groups.pop())
+
+
+if __name__ == "__main__":
+    main()
