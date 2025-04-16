@@ -18,6 +18,7 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 """
 
 import os
+import re
 import sys
 import time
 
@@ -54,7 +55,7 @@ SOFTWARE_GROUPS = {
     'QuantumATK': 'bquantumatk',
     'ReaxFF': 'breaxff',
     'Stata': 'brusselall',  # site license
-    'VASP': {'6': 'bvasp6', '5': 'bvasp'},
+    'VASP': {r'^6\.': 'bvasp6', r'^5\.': 'bvasp'},
 }
 
 GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
@@ -79,10 +80,12 @@ def get_group(name, version):
         if isinstance(SOFTWARE_GROUPS[name], str):
             group = SOFTWARE_GROUPS[name]
         else:
-            for versionsuffix, grp in SOFTWARE_GROUPS[name].items():
-                if version.startswith(versionsuffix):
+            for regex, grp in SOFTWARE_GROUPS[name].items():
+                if re.search(regex, version):
                     group = grp
                     break
+            if group is None:
+                raise EasyBuildError(f"No group defined for version {version} of licensed software {name}")
     return group
 
 
