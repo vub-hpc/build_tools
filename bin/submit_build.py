@@ -37,6 +37,7 @@ from build_tools.hooks_hydra import (
     VALID_MODULES_SUBDIRS,
 )
 from build_tools.lmodtools import submit_lmod_cache_job
+from build_tools.package import VERSION
 from build_tools.softinstall import mk_job_name, submit_build_job
 
 logger = fancylogger.getLogger()
@@ -106,8 +107,13 @@ def main():
         "skip-lmod-cache": ("Do not run Lmod cache after installation", None, "store_true", False, 's'),
         "tmp": ("Use /tmp as temporary disk instead of /dev/shm", None, "store_true", False, 'm'),
         "tmp-scratch": ("Use $VSC_SCRATCH as temporary disk instead of /dev/shm", None, "store_true", False, 'M'),
+        "version": ("Show the version", None, "store_true", False, 'v'),
     }
     opts = SimpleOption(options)
+
+    if opts.options.version:
+        print(VERSION)
+        sys.exit(0)
 
     dry_run = opts.options.dry_run
     if dry_run:

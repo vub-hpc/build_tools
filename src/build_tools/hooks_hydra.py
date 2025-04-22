@@ -18,6 +18,7 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 """
 
 import os
+import re
 import sys
 import time
 
@@ -34,7 +35,7 @@ from easybuild.tools.hooks import SANITYCHECK_STEP
 from build_tools.clusters import ARCHS
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
-# permission groups for licensed software
+# user groups for licensed software
 SOFTWARE_GROUPS = {
     'ABAQUS': 'babaqus',
     'ADF': 'badf',
@@ -54,7 +55,7 @@ SOFTWARE_GROUPS = {
     'QuantumATK': 'bquantumatk',
     'ReaxFF': 'breaxff',
     'Stata': 'brusselall',  # site license
-    'VASP': {'6': 'bvasp6', '5': 'bvasp'},
+    'VASP': {r'^6\.': 'bvasp6', r'^5\.': 'bvasp'},
 }
 
 GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
@@ -70,6 +71,25 @@ VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
 SUFFIX_MODULES_SYMLINK = 'all'
+
+
+def get_group(name, version):
+    """
+    get the user group for licensed software
+    returns None if there no group defined
+    """
+    group = None
+    if name in SOFTWARE_GROUPS:
+        if isinstance(SOFTWARE_GROUPS[name], str):
+            group = SOFTWARE_GROUPS[name]
+        else:
+            for regex, grp in SOFTWARE_GROUPS[name].items():
+                if re.search(regex, version):
+                    group = grp
+                    break
+            if group is None:
+                raise EasyBuildError(f"No group defined for version {version} of licensed software {name}")
+    return group
 
 
 def get_tc_versions():
@@ -247,14 +267,9 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec['postinstallcmds'] = [f'ln -sfb {ec["license_file"]} %(installdir)s/licenses/']
         ec.log.info(f"[parse hook] Set parameter postinstallcmds: {ec['postinstallcmds']}")
 
-    if ec.name in SOFTWARE_GROUPS:
-        if isinstance(SOFTWARE_GROUPS[ec.name], str):
-            ec['group'] = SOFTWARE_GROUPS[ec.name]
-        else:
-            for version, group in SOFTWARE_GROUPS[ec.name].items():
-                if ec.version.startswith(version):
-                    ec['group'] = group
-                    break
+    group = get_group(ec.name, ec.version)
+    if group:
+        ec['group'] = group
         ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
 
     # set optarch for intel compilers on AMD nodes
