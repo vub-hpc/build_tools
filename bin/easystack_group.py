@@ -51,6 +51,7 @@ def main():
                 ec_path = det_easyconfig_paths([ec])[0]
                 parser = EasyConfigParser(ec_path)
                 config = parser.get_config_dict()
+                # get_group() returns None if there is no group defined
                 groups.add(get_group(config['name'], config['version']))
 
     if len(groups) != 1:

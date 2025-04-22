@@ -74,7 +74,10 @@ SUFFIX_MODULES_SYMLINK = 'all'
 
 
 def get_group(name, version):
-    "get the user group for licensed software"
+    """
+    get the user group for licensed software
+    returns None if there no group defined
+    """
     group = None
     if name in SOFTWARE_GROUPS:
         if isinstance(SOFTWARE_GROUPS[name], str):
