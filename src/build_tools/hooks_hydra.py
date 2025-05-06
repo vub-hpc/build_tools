@@ -212,7 +212,12 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     if not ec['moduleclass'].endswith(f'/{SUFFIX_MODULES_SYMLINK}'):
         update_moduleclass(ec)
 
-    # disable robot for bwrap
+    # keep previous installation directory for bwrap (only for the vsc bot)
+    if os.getenv('BWRAP', '') == '1':
+        ec['keeppreviousinstall'] = True
+        ec.log.info("[parse hook] Set keeppreviousinstall to %s for bwrap", ec['keeppreviousinstall'])
+
+    # disable robot for bwrap (only when building with build_tools)
     # must be done in a hook in case robot is set in an easystack, which takes precedence over cmd line options
     subdir_modules = ConfigurationVariables()['subdir_modules']
     robot = build_option('robot')
