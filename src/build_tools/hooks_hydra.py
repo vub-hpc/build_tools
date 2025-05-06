@@ -274,10 +274,11 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # set optarch for intel compilers on AMD nodes
     optarchs_intel = {
-        'zen2': 'march=core-avx2',
+        'zen2': '-march=core-avx2',
         # common-avx512 gives test failure for scipy
         # see https://github.com/easybuilders/easybuild-easyconfigs/pull/18875
-        'zen4': 'march=rocketlake',
+        'zen4': '-march=rocketlake',
+        'zen5': '-march=rocketlake',
     }
     if LOCAL_ARCH in optarchs_intel and ec.toolchain.name in ['intel-compilers', 'iimpi', 'iimkl', 'intel']:
         optarch = ec.toolchain.options.get('optarch')
