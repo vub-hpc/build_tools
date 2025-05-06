@@ -28,7 +28,7 @@ Cluster parameters for build submission script
 ARCHS = {
     'broadwell': {
         'default': True,
-        'opt': 'mavx2',
+        'opt': '-mavx2',
         'partition': {
             'cpu': 'pascal_gpu',
             'gpu': 'pascal_gpu',
@@ -37,7 +37,7 @@ ARCHS = {
     },
     'haswell-ib': {
         'default': False,
-        'opt': 'mavx2',
+        'opt': '-mavx2',
         'partition': {
             'cpu': 'haswell_mpi',
             'gpu': None,
@@ -45,7 +45,7 @@ ARCHS = {
     },
     'skylake': {
         'default': True,
-        'opt': 'mavx512',
+        'opt': '-mavx512',
         'partition': {
             'cpu': 'skylake',
             'gpu': None,
@@ -53,7 +53,7 @@ ARCHS = {
     },
     'skylake-ib': {
         'default': True,
-        'opt': 'mavx512',
+        'opt': '-mavx512',
         'partition': {
             'cpu': 'skylake_mpi',
             'gpu': None,
@@ -61,7 +61,7 @@ ARCHS = {
     },
     'zen2-ib': {
         'default': True,
-        'opt': 'Intel:march=core-avx2;GCC:mavx2',
+        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
         'partition': {
             'cpu': 'ampere_gpu',  # no non-gpu partition available yet
             'gpu': 'ampere_gpu',
@@ -70,7 +70,7 @@ ARCHS = {
     },
     'zen3': {
         'default': False,
-        'opt': 'Intel:march=core-avx2;GCC:mavx2',
+        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
         'partition': {
             'cpu': 'zen3',
             'gpu': None,
@@ -78,7 +78,7 @@ ARCHS = {
     },
     'zen3-ib': {
         'default': False,
-        'opt': 'Intel:march=core-avx2;GCC:mavx2',
+        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
         'partition': {
             'cpu': 'zen3_mpi',
             'gpu': None,
@@ -86,9 +86,17 @@ ARCHS = {
     },
     'zen4': {
         'default': True,
-        'opt': 'Intel:march=rocketlake;GCC:znver4',
+        'opt': 'Intel:-march=rocketlake;GCC:-march=znver4',
         'partition': {
             'cpu': 'zen4',
+            'gpu': None,
+        },
+    },
+    'zen5-ib': {
+        'default': True,
+        'opt': 'Intel:-march=rocketlake;GCC:-march=znver5',
+        'partition': {
+            'cpu': 'zen5_mpi',
             'gpu': None,
         },
     },
