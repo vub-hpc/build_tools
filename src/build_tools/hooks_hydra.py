@@ -490,7 +490,7 @@ end
 local username = os.getenv("USER") or ""
 local licfile = pathJoin("/apps/brussel/licenses/freesurfer", username .. ".lic")
 if not isFile(licfile) then
-    LmodError("License file not found for your VSC user. Please consult with user support how to obtain a license for FreeSurfer.")
+    LmodError("FreeSurfer license file not found for your VSC user. Please contact user support on how to obtain one.")
 end
 setenv("FS_LICENSE", licfile)
 """
