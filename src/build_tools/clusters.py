@@ -138,4 +138,8 @@ PARTITIONS = {
         'cluster': 'hydra',
         'arch': 'zen4',
     },
+    'zen5_mpi': {
+        'cluster': 'hydra',
+        'arch': 'zen5-ib',
+    },
 }
