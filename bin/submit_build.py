@@ -81,7 +81,7 @@ def main():
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
         'hooks': hooks_hydra.__file__,
         'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
-        'installpath': os.path.join(APPS_BRUSSEL, os.getenv('VSC_OS_LOCAL'), LOCAL_ARCH),
+        'installpath': os.path.join(APPS_BRUSSEL, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
         'prefer-python-search-path': 'EBPYTHONPREFIXES',
         'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
         'sourcepath': '/apps/brussel/sources:/apps/gent/source',
@@ -284,7 +284,7 @@ def main():
 
         # update build and install paths of the EB job
         install_dir = job_options['target_arch']
-        ebconf['installpath'] = os.path.join(APPS_BRUSSEL, os.getenv('VSC_OS_LOCAL'), install_dir)
+        ebconf['installpath'] = os.path.join(APPS_BRUSSEL, '${VSC_OS_LOCAL:?}', install_dir)
         for opt, path in ebconf.items():
             eb_options.append(f'--{opt}={path}')
 
