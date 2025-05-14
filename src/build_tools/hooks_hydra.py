@@ -484,6 +484,17 @@ end
         if self.name == 'ABAQUS':
             self.cfg['modextravars'].update({'ABAQUSLM_LICENSE_FILE': '/apps/brussel/licenses/abaqus/license.lic'})
 
+        # FreeSurfer per-user licenses
+        if self.name == 'FreeSurfer':
+            self.cfg['modluafooter'] = """
+local username = os.getenv("USER") or ""
+local licfile = pathJoin("/apps/brussel/licenses/freesurfer", username .. ".lic")
+if not isFile(licfile) then
+    LmodError("FreeSurfer license file not found for your VSC user. Please contact hpc@vub.be on how to obtain one.")
+end
+setenv("FS_LICENSE", licfile)
+"""
+
         ##########################
         # ------ DATABASES ----- #
         ##########################
