@@ -42,6 +42,7 @@ SOFTWARE_GROUPS = {
     'AMS': 'badf',
     'CASTEP': 'bcastep',
     'COMSOL': 'bcomsol_users',  # autogroup (bcomsol, bcomsol_efremov)
+    'CRYSTAL': 'bcrystal',  # autogroup (bcrystal-algc)
     'FLUENT': 'bansys',
     'FreeSurfer': 'bfreesurfer',
     'Gaussian': 'brusselall',  # site license
