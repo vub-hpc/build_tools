@@ -92,6 +92,14 @@ ARCHS = {
             'gpu': None,
         },
     },
+    'zen5-ib': {
+        'default': True,
+        'opt': 'Intel:-march=rocketlake;GCC:-march=znver5',
+        'partition': {
+            'cpu': 'zen5_mpi',
+            'gpu': None,
+        },
+    },
 }
 
 # The key name should match the partition name in Slurm
@@ -129,5 +137,9 @@ PARTITIONS = {
     'zen4': {
         'cluster': 'hydra',
         'arch': 'zen4',
+    },
+        'zen5_mpi': {
+        'cluster': 'hydra',
+        'arch': 'zen5-ib',
     },
 }
