@@ -94,7 +94,7 @@ ARCHS = {
     },
     'zen5-ib': {
         'default': True,
-        'opt': 'Intel:-march=rocketlake;GCC:-march=znver5',
+        'opt': 'Intel:march=rocketlake;GCC:znver5',
         'partition': {
             'cpu': 'zen5_mpi',
             'gpu': None,
