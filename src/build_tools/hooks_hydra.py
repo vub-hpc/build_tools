@@ -45,6 +45,7 @@ SOFTWARE_GROUPS = {
     'CRYSTAL': 'bcrystal',  # autogroup (bcrystal-algc)
     'FLUENT': 'bansys',
     'FreeSurfer': 'bfreesurfer',
+    'FUNAERO': 'bfunaero',
     'Gaussian': 'brusselall',  # site license
     'GaussView': 'brusselall',  # site license
     'Gurobi': 'brusselall',  # site license
