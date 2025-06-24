@@ -40,6 +40,7 @@ SOFTWARE_GROUPS = {
     'ABAQUS': 'babaqus',
     'ADF': 'badf',
     'AMS': 'badf',
+    'ANSYS': 'bansys',
     'CASTEP': 'bcastep',
     'COMSOL': 'bcomsol_users',  # autogroup (bcomsol, bcomsol_efremov)
     'CRYSTAL': 'bcrystal',  # autogroup (bcrystal-algc)
