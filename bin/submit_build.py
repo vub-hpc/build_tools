@@ -77,7 +77,7 @@ def main():
     # Easybuild default paths
     # start using environment from local machine, job scripts get custom paths
     ebconf = {
-        'accept-eula-for': 'Intel-oneAPI,CUDA,cuDNN',
+        'accept-eula-for': 'Intel-oneAPI,CUDA,cuDNN,NVHPC',
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
         'hooks': hooks_hydra.__file__,
         'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
