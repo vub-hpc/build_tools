@@ -312,7 +312,10 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # skip installation of CUDA software in non-GPU architectures, only create module file
     is_cuda_software = 'CUDA' in ec.name or 'CUDA' in ec['versionsuffix']
+    cuda_tcs = ['CUDA', 'nvidia-compilers', 'NVHPC']
+    is_cuda_software = ec.name in cuda_tcs or ec.toolchain.name in cuda_tcs or 'CUDA' in ec['versionsuffix']
     if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
+        # only install the module file in non-GPU nodes
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
         ec['module_only'] = True
         ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
@@ -321,6 +324,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
     # set cuda compute capabilities
     elif is_cuda_software:
+        # on GPU nodes set cuda compute capabilities
         ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH_FULL]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
