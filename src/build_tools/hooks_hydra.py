@@ -84,6 +84,7 @@ if ( os.getenv("SLURM_JOB_ID") ) then
 end
 """
 
+
 def get_group(name, version):
     """
     get the user group for licensed software
