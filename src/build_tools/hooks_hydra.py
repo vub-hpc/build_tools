@@ -79,8 +79,8 @@ INTEL_MPI_MOD_FOOTER = """
 if ( os.getenv("SLURM_JOB_ID") ) then
     setenv("I_MPI_HYDRA_BOOTSTRAP", "slurm")
     setenv("I_MPI_PIN_RESPECT_CPUSET", "0")
-    setenv("I_MPI_PMI_LIBRARY", "%(pmi_lib)s")
-    setenv("%(pmi_var)s", "%(pmi_set)s")
+    setenv("I_MPI_PMI_LIBRARY", "{pmi_lib}")
+    setenv("{pmi_var}", "{pmi_set}")
 end
 """
 
@@ -439,7 +439,7 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
                 slurm_mpi_type = 'pmi2'
 
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
-            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(intel_mpi)
+            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**intel_mpi)
 
             # set MPI communication type in Slurm (default is none, which works for PMI1)
             # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
@@ -457,7 +457,7 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             }
             slurm_mpi_type = 'pmi2'
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
-            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(intel_mpi)
+            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**intel_mpi)
             self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
             self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
