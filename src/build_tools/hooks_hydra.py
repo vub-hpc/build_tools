@@ -40,6 +40,7 @@ SOFTWARE_GROUPS = {
     'ABAQUS': 'babaqus',
     'ADF': 'badf',
     'AMS': 'badf',
+    'ANSYS': 'bansys',
     'CASTEP': 'bcastep',
     'COMSOL': 'bcomsol_users',  # autogroup (bcomsol, bcomsol_efremov)
     'CRYSTAL': 'bcrystal',  # autogroup (bcrystal-algc)
@@ -73,6 +74,15 @@ VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
 SUFFIX_MODULES_SYMLINK = 'all'
+
+INTEL_MPI_MOD_FOOTER = """
+if ( os.getenv("SLURM_JOB_ID") ) then
+    setenv("I_MPI_HYDRA_BOOTSTRAP", "slurm")
+    setenv("I_MPI_PIN_RESPECT_CPUSET", "0")
+    setenv("I_MPI_PMI_LIBRARY", "{pmi_lib}")
+    setenv("{pmi_var}", "{pmi_set}")
+end
+"""
 
 
 def get_group(name, version):
@@ -429,14 +439,7 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
                 slurm_mpi_type = 'pmi2'
 
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
-            self.cfg['modluafooter'] = """
-if ( os.getenv("SLURM_JOB_ID") ) then
-    setenv("I_MPI_HYDRA_BOOTSTRAP", "slurm")
-    setenv("I_MPI_PIN_RESPECT_CPUSET", "0")
-    setenv("I_MPI_PMI_LIBRARY", "%(pmi_lib)s")
-    setenv("%(pmi_var)s", "%(pmi_set)s")
-end
-""" % intel_mpi
+            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**intel_mpi)
 
             # set MPI communication type in Slurm (default is none, which works for PMI1)
             # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
@@ -444,6 +447,19 @@ end
             if slurm_mpi_type:
                 self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
                 self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+
+        if self.name in ['ANSYS', 'FLUENT']:
+            # ANSYS versions 2022+ use Intel MPI v2021 by default
+            intel_mpi = {
+                'pmi_var': 'I_MPI_PMI',
+                'pmi_set': 'pmi2',
+                'pmi_lib': '/usr/lib64/slurmpmi/libpmi2.so',
+            }
+            slurm_mpi_type = 'pmi2'
+            self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
+            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**intel_mpi)
+            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
         ##########################
         # ------ TUNING -------- #
