@@ -28,6 +28,10 @@ fi
 mkdir -p $TMPDIR
 mkdir -p /tmp/eb-test-build
 
+if [ "0" != 1 ]; then
+    export MODULEPATH=""  # EB prepends 'modules/collection' to MODULEPATH
+fi
+
 # update MODULEPATH for cross-compilations
 local_arch="$VSC_ARCH_LOCAL$VSC_ARCH_SUFFIX"
 if [ "skylake" != "$local_arch" ]; then

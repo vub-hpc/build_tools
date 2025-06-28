@@ -28,6 +28,10 @@ fi
 mkdir -p $TMPDIR
 mkdir -p /tmp/eb-test-build
 
+if [ "1" != 1 ]; then
+    export MODULEPATH=""  # EB prepends 'modules/collection' to MODULEPATH
+fi
+
 # update MODULEPATH for cross-compilations
 local_arch="$VSC_ARCH_LOCAL$VSC_ARCH_SUFFIX"
 if [ "zen2-ib" != "$local_arch" ]; then
