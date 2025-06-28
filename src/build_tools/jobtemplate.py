@@ -37,7 +37,6 @@ source "$$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
 export LANG=${langcode}
-export MODULEPATH=""  # EB prepends 'modules/collection' to MODULEPATH
 
 SUBDIR_MODULES="modules"
 SUBDIR_MODULES_BWRAP=".modules_bwrap"
@@ -50,6 +49,10 @@ if [ -z $$SLURM_JOB_ID ]; then
 fi
 mkdir -p $$TMPDIR
 mkdir -p ${eb_buildpath}
+
+if [ "${bwrap}" != 1 ]; then
+    export MODULEPATH=""  # EB prepends 'modules/collection' to MODULEPATH
+fi
 
 # update MODULEPATH for cross-compilations
 local_arch="$$VSC_ARCH_LOCAL$$VSC_ARCH_SUFFIX"
