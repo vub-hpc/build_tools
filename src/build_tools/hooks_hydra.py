@@ -449,6 +449,11 @@ end
                 self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
                 self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
+        if self.name == 'NVHPC':
+            slurm_mpi_type = 'pmix'
+            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+
         ##########################
         # ------ TUNING -------- #
         ##########################
