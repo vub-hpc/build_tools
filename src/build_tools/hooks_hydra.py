@@ -453,6 +453,11 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             self.cfg['modextravars'].update({'SLURM_ENABLED': "1"})
             self.cfg['modextravars'].update({'SCHEDULER_TIGHT_COUPLING': "1"})
 
+        if self.name == 'NVHPC':
+            slurm_mpi_type = 'pmix'
+            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+
         ##########################
         # ------ TUNING -------- #
         ##########################
