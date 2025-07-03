@@ -53,7 +53,7 @@ mkdir -p ${eb_buildpath}
 if [ "${bwrap}" != 1 ]; then
     # Outside of bwrap we can just rely on default EB environment
     # which prepends 'modules/collection' to $MODULEPATH
-    export MODULEPATH=""  # EB prepends 'modules/collection' to MODULEPATH
+    export MODULEPATH=""
 fi
 
 # update MODULEPATH for cross-compilations
