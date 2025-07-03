@@ -28,7 +28,9 @@ mkdir -p $TMPDIR
 mkdir -p /tmp/eb-test-build
 
 if [ "1" != 1 ]; then
-    export MODULEPATH=""  # EB prepends 'modules/collection' to MODULEPATH
+    # Outside of bwrap we can just rely on default EB environment
+    # which prepends 'modules/collection' to $MODULEPATH
+    export MODULEPATH=""
 fi
 
 # update MODULEPATH for cross-compilations
