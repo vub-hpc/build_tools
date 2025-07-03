@@ -404,42 +404,22 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
                 self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
         if self.name == 'impi':
-            # - use PMI1/2 implementation from Slurm
+            # - use PMI2 implementation from Slurm
             # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
             # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7588
 
-            # use PMI1 by default (works with older versions)
-            slurm_mpi_type = None
+            # Intel MPI supports PMI2 with I_MPI_PMI=pmi2 since v2019.7
+            # see https://bugs.schedmd.com/show_bug.cgi?id=6727
+            slurm_mpi_type = 'pmi2'
             intel_mpi = {
-                'pmi_var': 'I_MPI_PMI2',
-                'pmi_set': 'no',
-                'pmi_lib': '/usr/lib64/slurmpmi/libpmi.so',
+                'pmi_var': 'I_MPI_PMI',
+                'pmi_set': 'pmi2',
+                'pmi_lib': '/usr/lib64/slurmpmi/libpmi2.so',
             }
-
-            if LooseVersion(self.version) >= '2019.7':
-                # Intel MPI v2019 supports PMI2 with I_MPI_PMI=pmi2, but it only atually works since v2019.7
-                # see https://bugs.schedmd.com/show_bug.cgi?id=6727
-                intel_mpi['pmi_var'] = 'I_MPI_PMI'
-                intel_mpi['pmi_set'] = 'pmi2'
-                intel_mpi['pmi_lib'] = '/usr/lib64/slurmpmi/libpmi2.so'
-                slurm_mpi_type = 'pmi2'
-            elif LooseVersion(self.version) >= '2019.0':
-                # use PMI1 with this buggy releases of Intel MPI
-                # see https://bugs.schedmd.com/show_bug.cgi?id=6727
-                intel_mpi['pmi_var'] = 'I_MPI_PMI'
-                intel_mpi['pmi_set'] = 'pmi1'
-            elif LooseVersion(self.version) >= '2018.0':
-                # Intel MPI v2018 supports PMI2 with I_MPI_PMI2=yes
-                intel_mpi['pmi_set'] = 'yes'
-                intel_mpi['pmi_lib'] = '/usr/lib64/slurmpmi/libpmi2.so'
-                slurm_mpi_type = 'pmi2'
 
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
             self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**intel_mpi)
 
-            # set MPI communication type in Slurm (default is none, which works for PMI1)
-            # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7192
-            # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/7588
             if slurm_mpi_type:
                 self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
                 self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
