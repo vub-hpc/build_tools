@@ -397,11 +397,7 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
         if self.name == 'OpenMPI':
             # set MPI communication type in Slurm (default is none)
             # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/4706
-            slurm_mpi_type = None
-            if LooseVersion(self.version) >= '3.0.0':
-                slurm_mpi_type = 'pmix'
-            elif LooseVersion(self.version) >= '2.1.0':
-                slurm_mpi_type = 'pmi2'
+            slurm_mpi_type = 'pmix'
 
             if slurm_mpi_type:
                 self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
