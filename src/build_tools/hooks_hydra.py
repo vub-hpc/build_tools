@@ -80,7 +80,7 @@ if ( os.getenv("SLURM_JOB_ID") ) then
     setenv("I_MPI_HYDRA_BOOTSTRAP", "slurm")
     setenv("I_MPI_PIN_RESPECT_CPUSET", "0")
     setenv("I_MPI_PMI_LIBRARY", "{pmi_lib}")
-    setenv("{pmi_var}", "{pmi_set}")
+    setenv("I_MPI_PMI", "{pmi_set}")
 end
 """
 
@@ -412,7 +412,6 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             # see https://bugs.schedmd.com/show_bug.cgi?id=6727
             slurm_mpi_type = 'pmi2'
             intel_mpi = {
-                'pmi_var': 'I_MPI_PMI',
                 'pmi_set': 'pmi2',
                 'pmi_lib': '/usr/lib64/slurmpmi/libpmi2.so',
             }
@@ -426,16 +425,23 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
 
         if self.name in ['ANSYS', 'FLUENT']:
             # ANSYS versions 2022+ use Intel MPI v2021 by default
-            intel_mpi = {
-                'pmi_var': 'I_MPI_PMI',
+            # do not set SLURM_MPI_TYPE as ANSYS has both OpenMPI and Intel MPI implementations
+            # both work well on their own without an explicit SLURM_MPI_TYPE
+            ansys_intel_mpi = {
                 'pmi_set': 'pmi2',
                 'pmi_lib': '/usr/lib64/slurmpmi/libpmi2.so',
             }
-            slurm_mpi_type = 'pmi2'
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
-            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**intel_mpi)
-            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
-            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+            self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**ansys_intel_mpi)
+            # remove restrictions on UCX transport layer, IB 'dc' not supported at system level
+            self.log.info("[pre-module hook] Allow all trasnports in UCX for ANSYS")
+            self.cfg['modextravars'].update({'UCX_TLS': "all"})
+            # the following mimics what ANSYS FLUENT does when it uses its integrated slurm capabilities
+            # with command: `fluent 2dpp -scheduler=slurm -t2 --mpi=openmpi -mpitest`
+            # see: https://ansyshelp.ansys.com/public//Views/Secured/corp/v242/en/flu_lm/slurm-140005.1.html
+            self.log.info("[pre-module hook] Enabling Slurm integration in ANSYS")
+            self.cfg['modextravars'].update({'SLURM_ENABLED': "1"})
+            self.cfg['modextravars'].update({'SCHEDULER_TIGHT_COUPLING': "1"})
 
         ##########################
         # ------ TUNING -------- #
