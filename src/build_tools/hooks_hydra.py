@@ -458,10 +458,6 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             # more info: https://projects.cc.vub.ac.be/issues/2940
             self.log.info("[pre-module hook] Set max heap memory in Java module")
             self.cfg['modluafooter'] = JAVA_MOD_FOOTER
-            # TODO: remove whenever PR#3832 is merged upstream
-            # https://github.com/easybuilders/easybuild-easyblocks/pull/3832
-            self.log.info("[pre-module hook] Disable UCX signal catching")
-            self.cfg['modextravars'].update({'UCX_ERROR_SIGNALS': ''})
 
         # set MATLAB Runtime Component Cache folder to a local temp dir
         # this cache directory lies in $HOME by default, which cause binaries compiled with MCC to hang
