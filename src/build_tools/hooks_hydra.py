@@ -83,7 +83,12 @@ if ( os.getenv("SLURM_JOB_ID") ) then
     setenv("I_MPI_PMI", "{pmi_set}")
 end
 """
-
+JAVA_MOD_FOOTER = """
+local mem = get_avail_memory()
+if mem then
+    setenv("JAVA_TOOL_OPTIONS",  "-Xmx" .. math.floor(mem*0.8))
+end
+"""
 
 def get_group(name, version):
     """
@@ -451,12 +456,9 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
         # more info: https://projects.cc.vub.ac.be/issues/2940
         if self.name == 'Java':
             self.log.info("[pre-module hook] Set max heap memory in Java module")
-            self.cfg['modluafooter'] = """
-local mem = get_avail_memory()
-if mem then
-    setenv("JAVA_TOOL_OPTIONS",  "-Xmx" .. math.floor(mem*0.8))
-end
-"""
+            self.cfg['modluafooter'] = JAVA_MOD_FOOTER
+            self.log.info("[pre-module hook] Disable UCX signal catching")
+            self.cfg['modextravars'].update({'UCX_ERROR_SIGNALS': ''})
 
         # set MATLAB Runtime Component Cache folder to a local temp dir
         # this cache directory lies in $HOME by default, which cause binaries compiled with MCC to hang
