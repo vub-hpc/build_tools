@@ -44,7 +44,7 @@ ARCHS = {
         },
     },
     'skylake': {
-        'default': True,
+        'default': False,
         'opt': '-mavx512',
         'partition': {
             'cpu': 'skylake',
@@ -52,7 +52,7 @@ ARCHS = {
         },
     },
     'skylake-ib': {
-        'default': True,
+        'default': False,
         'opt': '-mavx512',
         'partition': {
             'cpu': 'skylake_mpi',
