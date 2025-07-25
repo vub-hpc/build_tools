@@ -457,6 +457,12 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             slurm_mpi_type = 'pmix'
             self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
             self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+            # NVHPC ships with OpenMPI v4 which has an issue between its hwloc
+            # and Slurm cgroups2 that results in mpirun trying to use unallocated
+            # cores to the job (see https://github.com/open-mpi/ompi/issues/12470)
+            # Only mpirun is affected, workaround is to set '--bind-to=none':
+            self.log.info("[pre-module hook] Disable mpirun process binding in NVHPC")
+            self.cfg['modextravars'].update({'OMPI_MCA_hwloc_base_binding_policy': 'none'})
 
         ##########################
         # ------ TUNING -------- #
