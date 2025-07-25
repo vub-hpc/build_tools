@@ -67,9 +67,17 @@ LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
-VALID_TCGENS = ['2024a', '25.1']
-VALID_MODULES_SUBDIRS = VALID_TCGENS + ['system']
-VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi', 'nvidia-compilers', 'NVHPC']
+VALID_TOOLCHAINS = {
+    '2024a': {
+        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'subdir': '2024a',
+    },
+    '25.1': {
+        'toolchains': ['nvidia-compilers', 'NVHPC'],
+        'subdir': '2024a',
+    },
+}
+VALID_MODULES_SUBDIRS = ['system', '2024a']
 
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
@@ -118,22 +126,26 @@ def get_tc_versions():
     update_build_option('hooks', None)
 
     tc_versions = {}
-    for toolcgen in VALID_TCGENS:
-        tc_versions[toolcgen] = []
-        for toolc in VALID_TCS:
+    for tcgen, tcgen_spec in VALID_TOOLCHAINS.items():
+        tcgen_versions = []
+        for tc_name in tcgen_spec['toolchains']:
             try:
-                tc_versions[toolcgen].extend(get_toolchain_hierarchy({'name': toolc, 'version': toolcgen}))
+                tcgen_versions.extend(get_toolchain_hierarchy({'name': tc_name, 'version': tcgen}))
             except EasyBuildError:
                 # skip if no easyconfig found for toolchain-version
                 pass
+        tc_versions[tcgen] = {
+            'toolchains': tcgen_versions,
+            'subdir': tcgen_spec['subdir'],
+        }
 
     update_build_option('hooks', hooks)
     return tc_versions
 
 
-def calc_tc_gen(name, version, tcname, tcversion, easyblock):
+def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
     """
-    calculate the toolchain generation
+    calculate the toolchain generation subdir
     return False if not valid
     """
     name_version = {'name': name, 'version': version}
@@ -143,10 +155,11 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
     tc_versions = get_tc_versions()
 
     # (software with) valid (sub)toolchain-version combination
-    for toolcgen in VALID_TCGENS:
-        if toolchain in tc_versions[toolcgen] or name_version in tc_versions[toolcgen]:
-            log_msg = f"Determined toolchain generation {toolcgen} for {software}"
-            return toolcgen, log_msg
+    for tcgen, tcgen_spec in tc_versions.items():
+        if toolchain in tcgen_spec['toolchains'] or name_version in tcgen_spec['toolchains']:
+            tcgen_subdir = tcgen_spec['subdir']
+            log_msg = f"Determined toolchain generation subdir '{tcgen_subdir}' for {software}"
+            return tcgen_subdir, log_msg
 
     # invalid toolchains
     # all toolchains have 'system' toolchain, so we need to handle the invalid toolchains separately
@@ -157,8 +170,9 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
 
     # software with 'system' toolchain: return 'system'
     if tcname == 'system':
-        log_msg = f"Determined toolchain {tcname} for {software}"
-        return tcname, log_msg
+        tcgen_subdir = 'system'
+        log_msg = f"Determined toolchain '{tcgen_subdir}' for {software}"
+        return tcgen_subdir, log_msg
 
     log_msg = f"Invalid toolchain {tcname} and/or toolchain version {tcversion} for {software}"
     return False, log_msg
@@ -166,8 +180,9 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
 
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
-    tc_gen, log_msg = calc_tc_gen(
-        ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec.easyblock)
+    tc_gen, log_msg = calc_tc_gen_subdir(
+        ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec.easyblock
+    )
 
     if not tc_gen:
         raise EasyBuildError("[parse hook] " + log_msg)
