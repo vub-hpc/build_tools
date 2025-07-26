@@ -83,6 +83,10 @@ SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
 SUFFIX_MODULES_SYMLINK = 'all'
 
+##################
+# MODULE FOOTERS #
+##################
+
 INTEL_MPI_MOD_FOOTER = """
 if ( os.getenv("SLURM_JOB_ID") ) then
     setenv("I_MPI_HYDRA_BOOTSTRAP", "slurm")
@@ -95,6 +99,17 @@ JAVA_MOD_FOOTER = """
 local mem = get_avail_memory()
 if mem then
     setenv("JAVA_TOOL_OPTIONS",  "-Xmx" .. math.floor(mem*0.8))
+end
+"""
+GPU_DUMMY_MOD_FOOTER = """
+if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
+    LmodError([[
+This module is only available on nodes with a GPU.
+Jobs can request GPUs with the command 'srun --gpus-per-node=1' or 'sbatch --gpus-per-node=1'.
+
+More information in the VUB-HPC docs:
+https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
+    ]])
 end
 """
 
@@ -176,6 +191,18 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
 
     log_msg = f"Invalid toolchain {tcname} and/or toolchain version {tcversion} for {software}"
     return False, log_msg
+
+
+def is_gpu_software(ec):
+    "determine if it is a GPU-only installation"
+    gpu_components = ['CUDA']
+    gpu_toolchains = ['nvidia-compilers', 'NVHPC']
+
+    is_gpu_package = ec.name in gpu_components or ec.name in gpu_toolchains
+    needs_gpu_toolchain = ec.toolchain.name in gpu_toolchains
+    needs_gpu_component = any([x in ec['versionsuffix'] for x in gpu_components])
+
+    return  is_gpu_package or needs_gpu_toolchain or needs_gpu_component
 
 
 def update_moduleclass(ec):
@@ -326,10 +353,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
             ec.log.info(f"[parse hook] Set optarch in parameter toolchainopts: {ec.toolchain.options['optarch']}")
 
     # skip installation of CUDA software in non-GPU architectures, only create module file
-    is_cuda_software = 'CUDA' in ec.name or 'CUDA' in ec['versionsuffix']
-    cuda_tcs = ['CUDA', 'nvidia-compilers', 'NVHPC']
-    is_cuda_software = ec.name in cuda_tcs or ec.toolchain.name in cuda_tcs or 'CUDA' in ec['versionsuffix']
-    if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
+    if is_gpu_software(ec) and LOCAL_ARCH_FULL not in GPU_ARCHS:
         # only install the module file in non-GPU nodes
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
         ec['module_only'] = True
@@ -338,7 +362,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
 
     # set cuda compute capabilities
-    elif is_cuda_software:
+    elif is_gpu_software(ec):
         # on GPU nodes set cuda compute capabilities
         ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH_FULL]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
@@ -579,19 +603,9 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
         # ------ DUMMY MODULES -------- #
         #################################
 
-        is_cuda_software = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
-        if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
+        if is_gpu_software(self.cfg) and LOCAL_ARCH_FULL not in GPU_ARCHS:
             self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
-            self.cfg['modluafooter'] = """
-if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
-    LmodError([[
-This module is only available on nodes with a GPU.
-Jobs can request GPUs with the command 'srun --gpus-per-node=1' or 'sbatch --gpus-per-node=1'.
-
-More information in the VUB-HPC docs:
-https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
-    ]])
-end"""
+            self.cfg['modluafooter'] = GPU_DUMMY_MOD_FOOTER
 
 
 def post_build_and_install_loop_hook(ecs_with_res):
