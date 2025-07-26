@@ -360,6 +360,8 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
         ec['skipsteps'] = [SANITYCHECK_STEP]
         ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
+        # remove all dependencies to avoid unnecessary module loads on the dummy module
+        ec['dependencies'] = []
 
     # set cuda compute capabilities
     elif is_gpu_software(ec):
