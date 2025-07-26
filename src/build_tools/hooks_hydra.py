@@ -360,16 +360,22 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
             ec.toolchain.options['optarch'] = optarchs_intel[LOCAL_ARCH]
             ec.log.info(f"[parse hook] Set optarch in parameter toolchainopts: {ec.toolchain.options['optarch']}")
 
-    # skip installation of CUDA software in non-GPU architectures, only create module file
+    ###############################
+    # ------ GPU MODULES -------- #
+    ###############################
+
+    # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
     if is_gpu_software(ec) and LOCAL_ARCH_FULL not in GPU_ARCHS:
-        # only install the module file in non-GPU nodes
+        ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
+        # remove all dependencies to avoid unnecessary module loads on the dummy module
+        ec['dependencies'] = []
+        # inject error message in module file
+        ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
         ec['module_only'] = True
         ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
         ec['skipsteps'] = [SANITYCHECK_STEP]
         ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
-        # remove all dependencies to avoid unnecessary module loads on the dummy module
-        ec['dependencies'] = []
 
     # set cuda compute capabilities
     elif is_gpu_software(ec):
@@ -605,14 +611,6 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
                 self.cfg['docurls'].append(usage_info['link'])
             else:
                 self.cfg['docurls'] = [usage_info['link']]
-
-        #################################
-        # ------ DUMMY MODULES -------- #
-        #################################
-
-        if is_gpu_software(self.cfg) and LOCAL_ARCH_FULL not in GPU_ARCHS:
-            self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
-            self.cfg['modluafooter'] = GPU_DUMMY_MOD_FOOTER
 
 
 def post_build_and_install_loop_hook(ecs_with_res):
