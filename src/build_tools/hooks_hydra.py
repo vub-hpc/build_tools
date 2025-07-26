@@ -318,6 +318,14 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec['dependencies'] = [d for d in ec['dependencies'] if 'libfabric' not in d]
         ec.log.info("[parse hook] Removed libfabric from dependency list")
 
+    if ec.name == 'NVHPC':
+        # NVHPC ships with OpenMPI v4 which has an issue between its hwloc
+        # and Slurm cgroups2 that results in mpirun trying to use unallocated
+        # cores to the job (see https://github.com/open-mpi/ompi/issues/12470)
+        # Only mpirun is affected, workaround is to set '--bind-to=none':
+        ec.log.info("[parse hook] Disable mpirun process binding in NVHPC")
+        ec['modextravars'].update({'OMPI_MCA_hwloc_base_binding_policy': 'none'})
+
     if ec.name == 'Gurobi':
         # use centrally installed Gurobi license file, and don't copy to installdir
         ec['license_file'] = '/apps/brussel/licenses/gurobi/gurobi.lic'
@@ -435,7 +443,10 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
 
 
 def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
-    """Hook at pre-module level to alter module files"""
+    """
+    Hook at pre-module level to alter module files
+    WARNING: this hooks triggers *after* sanity checks
+    """
 
     # Must be done this way, updating self.cfg['modextravars']
     # directly doesn't work due to templating.
@@ -498,12 +509,6 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             slurm_mpi_type = 'pmix'
             self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
             self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
-            # NVHPC ships with OpenMPI v4 which has an issue between its hwloc
-            # and Slurm cgroups2 that results in mpirun trying to use unallocated
-            # cores to the job (see https://github.com/open-mpi/ompi/issues/12470)
-            # Only mpirun is affected, workaround is to set '--bind-to=none':
-            self.log.info("[pre-module hook] Disable mpirun process binding in NVHPC")
-            self.cfg['modextravars'].update({'OMPI_MCA_hwloc_base_binding_policy': 'none'})
 
         ##########################
         # ------ TUNING -------- #
