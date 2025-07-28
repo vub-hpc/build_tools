@@ -367,8 +367,6 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
     if is_gpu_software(ec) and LOCAL_ARCH_FULL not in GPU_ARCHS:
         ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
-        # remove all dependencies to avoid unnecessary module loads on the dummy module
-        ec['dependencies'] = []
         # inject error message in module file
         ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
         # workaround for NVHPC
