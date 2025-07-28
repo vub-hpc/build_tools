@@ -44,8 +44,8 @@ from build_tools import hooks_hydra
         ('fosscuda', '2023a', 'system', 'system', 'Toolchain', False),
     ],
 )
-def test_calc_tc_gen(toolchain, set_up_config):
+def test_calc_tc_gen_subdir(toolchain, set_up_config):
     name, version, tcname, tcversion, easyblock, expected_generation = toolchain
-    generation, _ = hooks_hydra.calc_tc_gen(name, version, tcname, tcversion, easyblock)
+    generation, _ = hooks_hydra.calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock)
 
-    assert generation == expected_generation
+    assert generation['toolchains'] == expected_generation
