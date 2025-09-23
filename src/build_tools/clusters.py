@@ -97,8 +97,9 @@ ARCHS = {
         'opt': 'Intel:-march=rocketlake;GCC:-march=znver5',
         'partition': {
             'cpu': 'zen5_mpi',
-            'gpu': None,
+            'gpu': 'ada_gpu',
         },
+        'cuda_cc': ['8.9'],  # L40S
     },
 }
 
@@ -106,6 +107,10 @@ ARCHS = {
 # cluster: name of the cluster
 
 PARTITIONS = {
+    'ada_gpu': {
+        'cluster': 'anansi',
+        'arch': 'zen5-ib',
+    },
     'ampere_gpu': {
         'cluster': 'hydra',
         'arch': 'zen2-ib',
