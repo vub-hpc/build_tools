@@ -309,6 +309,7 @@ def main():
             if ARCHS[host_arch]['partition']['gpu']:
                 # install on GPU partition on archs with GPUs
                 job_options['partition'] = ARCHS[host_arch]['partition']['gpu']
+                job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster', 'hydra')
                 job_options['gpus'] = 1
 
         # add extra footer if requested
