@@ -249,18 +249,19 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         extradep = 'munge-devel'
         ec.log.info("[parse hook] Adding OS dependency on: %s", extradep)
         ec['osdependencies'].append(extradep)
-        # Add sanity check on munge component
-        ec.log.info("[parse hook] Adding sanity check on munge component")
-        # PMIx-v4 does not have the specific plugin for psec-munge,
-        # but now it has a plugin for Slurm that links to munge
-        if LooseVersion(ec.version) >= LooseVersion('4.2'):
-            pmix_slurm_lib = 'lib/pmix/pmix_mca_prm_slurm.so'
-        elif LooseVersion(ec.version) >= LooseVersion('4.0'):
-            pmix_slurm_lib = 'lib/pmix/mca_prm_slurm.so'
-        else:
-            pmix_slurm_lib = 'lib/pmix/mca_psec_munge.so'
+        if LooseVersion(ec.version) < LooseVersion('5.0'):
+            # Add sanity check on munge component
+            ec.log.info("[parse hook] Adding sanity check on munge component")
+            # PMIx-v4 does not have the specific plugin for psec-munge,
+            # but now it has a plugin for Slurm that links to munge
+            if LooseVersion(ec.version) >= LooseVersion('4.2'):
+                pmix_slurm_lib = 'lib/pmix/pmix_mca_prm_slurm.so'
+            elif LooseVersion(ec.version) >= LooseVersion('4.0'):
+                pmix_slurm_lib = 'lib/pmix/mca_prm_slurm.so'
+            else:
+                pmix_slurm_lib = 'lib/pmix/mca_psec_munge.so'
 
-        ec['sanity_check_paths']['files'].append(pmix_slurm_lib)
+            ec['sanity_check_paths']['files'].append(pmix_slurm_lib)
 
     # InfiniBand support
     if ec.name in IB_MODULE_SOFTWARE:
