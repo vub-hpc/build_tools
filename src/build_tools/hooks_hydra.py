@@ -357,7 +357,7 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
         if LooseVersion(self.version) >= LooseVersion('2'):
             self.log.info("[pre-configure hook] Disable per-user configuration")
             self.cfg.update('configopts', "--disable-per-user-config-files")
-        if LooseVersion(self.version) >= LooseVerion('5.0'):
+        if LooseVersion(self.version) >= LooseVersion('5.0'):
             # TODO: check again in 2026a since opa component is removed in version 5.0.8
             self.log.info("[pre-configure hook] Disable building pnet-opa component")
             self.cfg.update('configopts', "--enable-mca-no-build=pnet-opa")
