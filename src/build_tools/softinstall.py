@@ -33,6 +33,7 @@ TOOLCHAIN_FORMAT = r"20[1-2][0-9][ab]"
 
 SUBTOOLCHAINS = {
     '2024a': ['GCCcore-13.3.0', 'GCC-13.3.0', 'intel-compilers-2024.2.0'],
+    '2025a': ['GCCcore-14.2.0', 'GCC-14.2.0', 'intel-compilers-2025.1.1'],
 }
 
 
