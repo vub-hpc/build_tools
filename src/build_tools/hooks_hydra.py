@@ -67,7 +67,7 @@ LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
-VALID_TCGENS = ['2024a, 2025a']
+VALID_TCGENS = ['2024a', '2025a']
 VALID_MODULES_SUBDIRS = VALID_TCGENS + ['system']
 VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
 
