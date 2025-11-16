@@ -48,8 +48,15 @@ jobs:
       - name: Install pytest
         run: python -m pip install pytest
 
+      - name: Install old setuptools
+        run: |
+          python -m pip install setuptools==53.0.0
+          python -c "import setuptools; print(setuptools.__version__)"
+
       - name: Install vsc-install
-        run: python -m pip install vsc-install==0.21.4
+        run: |
+          python -c "import setuptools; print(setuptools.__version__)"
+          python -m pip install vsc-install
 
       - name: Install build-tools
         run: python -m pip install .
