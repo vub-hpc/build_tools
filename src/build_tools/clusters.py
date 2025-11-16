@@ -99,7 +99,7 @@ ARCHS = {
             'cpu': 'zen5_mpi',
             'gpu': 'ada_gpu',
         },
-        'cuda_cc': ['8.9'],  # L40S
+        'cuda_cc': ['8.9', '9.0'],  # L40S, H200
     },
 }
 
