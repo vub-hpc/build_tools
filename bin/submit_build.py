@@ -292,7 +292,7 @@ def main():
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch, job_options['target_arch']),
-                'walltime': '23:59:59',
+                'walltime': '11:59:59',
                 'nodes': 1,
                 'tasks': 4,
                 'gpus': 0,
