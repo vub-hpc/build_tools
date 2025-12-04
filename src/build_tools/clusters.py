@@ -119,6 +119,10 @@ PARTITIONS = {
         'cluster': 'chimera',
         'arch': 'haswell-ib',
     },
+    'hopper_gpu': {
+        'cluster': 'hydra',
+        'arch': 'zen5-ib',
+    },
     'pascal_gpu': {
         'cluster': 'hydra',
         'arch': 'broadwell',
