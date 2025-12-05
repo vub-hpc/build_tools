@@ -5,8 +5,8 @@
 #SBATCH --time=23:59:59
 #SBATCH --nodes=1
 #SBATCH --ntasks=4
-#SBATCH --gpus-per-node=1
 #SBATCH --partition=ampere_gpu
+#SBATCH --gpus-per-node=1
 
 # activate build_tools virtual environment
 source "$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"

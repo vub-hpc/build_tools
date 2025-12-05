@@ -292,10 +292,10 @@ def main():
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch, job_options['target_arch']),
-                'walltime': '23:59:59',
+                'walltime': '11:59:59',
                 'nodes': 1,
                 'tasks': 4,
-                'gpus': 0,
+                'gpus': '',
                 'partition': host_partition,
                 'cluster': PARTITIONS[host_partition].get('cluster', 'hydra'),
                 'eb_options': " ".join(eb_options),
@@ -310,7 +310,10 @@ def main():
                 # install on GPU partition on archs with GPUs
                 job_options['partition'] = ARCHS[host_arch]['partition']['gpu']
                 job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster', 'hydra')
-                job_options['gpus'] = 1
+                if job_options['cluster'] == 'anansi':
+                    job_options['gpus'] = '--gres=shard:1'
+                else:
+                    job_options['gpus'] = '--gpus-per-node=1'
 
         # add extra footer if requested
         if opts.options.extra_mod_footer:

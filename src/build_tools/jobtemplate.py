@@ -28,8 +28,8 @@ BUILD_JOB = """\
 #SBATCH --time=${walltime}
 #SBATCH --nodes=${nodes}
 #SBATCH --ntasks=${tasks}
-#SBATCH --gpus-per-node=${gpus}
 #SBATCH --partition=${partition}
+#SBATCH ${gpus}
 
 # activate build_tools virtual environment
 source "$$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"
