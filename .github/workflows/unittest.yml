@@ -56,7 +56,12 @@ jobs:
       - name: Install vsc-install
         run: |
           python -c "import setuptools; print(setuptools.__version__)"
-          python -m pip install vsc-install
+          python -m pip install vsc-install --no-build-isolation
+
+      - name: Install vsc-base vsc-utils
+        run: |
+          python -c "import setuptools; print(setuptools.__version__)"
+          python -m pip install vsc-base vsc-utils --no-build-isolation
 
       - name: Install build-tools
         run: python -m pip install .

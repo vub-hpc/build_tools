@@ -307,9 +307,11 @@ def main():
         # settings for builds with GPUs
         if opts.options.gpu:
             if ARCHS[host_arch]['partition']['gpu']:
-                # install on GPU partition on archs with GPUs
-                job_options['partition'] = ARCHS[host_arch]['partition']['gpu']
-                job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster', 'hydra')
+                # user specified partitions have priority
+                if not opts.options.partition:
+                    # install on GPU partition on archs with GPUs
+                    job_options['partition'] = ARCHS[host_arch]['partition']['gpu']
+                    job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster', 'hydra')
                 if job_options['cluster'] == 'anansi':
                     job_options['gpus'] = '--gres=shard:1'
                 else:
