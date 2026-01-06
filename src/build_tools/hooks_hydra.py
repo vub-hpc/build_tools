@@ -39,6 +39,7 @@ from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_
 SOFTWARE_GROUPS = {
     'ABAQUS': 'babaqus',
     'ADF': 'badf',
+    'AIMAll': 'baimall',
     'AMS': 'badf',
     'ANSYS': 'bansys',
     'CASTEP': 'bcastep',
