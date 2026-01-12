@@ -175,7 +175,7 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
     tc_versions = get_tc_versions()
 
     # (software with) valid (sub)toolchain-version combination
-    for tcgen, tcgen_spec in tc_versions.items():
+    for tcgen_spec in tc_versions.values():
         if toolchain in tcgen_spec['toolchains'] or name_version in tcgen_spec['toolchains']:
             tcgen_subdir = tcgen_spec['subdir']
             log_msg = f"Determined toolchain generation subdir '{tcgen_subdir}' for {software}"
@@ -205,9 +205,9 @@ def is_gpu_software(ec):
 
     is_gpu_package = ec.name in gpu_components or ec.name in gpu_toolchains
     needs_gpu_toolchain = ec.toolchain.name in gpu_toolchains
-    needs_gpu_component = any([x in ec['versionsuffix'] for x in gpu_components])
+    needs_gpu_component = any(x in ec['versionsuffix'] for x in gpu_components)
 
-    return  is_gpu_package or needs_gpu_toolchain or needs_gpu_component
+    return is_gpu_package or needs_gpu_toolchain or needs_gpu_component
 
 
 def update_moduleclass(ec):
