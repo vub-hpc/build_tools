@@ -82,7 +82,7 @@ VALID_TOOLCHAINS = {
         'subdir': '2024a',
     },
 }
-VALID_MODULES_SUBDIRS = ['system', '2024a']
+VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a']
 
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
@@ -176,9 +176,11 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
 
     # (software with) valid (sub)toolchain-version combination
     for tcgen_spec in tc_versions.values():
+        print(f"DEBUG: {tcgen_spec['toolchains']} --- {toolchain} : {name_version}")
         if toolchain in tcgen_spec['toolchains'] or name_version in tcgen_spec['toolchains']:
             tcgen_subdir = tcgen_spec['subdir']
             log_msg = f"Determined toolchain generation subdir '{tcgen_subdir}' for {software}"
+            print(f"DEBUG: return {tcgen_subdir}")
             return tcgen_subdir, log_msg
 
     # invalid toolchains
