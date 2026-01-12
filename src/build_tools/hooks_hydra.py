@@ -39,6 +39,7 @@ from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_
 SOFTWARE_GROUPS = {
     'ABAQUS': 'babaqus',
     'ADF': 'badf',
+    'AIMAll': 'baimall',
     'AMS': 'badf',
     'ANSYS': 'bansys',
     'CASTEP': 'bcastep',
@@ -71,6 +72,10 @@ VALID_TOOLCHAINS = {
     '2024a': {
         'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
         'subdir': '2024a',
+    },
+    '2025a': {
+        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'subdir': '2025a',
     },
     '25.1': {
         'toolchains': ['nvidia-compilers', 'NVHPC'],
@@ -291,18 +296,19 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         extradep = 'munge-devel'
         ec.log.info("[parse hook] Adding OS dependency on: %s", extradep)
         ec['osdependencies'].append(extradep)
-        # Add sanity check on munge component
-        ec.log.info("[parse hook] Adding sanity check on munge component")
-        # PMIx-v4 does not have the specific plugin for psec-munge,
-        # but now it has a plugin for Slurm that links to munge
-        if LooseVersion(ec.version) >= LooseVersion('4.2'):
-            pmix_slurm_lib = 'lib/pmix/pmix_mca_prm_slurm.so'
-        elif LooseVersion(ec.version) >= LooseVersion('4.0'):
-            pmix_slurm_lib = 'lib/pmix/mca_prm_slurm.so'
-        else:
-            pmix_slurm_lib = 'lib/pmix/mca_psec_munge.so'
+        if LooseVersion(ec.version) < LooseVersion('5.0'):
+            # Add sanity check on munge component
+            ec.log.info("[parse hook] Adding sanity check on munge component")
+            # PMIx-v4 does not have the specific plugin for psec-munge,
+            # but now it has a plugin for Slurm that links to munge
+            if LooseVersion(ec.version) >= LooseVersion('4.2'):
+                pmix_slurm_lib = 'lib/pmix/pmix_mca_prm_slurm.so'
+            elif LooseVersion(ec.version) >= LooseVersion('4.0'):
+                pmix_slurm_lib = 'lib/pmix/mca_prm_slurm.so'
+            else:
+                pmix_slurm_lib = 'lib/pmix/mca_psec_munge.so'
 
-        ec['sanity_check_paths']['files'].append(pmix_slurm_lib)
+            ec['sanity_check_paths']['files'].append(pmix_slurm_lib)
 
     # InfiniBand support
     if ec.name in IB_MODULE_SOFTWARE:
@@ -410,12 +416,17 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
     # PMIx settings:
     # - build with munge support to work with Slurm
     # - disable per-user configuration files to save disk accesses during job start-up
+    # - build without pnet-opa since we do not have Omni-Path
     if self.name == 'PMIx':
         self.log.info("[pre-configure hook] Enable munge support")
         self.cfg.update('configopts', "--with-munge")
         if LooseVersion(self.version) >= LooseVersion('2'):
             self.log.info("[pre-configure hook] Disable per-user configuration")
             self.cfg.update('configopts', "--disable-per-user-config-files")
+        if LooseVersion(self.version) >= LooseVersion('5.0'):
+            # TODO: check again in 2026a since opa component is removed in version 5.0.8
+            self.log.info("[pre-configure hook] Disable building pnet-opa component")
+            self.cfg.update('configopts', "--enable-mca-no-build=pnet-opa")
 
     # InfiniBand support:
     if self.name in IB_MODULE_SOFTWARE:
