@@ -31,6 +31,10 @@ from build_tools import hooks_hydra
         ('UCX-CUDA', '1.16.0', 'GCCcore', '13.3.0', 'EB_UCX_Plugins', '2024a'),
         ('STREAM', '5.10', 'intel-compilers', '2024.2.0', 'MakeCp', '2024a'),
         ('SAMtools', '1.21', 'GCC', '13.3.0', 'EB_SAMtools', '2024a'),
+        ('nvidia-compilers', '25.1', 'GCCcore', '13.3.0', 'Toolchain', '2024a'),
+        ('nvidia-compilers', '24.0', 'system', 'system', 'Toolchain', False),
+        ('NVHPC', '25.1', 'GCCcore', '13.3.0', 'Toolchain', '2024a'),
+        ('NVHPC', '24.0', 'system', 'system', 'Toolchain', False),
         # (software with) toolchains with generation as their version
         ('foss', '2024a', 'system', 'system', 'Toolchain', '2024a'),
         ('foss', '2021a', 'system', 'system', 'Toolchain', False),
@@ -44,8 +48,8 @@ from build_tools import hooks_hydra
         ('fosscuda', '2023a', 'system', 'system', 'Toolchain', False),
     ],
 )
-def test_calc_tc_gen(toolchain, set_up_config):
+def test_calc_tc_gen_subdir(toolchain, set_up_config):
     name, version, tcname, tcversion, easyblock, expected_generation = toolchain
-    generation, _ = hooks_hydra.calc_tc_gen(name, version, tcname, tcversion, easyblock)
+    generation, _ = hooks_hydra.calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock)
 
     assert generation == expected_generation

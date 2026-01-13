@@ -68,13 +68,29 @@ LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
-VALID_TCGENS = ['2024a', '2025a']
-VALID_MODULES_SUBDIRS = VALID_TCGENS + ['system']
-VALID_TCS = ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi']
+VALID_TOOLCHAINS = {
+    '2024a': {
+        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'subdir': '2024a',
+    },
+    '2025a': {
+        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'subdir': '2025a',
+    },
+    '25.1': {
+        'toolchains': ['nvidia-compilers', 'NVHPC'],
+        'subdir': '2024a',
+    },
+}
+VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a']
 
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
 SUFFIX_MODULES_SYMLINK = 'all'
+
+##################
+# MODULE FOOTERS #
+##################
 
 INTEL_MPI_MOD_FOOTER = """
 if ( os.getenv("SLURM_JOB_ID") ) then
@@ -88,6 +104,17 @@ JAVA_MOD_FOOTER = """
 local mem = get_avail_memory()
 if mem then
     setenv("JAVA_TOOL_OPTIONS",  "-Xmx" .. math.floor(mem*0.8))
+end
+"""
+GPU_DUMMY_MOD_FOOTER = """
+if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
+    LmodError([[
+This module is only available on nodes with a GPU.
+Jobs can request GPUs with the command 'srun --gpus-per-node=1' or 'sbatch --gpus-per-node=1'.
+
+More information in the VUB-HPC docs:
+https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
+    ]])
 end
 """
 
@@ -119,22 +146,26 @@ def get_tc_versions():
     update_build_option('hooks', None)
 
     tc_versions = {}
-    for toolcgen in VALID_TCGENS:
-        tc_versions[toolcgen] = []
-        for toolc in VALID_TCS:
+    for tcgen, tcgen_spec in VALID_TOOLCHAINS.items():
+        tcgen_versions = []
+        for tc_name in tcgen_spec['toolchains']:
             try:
-                tc_versions[toolcgen].extend(get_toolchain_hierarchy({'name': toolc, 'version': toolcgen}))
+                tcgen_versions.extend(get_toolchain_hierarchy({'name': tc_name, 'version': tcgen}))
             except EasyBuildError:
                 # skip if no easyconfig found for toolchain-version
                 pass
+        tc_versions[tcgen] = {
+            'toolchains': tcgen_versions,
+            'subdir': tcgen_spec['subdir'],
+        }
 
     update_build_option('hooks', hooks)
     return tc_versions
 
 
-def calc_tc_gen(name, version, tcname, tcversion, easyblock):
+def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
     """
-    calculate the toolchain generation
+    calculate the toolchain generation subdir
     return False if not valid
     """
     name_version = {'name': name, 'version': version}
@@ -144,10 +175,13 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
     tc_versions = get_tc_versions()
 
     # (software with) valid (sub)toolchain-version combination
-    for toolcgen in VALID_TCGENS:
-        if toolchain in tc_versions[toolcgen] or name_version in tc_versions[toolcgen]:
-            log_msg = f"Determined toolchain generation {toolcgen} for {software}"
-            return toolcgen, log_msg
+    for tcgen_spec in tc_versions.values():
+        print(f"DEBUG: {tcgen_spec['toolchains']} --- {toolchain} : {name_version}")
+        if toolchain in tcgen_spec['toolchains'] or name_version in tcgen_spec['toolchains']:
+            tcgen_subdir = tcgen_spec['subdir']
+            log_msg = f"Determined toolchain generation subdir '{tcgen_subdir}' for {software}"
+            print(f"DEBUG: return {tcgen_subdir}")
+            return tcgen_subdir, log_msg
 
     # invalid toolchains
     # all toolchains have 'system' toolchain, so we need to handle the invalid toolchains separately
@@ -158,17 +192,31 @@ def calc_tc_gen(name, version, tcname, tcversion, easyblock):
 
     # software with 'system' toolchain: return 'system'
     if tcname == 'system':
-        log_msg = f"Determined toolchain {tcname} for {software}"
-        return tcname, log_msg
+        tcgen_subdir = 'system'
+        log_msg = f"Determined toolchain '{tcgen_subdir}' for {software}"
+        return tcgen_subdir, log_msg
 
     log_msg = f"Invalid toolchain {tcname} and/or toolchain version {tcversion} for {software}"
     return False, log_msg
 
 
+def is_gpu_software(ec):
+    "determine if it is a GPU-only installation"
+    gpu_components = ['CUDA']
+    gpu_toolchains = ['nvidia-compilers', 'NVHPC']
+
+    is_gpu_package = ec.name in gpu_components or ec.name in gpu_toolchains
+    needs_gpu_toolchain = ec.toolchain.name in gpu_toolchains
+    needs_gpu_component = any(x in ec['versionsuffix'] for x in gpu_components)
+
+    return is_gpu_package or needs_gpu_toolchain or needs_gpu_component
+
+
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
-    tc_gen, log_msg = calc_tc_gen(
-        ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec.easyblock)
+    tc_gen, log_msg = calc_tc_gen_subdir(
+        ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec.easyblock
+    )
 
     if not tc_gen:
         raise EasyBuildError("[parse hook] " + log_msg)
@@ -278,6 +326,14 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec['dependencies'] = [d for d in ec['dependencies'] if 'libfabric' not in d]
         ec.log.info("[parse hook] Removed libfabric from dependency list")
 
+    if ec.name == 'NVHPC':
+        # NVHPC ships with OpenMPI v4 which has an issue between its hwloc
+        # and Slurm cgroups2 that results in mpirun trying to use unallocated
+        # cores to the job (see https://github.com/open-mpi/ompi/issues/12470)
+        # Only mpirun is affected, workaround is to set '--bind-to=none':
+        ec.log.info("[parse hook] Disable mpirun process binding in NVHPC")
+        ec['modextravars'].update({'OMPI_MCA_hwloc_base_binding_policy': 'none'})
+
     if ec.name == 'Gurobi':
         # use centrally installed Gurobi license file, and don't copy to installdir
         ec['license_file'] = '/apps/brussel/licenses/gurobi/gurobi.lic'
@@ -312,9 +368,18 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
             ec.toolchain.options['optarch'] = optarchs_intel[LOCAL_ARCH]
             ec.log.info(f"[parse hook] Set optarch in parameter toolchainopts: {ec.toolchain.options['optarch']}")
 
-    # skip installation of CUDA software in non-GPU architectures, only create module file
-    is_cuda_software = 'CUDA' in ec.name or 'CUDA' in ec['versionsuffix']
-    if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
+    ###############################
+    # ------ GPU MODULES -------- #
+    ###############################
+
+    # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
+    if is_gpu_software(ec) and LOCAL_ARCH_FULL not in GPU_ARCHS:
+        ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
+        # inject error message in module file
+        ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
+        # manually set some default CUDA version for dummy module of NVHPC (required by easyblock)
+        if ec.name == 'NVHPC':
+            ec['default_cuda_version'] = '0'
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
         ec['module_only'] = True
         ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
@@ -322,7 +387,8 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
 
     # set cuda compute capabilities
-    elif is_cuda_software:
+    elif is_gpu_software(ec):
+        # on GPU nodes set cuda compute capabilities
         ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH_FULL]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
@@ -397,7 +463,10 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
 
 
 def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
-    """Hook at pre-module level to alter module files"""
+    """
+    Hook at pre-module level to alter module files
+    WARNING: this hooks triggers *after* sanity checks
+    """
 
     # Must be done this way, updating self.cfg['modextravars']
     # directly doesn't work due to templating.
@@ -455,6 +524,11 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             self.log.info("[pre-module hook] Enabling Slurm integration in ANSYS")
             self.cfg['modextravars'].update({'SLURM_ENABLED': "1"})
             self.cfg['modextravars'].update({'SCHEDULER_TIGHT_COUPLING': "1"})
+
+        if self.name == 'NVHPC':
+            slurm_mpi_type = 'pmix'
+            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
         ##########################
         # ------ TUNING -------- #
@@ -551,24 +625,6 @@ Specific usage instructions for %(app)s are available in VUB-HPC documentation:
                 self.cfg['docurls'].append(usage_info['link'])
             else:
                 self.cfg['docurls'] = [usage_info['link']]
-
-        #################################
-        # ------ DUMMY MODULES -------- #
-        #################################
-
-        is_cuda_software = 'CUDA' in self.name or 'CUDA' in self.cfg['versionsuffix']
-        if is_cuda_software and LOCAL_ARCH_FULL not in GPU_ARCHS:
-            self.log.info("[pre-module hook] Creating dummy module for CUDA modules on non-GPU nodes")
-            self.cfg['modluafooter'] = """
-if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
-    LmodError([[
-This module is only available on nodes with a GPU.
-Jobs can request GPUs with the command 'srun --gpus-per-node=1' or 'sbatch --gpus-per-node=1'.
-
-More information in the VUB-HPC docs:
-https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
-    ]])
-end"""
 
 
 def post_build_and_install_loop_hook(ecs_with_res):
