@@ -411,10 +411,6 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
         self.cfg['install_type'] = 'merge'
         self.log.info("[pre-configure hook] Set install_type to %s for bwrap", self.cfg['install_type'])
 
-    # BLIS autodetection fails on zen5, set to zen3 (the highest currently supported zen)
-    if self.name == 'BLIS' and LOCAL_ARCH == 'zen5' and LooseVersion(self.version) <= LooseVersion('2.0'):
-        self.cfg['cpu_architecture'] = 'zen3'
-
     # PMIx settings:
     # - build with munge support to work with Slurm
     # - disable per-user configuration files to save disk accesses during job start-up
