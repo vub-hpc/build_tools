@@ -377,7 +377,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
         # inject error message in module file
         ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
-        # workaround for NVHPC
+        # manually set some default CUDA version for dummy module of NVHPC (required by easyblock)
         if ec.name == 'NVHPC':
             ec['default_cuda_version'] = '0'
         # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
