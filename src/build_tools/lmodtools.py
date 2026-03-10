@@ -58,6 +58,9 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
         f'--module-basedir {APPS_BRUSSEL}/$VSC_OS_LOCAL',
     ]
 
+    if PARTITIONS[partition]['arch'] == 'zen5-ib':
+        cache_cmd.append('--create-spider-cache')
+
     cache_job = LMOD_CACHE_JOB_TEMPLATE.format(
         jobids_depend=f',afterok:{":".join(jobids_depend)}' if jobids_depend else '',
         partition=partition,
