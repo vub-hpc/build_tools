@@ -122,6 +122,9 @@ if [[ "0" == 1 && -n "${builds_succeeded}" ]];then
         --architecture zen2-ib
         --module-basedir /apps/brussel/$VSC_OS_LOCAL
     )
+    if [[ zen2-ib == "zen5-ib" ]]; then
+        cmd+=(--create-spider-cache)
+    fi
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition ampere_gpu for architecture zen2-ib"
     sbatch "${job_options[@]}" --wrap "${cmd[*]}"
 fi

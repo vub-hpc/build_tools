@@ -5,7 +5,7 @@
 #SBATCH --time=23:59:59
 #SBATCH --nodes=1
 #SBATCH --ntasks=4
-#SBATCH --partition=skylake_mpi
+#SBATCH --partition=zen5_mpi
 #SBATCH 
 
 # activate build_tools virtual environment
@@ -35,8 +35,8 @@ fi
 
 # update MODULEPATH for cross-compilations
 local_arch="$VSC_ARCH_LOCAL$VSC_ARCH_SUFFIX"
-if [ "skylake" != "$local_arch" ]; then
-    export MODULEPATH=${MODULEPATH//$local_arch/skylake}
+if [ "zen5-ib" != "$local_arch" ]; then
+    export MODULEPATH=${MODULEPATH//$local_arch/zen5-ib}
 fi
 
 EB='eb'
@@ -51,8 +51,8 @@ if [ "0" == 1 ]; then
     echo "BUILD_TOOLS: modname $modname modversion $modversion"
     [[ -n $modname && -n $modversion ]] || { echo "ERROR: failed to get modname and/or modversion"; exit 1; }
     appsmnt="/vscmnt/brussel_pixiu_apps/_apps_brussel"
-    softbwrap="/apps/brussel/bwrap/$VSC_OS_LOCAL/skylake/software/$modname"
-    softreal="$appsmnt/$VSC_OS_LOCAL/skylake/software/$modname"
+    softbwrap="/apps/brussel/bwrap/$VSC_OS_LOCAL/zen5-ib/software/$modname"
+    softreal="$appsmnt/$VSC_OS_LOCAL/zen5-ib/software/$modname"
     mkdir -p "$softbwrap"
     bwrap_cmd=(
         bwrap
@@ -82,7 +82,7 @@ fi
 if [ "0" == 1 ]; then
     source_installdir="$softbwrap/$modversion/"
     dest_installdir="$softreal/$modversion/"
-    installbase="/apps/brussel/$VSC_OS_LOCAL/skylake"
+    installbase="/apps/brussel/$VSC_OS_LOCAL/zen5-ib"
     source_modfile="$installbase/$SUBDIR_MODULES_BWRAP/$SUFFIX_MODULES_PATH/$modname/$modversion.lua"
     source_modsymlink=$(echo $installbase/$SUBDIR_MODULES_BWRAP/*/$SUFFIX_MODULES_SYMLINK/$modname/$modversion.lua)
     dest_modfile="$installbase/$SUBDIR_MODULES/$SUFFIX_MODULES_PATH/$modname/$modversion.lua"
@@ -112,20 +112,23 @@ if [[ "1" == 1 && -n "${builds_succeeded}" ]];then
         --time=1:0:0
         --mem=1g
         --output=%x_%j.log
-        --job-name=lmod_cache_skylake
+        --job-name=lmod_cache_zen5-ib
         --dependency=singleton
-        --partition=skylake_mpi
+        --partition=zen5_mpi
     )
     cmd=(
         /usr/libexec/lmod/run_lmod_cache.py
         --create-cache
-        --architecture skylake
+        --architecture zen5-ib
         --module-basedir /apps/brussel/$VSC_OS_LOCAL
     )
-    echo "BUILD_TOOLS: submitting Lmod cache update job on partition skylake_mpi for architecture skylake"
+    if [[ zen5-ib == "zen5-ib" ]]; then
+        cmd+=(--create-spider-cache)
+    fi
+    echo "BUILD_TOOLS: submitting Lmod cache update job on partition zen5_mpi for architecture zen5-ib"
     sbatch "${job_options[@]}" --wrap "${cmd[*]}"
 fi
 
 if [[ -n "${builds_succeeded}" ]]; then
-    logger -t build_tools -p user.notice -- "partition=skylake_mpi architecture=skylake easyconfig=zlib-1.2.11.eb"
+    logger -t build_tools -p user.notice -- "partition=zen5_mpi architecture=zen5-ib easyconfig=zlib-1.2.11.eb"
 fi
