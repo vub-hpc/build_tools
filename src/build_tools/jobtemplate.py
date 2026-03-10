@@ -145,6 +145,9 @@ if [[ "${lmod_cache}" == 1 && -n "$${builds_succeeded}" ]];then
         --architecture ${target_arch}
         --module-basedir /apps/brussel/$$VSC_OS_LOCAL
     )
+    if [[ ${target_arch} == "zen5-ib" ]]; then
+        cmd+=(--create-spider-cache)
+    fi
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${target_arch}"
     sbatch "$${job_options[@]}" --wrap "$${cmd[*]}"
 fi
