@@ -92,7 +92,6 @@ def main():
         "arch": ("CPU architecture of the host system and the build", 'strlist', 'add', None, 'a'),
         "bwrap": ("Reinstall in 2 steps via new namespace with bwrap (no robot)", None, "store_true", False, 'b'),
         "clang": ("Set LANG=C in the build (instead of unicode)", None, "store_true", False, 'c'),
-        "cross-compile": ("CPU architecture of the build (different than the build system)", None, "store", None, 'x'),
         "dry-run": ("Do not fetch/install, set debug log level", None, "store_true", False, 'D'),
         "extra-flags": ("Extra flags to pass to EasyBuild", None, "store", None, 'e'),
         "extra-mod-footer": ("Path to extra footer for module file", None, "store", None, 'f'),
@@ -174,17 +173,6 @@ def main():
 
     logger.debug("Initial target build hosts: %s", ', '.join([f'{p} ({a})' for (a, p) in build_hosts]))
 
-    # Cross compilation
-    if opts.options.cross_compile:
-        if len(build_hosts) > 1:
-            logger.error("Cross-compilation only supports 1 build architecture (--arch)")
-        target_arch = opts.options.cross_compile
-        if target_arch not in ARCHS:
-            logger.error("Unknown target arch: %s", target_arch)
-            sys.exit(1)
-        job['target_arch'] = target_arch
-        logger.info("Doing cross-compilation to target arch: %s", job['target_arch'])
-
     # Switch build language to C
     if opts.options.clang:
         job['langcode'] = 'C'
@@ -242,10 +230,7 @@ def main():
     # submit build jobs for each micro-architecture
     for (host_arch, host_partition) in build_hosts:
         job_options = dict(job)
-
-        # without special target arch, target host arch
-        if not job_options['target_arch']:
-            job_options['target_arch'] = host_arch
+        job_options['target_arch'] = host_arch
 
         # Set tmp dir and update build path accordingly
         if opts.options.tmp:
@@ -273,10 +258,6 @@ def main():
         else:
             # robot is not supported with bwrap
             eb_options.append('--robot')
-
-        # cross-compilation
-        if job_options['target_arch'] != host_arch:
-            eb_options.extend(['--optarch', ARCHS[job_options['target_arch']]['opt']])
 
         # extra settings from user
         if opts.options.extra_flags:

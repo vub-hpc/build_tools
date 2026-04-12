@@ -20,7 +20,6 @@ Cluster parameters for build submission script
 
 # CPU architecture name including suffix with network fabric
 # default: software will be installed by default using this partitions
-# opt: optimization level of each architecture for cross-compilation
 # eb: extra options for EasyBuild in this architecture
 # partition: dict with default CPU and GPU partitions for this arch
 # cuda_cc: suported CUDA compute capabilities in the GPU partition
@@ -28,7 +27,6 @@ Cluster parameters for build submission script
 ARCHS = {
     'broadwell': {
         'default': True,
-        'opt': '-mavx2',
         'partition': {
             'cpu': 'pascal_gpu',
             'gpu': 'pascal_gpu',
@@ -37,7 +35,6 @@ ARCHS = {
     },
     'haswell-ib': {
         'default': False,
-        'opt': '-mavx2',
         'partition': {
             'cpu': 'haswell_mpi',
             'gpu': None,
@@ -45,7 +42,6 @@ ARCHS = {
     },
     'skylake': {
         'default': False,
-        'opt': '-mavx512',
         'partition': {
             'cpu': 'skylake',
             'gpu': None,
@@ -53,7 +49,6 @@ ARCHS = {
     },
     'skylake-ib': {
         'default': False,
-        'opt': '-mavx512',
         'partition': {
             'cpu': 'skylake_mpi',
             'gpu': None,
@@ -61,7 +56,6 @@ ARCHS = {
     },
     'zen2-ib': {
         'default': True,
-        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
         'partition': {
             'cpu': 'ampere_gpu',  # no non-gpu partition available yet
             'gpu': 'ampere_gpu',
@@ -70,7 +64,6 @@ ARCHS = {
     },
     'zen3': {
         'default': False,
-        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
         'partition': {
             'cpu': 'zen3',
             'gpu': None,
@@ -78,7 +71,6 @@ ARCHS = {
     },
     'zen3-ib': {
         'default': False,
-        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
         'partition': {
             'cpu': 'zen3_mpi',
             'gpu': None,
@@ -86,7 +78,6 @@ ARCHS = {
     },
     'zen4': {
         'default': True,
-        'opt': 'Intel:-march=rocketlake;GCC:-march=znver4',
         'partition': {
             'cpu': 'zen4',
             'gpu': None,
@@ -94,7 +85,6 @@ ARCHS = {
     },
     'zen5-ib': {
         'default': True,
-        'opt': 'Intel:-march=rocketlake;GCC:-march=znver5',
         'partition': {
             'cpu': 'zen5_mpi',
             'gpu': 'ada_gpu',

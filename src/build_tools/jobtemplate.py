@@ -56,12 +56,6 @@ if [ "${bwrap}" != 1 ]; then
     export MODULEPATH=""
 fi
 
-# update MODULEPATH for cross-compilations
-local_arch="$$VSC_ARCH_LOCAL$$VSC_ARCH_SUFFIX"
-if [ "${target_arch}" != "$$local_arch" ]; then
-    export MODULEPATH=$${MODULEPATH//$$local_arch/${target_arch}}
-fi
-
 EB='eb'
 
 if [ "${bwrap}" == 1 ]; then

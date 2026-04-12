@@ -33,12 +33,6 @@ if [ "0" != 1 ]; then
     export MODULEPATH=""
 fi
 
-# update MODULEPATH for cross-compilations
-local_arch="$VSC_ARCH_LOCAL$VSC_ARCH_SUFFIX"
-if [ "zen5-ib" != "$local_arch" ]; then
-    export MODULEPATH=${MODULEPATH//$local_arch/zen5-ib}
-fi
-
 EB='eb'
 
 if [ "0" == 1 ]; then
