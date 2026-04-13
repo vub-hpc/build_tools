@@ -17,15 +17,17 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
+import json
 import os
 import re
+import subprocess
 import sys
 import time
 
 from flufl.lock import Lock, TimeOutError, NotLockedError
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
-from easybuild.framework.easyconfig.easyconfig import letter_dir_for, get_toolchain_hierarchy
+from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
 from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
@@ -118,6 +120,57 @@ https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
 end
 """
 
+TC_VERSIONS = {}
+
+
+def set_tc_versions():
+    " build dict of valid (sub)toolchain-version combinations per valid generation "
+
+    if TC_VERSIONS:
+        return
+
+    tc_versions_code = """
+import json, os, sys
+from easybuild.framework.easyconfig.easyconfig import get_toolchain_hierarchy
+from easybuild.tools.build_log import EasyBuildError
+from easybuild.tools.options import set_up_configuration
+
+os.environ['EASYBUILD_IGNORE_INDEX'] = '1'
+os.environ['EASYBUILD_TERSE'] = '1'
+
+VALID_TOOLCHAINS = json.loads(sys.stdin.read())
+
+set_up_configuration()
+
+tc_versions = {}
+for tcgen, tcgen_spec in VALID_TOOLCHAINS.items():
+    tcgen_versions = []
+    for tc_name in tcgen_spec['toolchains']:
+        try:
+            tcgen_versions.extend(get_toolchain_hierarchy({'name': tc_name, 'version': tcgen}))
+        except EasyBuildError:
+            # skip if no easyconfig found for toolchain-version
+            pass
+    tc_versions[tcgen] = {
+        'toolchains': tcgen_versions,
+        'subdir': tcgen_spec['subdir'],
+    }
+print(json.dumps(tc_versions))
+"""
+
+    try:
+        result = subprocess.run(
+            ["python", "-c", tc_versions_code],
+            check=True,
+            input=json.dumps(VALID_TOOLCHAINS),
+            capture_output=True,
+            text=True)
+    except subprocess.CalledProcessError as e:
+        print(f'stderr: {e}', file=sys.stderr)
+        raise
+
+    TC_VERSIONS.update(json.loads(result.stdout))
+
 
 def get_group(name, version):
     """
@@ -138,31 +191,6 @@ def get_group(name, version):
     return group
 
 
-def get_tc_versions():
-    " build dict of valid (sub)toolchain-version combinations per valid generation "
-
-    # temporarily disable hooks to avoid infinite recursion when calling get_toolchain_hierarchy()
-    hooks = build_option('hooks')
-    update_build_option('hooks', None)
-
-    tc_versions = {}
-    for tcgen, tcgen_spec in VALID_TOOLCHAINS.items():
-        tcgen_versions = []
-        for tc_name in tcgen_spec['toolchains']:
-            try:
-                tcgen_versions.extend(get_toolchain_hierarchy({'name': tc_name, 'version': tcgen}))
-            except EasyBuildError:
-                # skip if no easyconfig found for toolchain-version
-                pass
-        tc_versions[tcgen] = {
-            'toolchains': tcgen_versions,
-            'subdir': tcgen_spec['subdir'],
-        }
-
-    update_build_option('hooks', hooks)
-    return tc_versions
-
-
 def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
     """
     calculate the toolchain generation subdir
@@ -172,10 +200,10 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
     toolchain = {'name': tcname, 'version': tcversion}
     software = [name, version, tcname, tcversion, easyblock]
 
-    tc_versions = get_tc_versions()
+    set_tc_versions()
 
     # (software with) valid (sub)toolchain-version combination
-    for tcgen_spec in tc_versions.values():
+    for tcgen_spec in TC_VERSIONS.values():
         print(f"DEBUG: {tcgen_spec['toolchains']} --- {toolchain} : {name_version}")
         if toolchain in tcgen_spec['toolchains'] or name_version in tcgen_spec['toolchains']:
             tcgen_subdir = tcgen_spec['subdir']
