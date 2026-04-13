@@ -9,7 +9,7 @@
 #SBATCH 
 
 # activate build_tools virtual environment
-source "$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"
+source "$HOME/EB5/eb5env/bin/activate"
 
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1

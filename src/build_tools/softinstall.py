@@ -88,7 +88,7 @@ def mk_job_name(easyconfig, host_arch, target_arch=None):
     return job_name
 
 
-def submit_job_script(job_file, sub_options='', cluster='hydra', local_exec=False, dry_run=False):
+def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, dry_run=False):
     """
     Execute sbatch command to submit job script to target cluster
     :param job_file: file name of the job script

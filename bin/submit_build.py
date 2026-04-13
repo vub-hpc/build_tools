@@ -28,8 +28,8 @@ from vsc.utils.run import RunNoShell
 from vsc.utils.script_tools import SimpleOption
 
 from build_tools import hooks_hydra
-from build_tools.clusters import ARCHS, PARTITIONS
-from build_tools.filetools import APPS_BRUSSEL
+from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, GENT, GPU, PARTITION, PARTITIONS,
+                                  SOFIA, SOURCES)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -53,10 +53,30 @@ EASYCONFIG_REPOS = [
 ]
 EASYBLOCK_REPO = os.path.join("site-vub", "easyblocks", "*", "*.py")
 
-DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS.items() if prop['default']]
+VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
+if not VSC_INSTITUTE_CLUSTER:
+    logger.error("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+    sys.exit(1)
+
+if VSC_INSTITUTE_CLUSTER == SOFIA:
+    MACHINE = VSC_INSTITUTE_CLUSTER
+    SOURCEPATH = os.path.join(APPS, SOFIA, SOURCES)
+else:
+    MACHINE = BRUSSEL
+    SOURCEPATH = os.pathsep.join([
+        os.path.join(APPS, BRUSSEL, SOURCES),
+        os.path.join(APPS, GENT, SOURCES),
+    ])
+
+DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS[MACHINE].items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
-if LOCAL_ARCH not in ARCHS:
+if LOCAL_ARCH not in ARCHS[MACHINE]:
     logger.error("Local system has unsupported architeture: '%s'", LOCAL_ARCH)
+    sys.exit(1)
+
+VSC_DEFAULT_CLUSTER_MODULE = os.getenv('VSC_DEFAULT_CLUSTER_MODULE')
+if not VSC_DEFAULT_CLUSTER_MODULE:
+    logger.error("VSC_DEFAULT_CLUSTER_MODULE environment variable is undefined")
     sys.exit(1)
 
 
@@ -66,7 +86,7 @@ def main():
     # Default job options
     job = {
         'bwrap': '0',
-        'cluster': 'hydra',
+        CLUSTER: VSC_DEFAULT_CLUSTER_MODULE,
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
         'lmod_cache': '1',
@@ -81,10 +101,10 @@ def main():
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
         'hooks': hooks_hydra.__file__,
         'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
-        'installpath': os.path.join(APPS_BRUSSEL, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
+        'installpath': os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
         'prefer-python-search-path': 'EBPYTHONPREFIXES',
         'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
-        'sourcepath': '/apps/brussel/sources:/apps/gent/source',
+        'sourcepath': SOURCEPATH,
     }
 
     # Parse command line arguments
@@ -121,7 +141,7 @@ def main():
 
     if opts.options.lmod_cache_only:
         for arch in DEFAULT_ARCHS:
-            submit_lmod_cache_job(ARCHS[arch]['partition']['cpu'], dry_run=dry_run)
+            submit_lmod_cache_job(ARCHS[MACHINE][arch][PARTITION]['cpu'], dry_run=dry_run)
         sys.exit(0)
 
     if not opts.args:
@@ -146,7 +166,7 @@ def main():
         arch_stack = [LOCAL_ARCH]
     elif opts.options.arch:
         arch_stack = opts.options.arch
-        unknown_archs = [arch for arch in arch_stack if arch not in ARCHS]
+        unknown_archs = [arch for arch in arch_stack if arch not in ARCHS[MACHINE]]
         if unknown_archs:
             logger.error("Unknown archs: %s", ", ".join(unknown_archs))
             sys.exit(1)
@@ -161,12 +181,12 @@ def main():
         partition_stack = [part for part in opts.options.partition if part in PARTITIONS]
         if opts.options.arch:
             logger.warning("Overwriting given architectures with the architectures of given partitions")
-        arch_stack = [PARTITIONS[part]['arch'] for part in partition_stack]
+        arch_stack = [PARTITIONS[part][ARCH] for part in partition_stack]
         build_hosts = list(zip(arch_stack, partition_stack))
     else:
         # initially target default CPU partitions for all selected architectures
         # in case of builds for GPUs, the build host might change down the line if suitable GPU partitions exist
-        build_hosts = [(arch, ARCHS[arch]['partition']['cpu']) for arch in arch_stack]
+        build_hosts = [(arch, ARCHS[MACHINE][arch][PARTITION]['cpu']) for arch in arch_stack]
 
     # remove duplicates and clean-up list of build hosts
     build_hosts = {(arch, part) for (arch, part) in build_hosts if arch and part}
@@ -265,9 +285,15 @@ def main():
 
         # update build and install paths of the EB job
         install_dir = job_options['target_arch']
-        ebconf['installpath'] = os.path.join(APPS_BRUSSEL, '${VSC_OS_LOCAL:?}', install_dir)
+        ebconf['installpath'] = os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', install_dir)
         for opt, path in ebconf.items():
             eb_options.append(f'--{opt}={path}')
+
+        cluster = PARTITIONS[host_partition].get(CLUSTER, VSC_DEFAULT_CLUSTER_MODULE)
+        if cluster == SOFIA:
+            cluster_module = None  # there is no cluster module in sofia
+        else:
+            cluster_module = cluster
 
         # set Slurm directives in job file
         job_options.update(
@@ -277,8 +303,8 @@ def main():
                 'nodes': 1,
                 'tasks': 4,
                 'gpus': '',
-                'partition': host_partition,
-                'cluster': PARTITIONS[host_partition].get('cluster', 'hydra'),
+                PARTITION: host_partition,
+                CLUSTER: cluster_module,
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
@@ -287,13 +313,15 @@ def main():
 
         # settings for builds with GPUs
         if opts.options.gpu:
-            if ARCHS[host_arch]['partition']['gpu']:
+            if ARCHS[MACHINE][host_arch][PARTITION][GPU]:
                 # user specified partitions have priority
                 if not opts.options.partition:
                     # install on GPU partition on archs with GPUs
-                    job_options['partition'] = ARCHS[host_arch]['partition']['gpu']
-                    job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster', 'hydra')
-                if job_options['cluster'] == 'anansi':
+                    job_options[PARTITION] = ARCHS[MACHINE][host_arch][PARTITION][GPU]
+                    if cluster != SOFIA:
+                        job_options[CLUSTER] = PARTITIONS[job_options[PARTITION]].get(CLUSTER,
+                                                                                      VSC_DEFAULT_CLUSTER_MODULE)
+                if job_options[CLUSTER] == ANANSI:
                     job_options['gpus'] = '--gres=shard:1'
                 else:
                     job_options['gpus'] = '--gpus-per-node=1'
@@ -305,13 +333,13 @@ def main():
         # submit build job
         buildjob_out = None
 
-        if job_options['partition']:
+        if job_options[PARTITION]:
             logger.debug('job_options: %s', job_options)
 
             logger.info(
                 "Building %s on %s (%s) for %s",
                 easyconfig,
-                job_options['partition'],
+                job_options[PARTITION],
                 host_arch,
                 job_options['target_arch'],
             )
@@ -320,7 +348,7 @@ def main():
                 job_options,
                 keep_job=opts.options.keep,
                 sub_options=opts.options.extra_sub_flags,
-                cluster=job_options['cluster'],
+                cluster=job_options[CLUSTER],
                 local_exec=local_exec,
                 dry_run=dry_run,
             )

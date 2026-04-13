@@ -34,7 +34,7 @@ from easybuild.tools.config import build_option, ConfigurationVariables, source_
 from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
-from build_tools.clusters import ARCHS
+from build_tools.clusters import ARCHS, BRUSSEL, SOFIA
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
 # user groups for licensed software
@@ -64,7 +64,16 @@ SOFTWARE_GROUPS = {
     'VASP': {r'^6\.': 'bvasp6', r'^5\.': 'bvasp'},
 }
 
-GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
+VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
+if not VSC_INSTITUTE_CLUSTER:
+    raise ValueError("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+
+if VSC_INSTITUTE_CLUSTER == SOFIA:
+    MACHINE = VSC_INSTITUTE_CLUSTER
+else:
+    MACHINE = BRUSSEL
+
+GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
 
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
