@@ -234,10 +234,10 @@ def main():
 
         # Set tmp dir and update build path accordingly
         if opts.options.tmp:
-            job['tmp'] = '/tmp'
+            job_options['tmp'] = '/tmp'
         elif opts.options.tmp_scratch:
-            job['tmp'] = os.path.join('$VSC_SCRATCH', job_options['target_arch'])
-        ebconf['buildpath'] = os.path.join(job['tmp'], 'eb-submit-build')
+            job_options['tmp'] = os.path.join('$VSC_SCRATCH', job_options['target_arch'])
+        ebconf['buildpath'] = os.path.join(job_options['tmp'], 'eb-submit-build')
 
         # common EB command line options
         eb_options = [
