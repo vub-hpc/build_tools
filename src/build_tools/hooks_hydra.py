@@ -79,13 +79,26 @@ LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
+# try to avoid uncommon toolchains
+INVALID_TC_NAMES = [
+    'gmpflf', 'gmpich', 'gompi',
+    'iomkl', 'iompi',
+    'lmpflf', 'lmpich',
+    'nvofbf', 'nvompi',
+]
+VALID_TC_NAMES = [
+    'GCCcore', 'GCC', 'gfbf', 'gompi', 'foss',
+    'intel-compilers', 'iimpi', 'iimkl', 'intel',
+    'nvidia-compilers', 'NVHPC',
+    'llvm-compilers', 'lfbf', 'lompi', 'lfoss',
+]
 VALID_TOOLCHAINS = {
     '2024a': {
-        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'toolchains': ['foss', 'intel'],
         'subdir': '2024a',
     },
     '2025a': {
-        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'toolchains': ['foss', 'intel'],
         'subdir': '2025a',
     },
     '25.1': {
@@ -200,14 +213,20 @@ def get_group(name, version):
     return group
 
 
-def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
+def calc_tc_gen_subdir(name, version, tcname, tcversion):
     """
     calculate the toolchain generation subdir
     return False if not valid
     """
     name_version = {'name': name, 'version': version}
     toolchain = {'name': tcname, 'version': tcversion}
-    software = [name, version, tcname, tcversion, easyblock]
+    software = [name, version, tcname, tcversion]
+
+    # invalid toolchains
+    for curr_name in [tcname, name]:
+        if curr_name in INVALID_TC_NAMES:
+            log_msg = f"Invalid toolchain {curr_name} for {software}"
+            return False, log_msg
 
     set_tc_versions()
 
@@ -220,12 +239,11 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
             print(f"DEBUG: return {tcgen_subdir}")
             return tcgen_subdir, log_msg
 
-    # invalid toolchains
-    # all toolchains have 'system' toolchain, so we need to handle the invalid toolchains separately
-    # all toolchains have 'Toolchain' easyblock, so checking the easyblock is sufficient
-    if easyblock == 'Toolchain':
-        log_msg = f"Invalid toolchain {name} for {software}"
-        return False, log_msg
+    # invalid toolchain version
+    for curr_name, curr_version in [(tcname, tcversion), (name, version)]:
+        if curr_name in VALID_TC_NAMES:
+            log_msg = f"Invalid toolchain version {curr_version} for {software}"
+            return False, log_msg
 
     # software with 'system' toolchain: return 'system'
     if tcname == 'system':
@@ -233,7 +251,7 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
         log_msg = f"Determined toolchain '{tcgen_subdir}' for {software}"
         return tcgen_subdir, log_msg
 
-    log_msg = f"Invalid toolchain {tcname} and/or toolchain version {tcversion} for {software}"
+    log_msg = f"Unknown toolchain {tcname}-{tcversion} for {software}. Please add to VALID_TC_NAMES or INVALID_TC_NAMES"
     return False, log_msg
 
 
@@ -251,9 +269,7 @@ def is_gpu_software(ec):
 
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
-    tc_gen, log_msg = calc_tc_gen_subdir(
-        ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec.easyblock
-    )
+    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.toolchain.name, ec.toolchain.version)
 
     if not tc_gen:
         raise EasyBuildError("[parse hook] " + log_msg)
