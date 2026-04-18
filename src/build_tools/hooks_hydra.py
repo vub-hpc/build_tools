@@ -148,9 +148,6 @@ TC_VERSIONS = {}
 def set_tc_versions():
     " build dict of valid (sub)toolchain-version combinations per valid generation "
 
-    if TC_VERSIONS:
-        return
-
     tc_versions_code = """
 import json, os, sys
 from easybuild.framework.easyconfig.easyconfig import get_toolchain_hierarchy
@@ -228,7 +225,8 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion):
             log_msg = f"Invalid toolchain {curr_name} for {software}"
             return False, log_msg
 
-    set_tc_versions()
+    if not TC_VERSIONS:
+        set_tc_versions()
 
     # (software with) valid (sub)toolchain-version combination
     for tcgen_spec in TC_VERSIONS.values():
