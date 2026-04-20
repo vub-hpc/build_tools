@@ -364,7 +364,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
             ec['sanity_check_paths']['files'].append(pmix_slurm_lib)
 
     # InfiniBand support
-    if ec.name in IB_MODULE_SOFTWARE:
+    if ec.name in IB_MODULE_SOFTWARE and ec.easyblock == IB_MODULE_SOFTWARE[ec.name]['easyblock-ec']:
         # remove any OS dependency on libverbs in non-IB nodes
         if LOCAL_ARCH_SUFFIX != IB_MODULE_SUFFIX:
             pkg_ibverbs = EASYCONFIG_CONSTANTS['OS_PKG_IBVERBS_DEV'][0]
@@ -478,8 +478,8 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
             self.cfg.update('configopts', "--enable-mca-no-build=pnet-opa")
 
     # InfiniBand support:
-    if self.name in IB_MODULE_SOFTWARE:
-        ec_param = IB_MODULE_SOFTWARE[self.name][0]
+    if self.name in IB_MODULE_SOFTWARE and self.cfg.easyblock == IB_MODULE_SOFTWARE[self.name]['easyblock']:
+        ec_param = IB_MODULE_SOFTWARE[self.name]['options'][0]
 
         # convert any non-list parameters to a list
         if ec_param == 'configopts':
@@ -493,10 +493,10 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
         # update IB settings
         if LOCAL_ARCH_SUFFIX == IB_MODULE_SUFFIX:
             self.log.info("[pre-configure hook] Enabling verbs in %s", self.name)
-            ib_opt = IB_MODULE_SOFTWARE[self.name][1]
+            ib_opt = IB_MODULE_SOFTWARE[self.name]['options'][1]
         else:
             self.log.info("[pre-configure hook] Disabling verbs in %s", self.name)
-            ib_opt = IB_MODULE_SOFTWARE[self.name][2]
+            ib_opt = IB_MODULE_SOFTWARE[self.name]['options'][2]
 
         ib_config = ib_free_config + [ib_opt]
 

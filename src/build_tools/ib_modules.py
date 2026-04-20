@@ -18,12 +18,30 @@ Parameters for installing IB/non-IB modules
 """
 
 # software with IB and non-IB modules
-# tuple with name of easyconfig parameter and its options to enable/disable IB
+# easyblock: real easyblock
+# easyblock-ec: easyblock as obtained from the easyconfig
+# options: tuple of (name of easyconfig parameter, options to enable IB, options to disable IB)
 IB_MODULE_SOFTWARE = {
-    'UCX': ('configopts', '--with-verbs', '--without-verbs --without-rdmacm'),
-    'UCX-CUDA': ('configopts', '--with-verbs', '--without-verbs --without-rdmacm'),
-    'libfabric': ('configopts', '--enable-verbs=yes', '--enable-verbs=no'),
-    'PyTorch': ('custom_opts', 'USE_IBVERBS=1', 'USE_IBVERBS=0'),
+    'UCX': {
+        'easyblock': 'ConfigureMake',
+        'easyblock-ec': 'ConfigureMake',
+        'options': ('configopts', '--with-verbs', '--without-verbs --without-rdmacm'),
+    },
+    'UCX-CUDA': {
+        'easyblock': 'ConfigureMake',
+        'easyblock-ec': 'ConfigureMake',
+        'options': ('configopts', '--with-verbs', '--without-verbs --without-rdmacm'),
+    },
+    'libfabric': {
+        'easyblock': 'ConfigureMake',
+        'easyblock-ec': 'ConfigureMake',
+        'options': ('configopts', '--enable-verbs=yes', '--enable-verbs=no'),
+    },
+    'PyTorch': {
+        'easyblock': 'EB_PyTorch',
+        'easyblock-ec': None,
+        'options': ('custom_opts', 'USE_IBVERBS=1', 'USE_IBVERBS=0'),
+    }
 }
 
 IB_OPT_MARK = ['verbs', 'VERBS', 'rdma']
