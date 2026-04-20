@@ -125,7 +125,11 @@ if ( os.getenv("SLURM_JOB_ID") ) then
 end
 """
 JAVA_MOD_FOOTER = """
-local mem = get_avail_memory()
+local mem_str = capture("cat /sys/fs/cgroup/$(</proc/self/cpuset)/../../../memory.max 2>/dev/null")
+local mem = tonumber(mem_str)
+if mem == 9223372036854771712 then
+    mem = nil
+end
 if mem then
     setenv("JAVA_TOOL_OPTIONS",  "-Xmx" .. math.floor(mem*0.8))
 end
