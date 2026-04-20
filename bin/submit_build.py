@@ -28,8 +28,8 @@ from vsc.utils.run import RunNoShell
 from vsc.utils.script_tools import SimpleOption
 
 from build_tools import hooks_hydra
-from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, GENT, GPU, PARTITION, PARTITIONS,
-                                  SOFIA, SOURCES)
+from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, GENT, GPU, MACHINE, PARTITION,
+                                  PARTITIONS, SOFIA, SOURCES)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -53,20 +53,13 @@ EASYCONFIG_REPOS = [
 ]
 EASYBLOCK_REPO = os.path.join("site-vub", "easyblocks", "*", "*.py")
 
-VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
-if not VSC_INSTITUTE_CLUSTER:
-    logger.error("VSC_INSTITUTE_CLUSTER environment variable is undefined")
-    sys.exit(1)
-
-if VSC_INSTITUTE_CLUSTER == SOFIA:
-    MACHINE = VSC_INSTITUTE_CLUSTER
-    SOURCEPATH = os.path.join(APPS, SOFIA, SOURCES)
-else:
-    MACHINE = BRUSSEL
-    SOURCEPATH = os.pathsep.join([
+SOURCEPATH = {
+    BRUSSEL: os.pathsep.join([
         os.path.join(APPS, BRUSSEL, SOURCES),
         os.path.join(APPS, GENT, SOURCES),
-    ])
+    ]),
+    SOFIA: os.path.join(APPS, SOFIA, SOURCES),
+}
 
 DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS[MACHINE].items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
@@ -90,6 +83,7 @@ def main():
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
         'lmod_cache': '1',
+        'machine': MACHINE,
         'target_arch': None,
         'tmp': '/dev/shm',
     }
@@ -104,7 +98,7 @@ def main():
         'installpath': os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
         'prefer-python-search-path': 'EBPYTHONPREFIXES',
         'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
-        'sourcepath': SOURCEPATH,
+        'sourcepath': SOURCEPATH[MACHINE],
     }
 
     # Parse command line arguments

@@ -19,8 +19,8 @@ import sys
 
 from vsc.utils import fancylogger
 
-from build_tools.clusters import PARTITIONS
-from build_tools.filetools import APPS_BRUSSEL, write_tempfile
+from build_tools.clusters import ARCH, APPS, CLUSTER, MACHINE, PARTITIONS, SOFIA
+from build_tools.filetools import write_tempfile
 from build_tools.softinstall import submit_job_script
 
 logger = fancylogger.getLogger()
@@ -47,18 +47,19 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
     if cluster is False, don’t purge/load a cluster module (use the currently active cluster)
     """
 
-    archdir = PARTITIONS[partition]['arch']
+    archdir = PARTITIONS[partition][ARCH]
     if cluster is None:
-        cluster = PARTITIONS[partition]['cluster']
+        cluster = PARTITIONS[partition][CLUSTER]
 
     cache_cmd = [
         '/usr/libexec/lmod/run_lmod_cache.py',
         '--create-cache',
         f'--architecture {archdir}',
-        f'--module-basedir {APPS_BRUSSEL}/$VSC_OS_LOCAL',
+        f'--module-basedir {APPS}/{MACHINE}/${{VSC_OS_LOCAL:?}}',
     ]
 
-    if PARTITIONS[partition]['arch'] == 'zen5-ib':
+    # TODO: also create spider cache on sofia when the updated run_lmod_cache.py script is installed there
+    if PARTITIONS[partition][ARCH] == 'zen5-ib' and PARTITIONS[partition][CLUSTER] != SOFIA:
         cache_cmd.append('--create-spider-cache')
 
     cache_job = LMOD_CACHE_JOB_TEMPLATE.format(

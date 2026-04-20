@@ -137,7 +137,7 @@ if [[ "${lmod_cache}" == 1 && -n "$${builds_succeeded}" ]];then
         /usr/libexec/lmod/run_lmod_cache.py
         --create-cache
         --architecture ${target_arch}
-        --module-basedir /apps/brussel/$$VSC_OS_LOCAL
+        --module-basedir /apps/${machine}/$$VSC_OS_LOCAL
     )
     if [[ ${target_arch} == "zen5-ib" ]]; then
         cmd+=(--create-spider-cache)

@@ -17,6 +17,7 @@ Cluster parameters for build submission script
 @author: Samuel Moors (Vrije Universiteit Brussel)
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
+import os
 
 
 ANANSI = 'anansi'
@@ -33,6 +34,15 @@ MANTICORE = 'manticore'
 PARTITION = 'partition'
 SOFIA = 'sofia'
 SOURCES = 'sources'
+
+VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
+if not VSC_INSTITUTE_CLUSTER:
+    raise ValueError("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+
+if VSC_INSTITUTE_CLUSTER == SOFIA:
+    MACHINE = SOFIA
+else:
+    MACHINE = BRUSSEL
 
 # CPU architecture name including suffix with network fabric
 # default: software will be installed by default using this partitions
