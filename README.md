@@ -27,7 +27,7 @@ python setup.py install
 
 ### Virtual environment
 
-```
+```bash
 python -m venv /path/to/venv/hpcbuild
 source /path/to/venv/hpcbuild/activate
 # Install VSC dependencies
@@ -56,7 +56,7 @@ python -m pip install . --no-deps
 
 Tests can be carried out with `pytest`:
 
-```
+```bash
 cd build_tools
 python -m pytest
 ```

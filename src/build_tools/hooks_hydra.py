@@ -440,7 +440,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     # set cuda compute capabilities
     elif is_gpu_software(ec):
         # on GPU nodes set cuda compute capabilities
-        ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH_FULL]['cuda_cc']
+        ec['cuda_compute_capabilities'] = ARCHS[MACHINE][LOCAL_ARCH_FULL]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
 
