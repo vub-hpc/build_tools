@@ -17,7 +17,6 @@ Cluster parameters for build submission script
 @author: Samuel Moors (Vrije Universiteit Brussel)
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
-import os
 
 
 ANANSI = 'anansi'
