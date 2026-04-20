@@ -295,7 +295,7 @@ def main():
                 'job_name': mk_job_name(easyconfig, host_arch, job_options['target_arch']),
                 'walltime': '11:59:59',
                 'nodes': 1,
-                'tasks': 4,
+                'tasks': 8 if MACHINE == SOFIA else 4,
                 'gpus': '',
                 PARTITION: host_partition,
                 CLUSTER: cluster_module,
