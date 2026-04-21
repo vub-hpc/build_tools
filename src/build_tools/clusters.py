@@ -116,6 +116,7 @@ ARCHS = {
                 GPU: 'ada_gpu',
             },
             'cuda_cc': ['8.9', '9.0'],  # L40S, H200
+            'lmod_json_spider_cache': "1",
         },
     }, SOFIA: {
         'zen5-ib': {

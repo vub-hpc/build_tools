@@ -14,12 +14,15 @@
 Unit tests configuration file
 
 @author: Alex Domingo (Vrije Universiteit Brussel)
+@author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
 import os
 import pytest
 
 from easybuild.tools.options import set_up_configuration
+
+os.environ["VSC_INSTITUTE_CLUSTER"] = "hydra"
 
 
 def pytest_addoption(parser):

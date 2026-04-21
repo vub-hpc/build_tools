@@ -123,7 +123,7 @@ if [ "${bwrap}" == 1 ]; then
 fi
 
 builds_succeeded=$$(grep "^BUILD_TOOLS: builds_succeeded" "$$eb_stderr")
-if [[ "${lmod_cache}" == 1 && -n "$${builds_succeeded}" ]];then
+if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
     job_options=(
         --wait
         --time=1:0:0
@@ -139,8 +139,7 @@ if [[ "${lmod_cache}" == 1 && -n "$${builds_succeeded}" ]];then
         --architecture ${target_arch}
         --module-basedir /apps/${machine}/$$VSC_OS_LOCAL
     )
-    # TODO: also add for sofia when the updated cache script is installed
-    if [[ ${target_arch} == "zen5-ib" && ${machine} != "sofia" ]]; then
+    if [[ "${lmod_json_spider_cache}" == "1" ]]; then
         cmd+=(--create-spider-cache)
     fi
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${target_arch}"

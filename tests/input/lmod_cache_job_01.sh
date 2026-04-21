@@ -5,4 +5,4 @@
 #SBATCH --job-name=lmod_cache_skylake-ib
 #SBATCH --dependency=singleton,afterok:123:456
 #SBATCH --partition=skylake_mpi
-/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture skylake-ib --module-basedir /apps/brussel/$VSC_OS_LOCAL
+/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture skylake-ib --module-basedir /apps/brussel/${VSC_OS_LOCAL:?}

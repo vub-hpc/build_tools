@@ -245,6 +245,7 @@ def main():
     for (host_arch, host_partition) in build_hosts:
         job_options = dict(job)
         job_options['target_arch'] = host_arch
+        job_options['lmod_json_spider_cache'] = ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0')
 
         # Set tmp dir and update build path accordingly
         if opts.options.tmp:
