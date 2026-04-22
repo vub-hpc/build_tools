@@ -41,6 +41,7 @@ setuptools.setup(
     scripts=[
         'bin/submit_build.py',
         'bin/ec2ml.py',
+        'bin/calc_toolchain_versions.py',
     ],
 
     python_requires='~=3.9',

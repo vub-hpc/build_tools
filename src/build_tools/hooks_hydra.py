@@ -144,38 +144,9 @@ TC_VERSIONS = {}
 def set_tc_versions():
     " build dict of valid (sub)toolchain-version combinations per valid generation "
 
-    tc_versions_code = """
-import json, os, sys
-from easybuild.framework.easyconfig.easyconfig import get_toolchain_hierarchy
-from easybuild.tools.build_log import EasyBuildError
-from easybuild.tools.options import set_up_configuration
-
-os.environ['EASYBUILD_IGNORE_INDEX'] = '1'
-os.environ['EASYBUILD_TERSE'] = '1'
-
-VALID_TOOLCHAINS = json.loads(sys.stdin.read())
-
-set_up_configuration()
-
-tc_versions = {}
-for tcgen, tcgen_spec in VALID_TOOLCHAINS.items():
-    tcgen_versions = []
-    for tc_name in tcgen_spec['toolchains']:
-        try:
-            tcgen_versions.extend(get_toolchain_hierarchy({'name': tc_name, 'version': tcgen}))
-        except EasyBuildError:
-            # skip if no easyconfig found for toolchain-version
-            pass
-    tc_versions[tcgen] = {
-        'toolchains': tcgen_versions,
-        'subdir': tcgen_spec['subdir'],
-    }
-print(json.dumps(tc_versions))
-"""
-
     try:
         result = subprocess.run(
-            ["python", "-c", tc_versions_code],
+            ["calc_toolchain_versions.py"],
             check=True,
             input=json.dumps(VALID_TOOLCHAINS),
             capture_output=True,
