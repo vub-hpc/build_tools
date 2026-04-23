@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2026 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -17,22 +17,24 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
+import json
 import os
 import re
+import subprocess
 import sys
 import time
 
 from flufl.lock import Lock, TimeOutError, NotLockedError
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
-from easybuild.framework.easyconfig.easyconfig import letter_dir_for, get_toolchain_hierarchy
+from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
 from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
 from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
-from build_tools.clusters import ARCHS
+from build_tools.clusters import ARCHS, MACHINE
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
 
 # user groups for licensed software
@@ -62,19 +64,33 @@ SOFTWARE_GROUPS = {
     'VASP': {r'^6\.': 'bvasp6', r'^5\.': 'bvasp'},
 }
 
-GPU_ARCHS = [x for (x, y) in ARCHS.items() if y['partition']['gpu']]
+GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
 
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
+# try to avoid uncommon toolchains
+INVALID_TC_NAMES = [
+    'fosscuda',
+    'gmpflf', 'gmpich'
+    'iomkl', 'iompi',
+    'lmpflf', 'lmpich',
+    'nvofbf', 'nvompi',
+]
+VALID_TC_NAMES = [
+    'GCCcore', 'GCC', 'gfbf', 'gompi', 'foss',
+    'intel-compilers', 'iimpi', 'iimkl', 'intel',
+    'nvidia-compilers', 'NVHPC',
+    'llvm-compilers', 'lfbf', 'lompi', 'lfoss',
+]
 VALID_TOOLCHAINS = {
     '2024a': {
-        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'toolchains': ['foss', 'intel'],
         'subdir': '2024a',
     },
     '2025a': {
-        'toolchains': ['foss', 'intel', 'gomkl', 'gimkl', 'gimpi'],
+        'toolchains': ['foss', 'intel'],
         'subdir': '2025a',
     },
     '25.1': {
@@ -101,7 +117,11 @@ if ( os.getenv("SLURM_JOB_ID") ) then
 end
 """
 JAVA_MOD_FOOTER = """
-local mem = get_avail_memory()
+local mem_str = capture("cat /sys/fs/cgroup/$(</proc/self/cpuset)/../../../memory.max 2>/dev/null")
+local mem = tonumber(mem_str)
+if mem == 9223372036854771712 then
+    mem = nil
+end
 if mem then
     setenv("JAVA_TOOL_OPTIONS",  "-Xmx" .. math.floor(mem*0.8))
 end
@@ -117,6 +137,25 @@ https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
     ]])
 end
 """
+
+TC_VERSIONS = {}
+
+
+def set_tc_versions():
+    " build dict of valid (sub)toolchain-version combinations per valid generation "
+
+    try:
+        result = subprocess.run(
+            ["calc_toolchain_versions.py"],
+            check=True,
+            input=json.dumps(VALID_TOOLCHAINS),
+            capture_output=True,
+            text=True)
+    except subprocess.CalledProcessError as e:
+        print(f'stderr: {e}', file=sys.stderr)
+        raise
+
+    TC_VERSIONS.update(json.loads(result.stdout))
 
 
 def get_group(name, version):
@@ -138,44 +177,26 @@ def get_group(name, version):
     return group
 
 
-def get_tc_versions():
-    " build dict of valid (sub)toolchain-version combinations per valid generation "
-
-    # temporarily disable hooks to avoid infinite recursion when calling get_toolchain_hierarchy()
-    hooks = build_option('hooks')
-    update_build_option('hooks', None)
-
-    tc_versions = {}
-    for tcgen, tcgen_spec in VALID_TOOLCHAINS.items():
-        tcgen_versions = []
-        for tc_name in tcgen_spec['toolchains']:
-            try:
-                tcgen_versions.extend(get_toolchain_hierarchy({'name': tc_name, 'version': tcgen}))
-            except EasyBuildError:
-                # skip if no easyconfig found for toolchain-version
-                pass
-        tc_versions[tcgen] = {
-            'toolchains': tcgen_versions,
-            'subdir': tcgen_spec['subdir'],
-        }
-
-    update_build_option('hooks', hooks)
-    return tc_versions
-
-
-def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
+def calc_tc_gen_subdir(name, version, tcname, tcversion):
     """
     calculate the toolchain generation subdir
     return False if not valid
     """
     name_version = {'name': name, 'version': version}
     toolchain = {'name': tcname, 'version': tcversion}
-    software = [name, version, tcname, tcversion, easyblock]
+    software = [name, version, tcname, tcversion]
 
-    tc_versions = get_tc_versions()
+    # invalid toolchains
+    for curr_name in [tcname, name]:
+        if curr_name in INVALID_TC_NAMES:
+            log_msg = f"Invalid toolchain {curr_name} for {software}"
+            return False, log_msg
+
+    if not TC_VERSIONS:
+        set_tc_versions()
 
     # (software with) valid (sub)toolchain-version combination
-    for tcgen_spec in tc_versions.values():
+    for tcgen_spec in TC_VERSIONS.values():
         print(f"DEBUG: {tcgen_spec['toolchains']} --- {toolchain} : {name_version}")
         if toolchain in tcgen_spec['toolchains'] or name_version in tcgen_spec['toolchains']:
             tcgen_subdir = tcgen_spec['subdir']
@@ -183,12 +204,11 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
             print(f"DEBUG: return {tcgen_subdir}")
             return tcgen_subdir, log_msg
 
-    # invalid toolchains
-    # all toolchains have 'system' toolchain, so we need to handle the invalid toolchains separately
-    # all toolchains have 'Toolchain' easyblock, so checking the easyblock is sufficient
-    if easyblock == 'Toolchain':
-        log_msg = f"Invalid toolchain {name} for {software}"
-        return False, log_msg
+    # invalid toolchain version
+    for curr_name, curr_version in [(tcname, tcversion), (name, version)]:
+        if curr_name in VALID_TC_NAMES:
+            log_msg = f"Invalid toolchain version {curr_version} for {software}"
+            return False, log_msg
 
     # software with 'system' toolchain: return 'system'
     if tcname == 'system':
@@ -196,7 +216,7 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock):
         log_msg = f"Determined toolchain '{tcgen_subdir}' for {software}"
         return tcgen_subdir, log_msg
 
-    log_msg = f"Invalid toolchain {tcname} and/or toolchain version {tcversion} for {software}"
+    log_msg = f"Unknown toolchain {tcname}-{tcversion} for {software}. Please add to VALID_TC_NAMES or INVALID_TC_NAMES"
     return False, log_msg
 
 
@@ -214,9 +234,7 @@ def is_gpu_software(ec):
 
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
-    tc_gen, log_msg = calc_tc_gen_subdir(
-        ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec.easyblock
-    )
+    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.toolchain.name, ec.toolchain.version)
 
     if not tc_gen:
         raise EasyBuildError("[parse hook] " + log_msg)
@@ -313,7 +331,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
             ec['sanity_check_paths']['files'].append(pmix_slurm_lib)
 
     # InfiniBand support
-    if ec.name in IB_MODULE_SOFTWARE:
+    if ec.name in IB_MODULE_SOFTWARE and ec.easyblock == IB_MODULE_SOFTWARE[ec.name]['easyblock-ec']:
         # remove any OS dependency on libverbs in non-IB nodes
         if LOCAL_ARCH_SUFFIX != IB_MODULE_SUFFIX:
             pkg_ibverbs = EASYCONFIG_CONSTANTS['OS_PKG_IBVERBS_DEV'][0]
@@ -389,7 +407,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     # set cuda compute capabilities
     elif is_gpu_software(ec):
         # on GPU nodes set cuda compute capabilities
-        ec['cuda_compute_capabilities'] = ARCHS[LOCAL_ARCH_FULL]['cuda_cc']
+        ec['cuda_compute_capabilities'] = ARCHS[MACHINE][LOCAL_ARCH_FULL]['cuda_cc']
         ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
 
@@ -427,8 +445,8 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
             self.cfg.update('configopts', "--enable-mca-no-build=pnet-opa")
 
     # InfiniBand support:
-    if self.name in IB_MODULE_SOFTWARE:
-        ec_param = IB_MODULE_SOFTWARE[self.name][0]
+    if self.name in IB_MODULE_SOFTWARE and self.cfg.easyblock == IB_MODULE_SOFTWARE[self.name]['easyblock']:
+        ec_param = IB_MODULE_SOFTWARE[self.name]['options'][0]
 
         # convert any non-list parameters to a list
         if ec_param == 'configopts':
@@ -442,10 +460,10 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
         # update IB settings
         if LOCAL_ARCH_SUFFIX == IB_MODULE_SUFFIX:
             self.log.info("[pre-configure hook] Enabling verbs in %s", self.name)
-            ib_opt = IB_MODULE_SOFTWARE[self.name][1]
+            ib_opt = IB_MODULE_SOFTWARE[self.name]['options'][1]
         else:
             self.log.info("[pre-configure hook] Disabling verbs in %s", self.name)
-            ib_opt = IB_MODULE_SOFTWARE[self.name][2]
+            ib_opt = IB_MODULE_SOFTWARE[self.name]['options'][2]
 
         ib_config = ib_free_config + [ib_opt]
 

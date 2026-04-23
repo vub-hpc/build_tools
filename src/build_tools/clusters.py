@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2026 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -17,89 +17,124 @@ Cluster parameters for build submission script
 @author: Samuel Moors (Vrije Universiteit Brussel)
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
+import os
+
+
+ANANSI = 'anansi'
+APPS = '/apps'
+ARCH = 'arch'
+BRUSSEL = 'brussel'
+CLUSTER = 'cluster'
+CPU = 'cpu'
+DEFAULT = 'default'
+GENT = 'gent'
+GPU = 'gpu'
+HYDRA = 'hydra'
+MANTICORE = 'manticore'
+PARTITION = 'partition'
+SOFIA = 'sofia'
+SOURCES = 'sources'
+
+VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
+if not VSC_INSTITUTE_CLUSTER:
+    raise ValueError("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+
+if VSC_INSTITUTE_CLUSTER == SOFIA:
+    MACHINE = SOFIA
+else:
+    MACHINE = BRUSSEL
 
 # CPU architecture name including suffix with network fabric
 # default: software will be installed by default using this partitions
-# opt: optimization level of each architecture for cross-compilation
 # eb: extra options for EasyBuild in this architecture
 # partition: dict with default CPU and GPU partitions for this arch
 # cuda_cc: suported CUDA compute capabilities in the GPU partition
-
 ARCHS = {
-    'broadwell': {
-        'default': True,
-        'opt': '-mavx2',
-        'partition': {
-            'cpu': 'pascal_gpu',
-            'gpu': 'pascal_gpu',
+    BRUSSEL: {
+        'broadwell': {
+            DEFAULT: True,
+            PARTITION: {
+                CPU: 'pascal_gpu',
+                GPU: 'pascal_gpu',
+            },
+            'cuda_cc': ['6.0', '6.1'],  # Tesla P100, GeForce 1080Ti
         },
-        'cuda_cc': ['6.0', '6.1'],  # Tesla P100, GeForce 1080Ti
-    },
-    'haswell-ib': {
-        'default': False,
-        'opt': '-mavx2',
-        'partition': {
-            'cpu': 'haswell_mpi',
-            'gpu': None,
+        'haswell-ib': {
+            DEFAULT: False,
+            PARTITION: {
+                CPU: 'haswell_mpi',
+                GPU: None,
+            },
         },
-    },
-    'skylake': {
-        'default': False,
-        'opt': '-mavx512',
-        'partition': {
-            'cpu': 'skylake',
-            'gpu': None,
+        'skylake': {
+            DEFAULT: False,
+            PARTITION: {
+                CPU: 'skylake',
+                GPU: None,
+            },
         },
-    },
-    'skylake-ib': {
-        'default': False,
-        'opt': '-mavx512',
-        'partition': {
-            'cpu': 'skylake_mpi',
-            'gpu': None,
+        'skylake-ib': {
+            DEFAULT: False,
+            PARTITION: {
+                CPU: 'skylake_mpi',
+                GPU: None,
+            },
         },
-    },
-    'zen2-ib': {
-        'default': True,
-        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
-        'partition': {
-            'cpu': 'ampere_gpu',  # no non-gpu partition available yet
-            'gpu': 'ampere_gpu',
+        'zen2-ib': {
+            DEFAULT: True,
+            PARTITION: {
+                CPU: 'ampere_gpu',  # no non-gpu partition available yet
+                GPU: 'ampere_gpu',
+            },
+            'cuda_cc': ['8.0'],  # A100
         },
-        'cuda_cc': ['8.0'],  # A100
-    },
-    'zen3': {
-        'default': False,
-        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
-        'partition': {
-            'cpu': 'zen3',
-            'gpu': None,
+        'zen3': {
+            DEFAULT: False,
+            PARTITION: {
+                CPU: 'zen3',
+                GPU: None,
+            },
         },
-    },
-    'zen3-ib': {
-        'default': False,
-        'opt': 'Intel:-march=core-avx2;GCC:-mavx2',
-        'partition': {
-            'cpu': 'zen3_mpi',
-            'gpu': None,
+        'zen3-ib': {
+            DEFAULT: False,
+            PARTITION: {
+                CPU: 'zen3_mpi',
+                GPU: None,
+            },
         },
-    },
-    'zen4': {
-        'default': True,
-        'opt': 'Intel:-march=rocketlake;GCC:-march=znver4',
-        'partition': {
-            'cpu': 'zen4',
-            'gpu': None,
+        'zen4': {
+            DEFAULT: True,
+            PARTITION: {
+                CPU: 'zen4',
+                GPU: None,
+            },
         },
-    },
-    'zen5-ib': {
-        'default': True,
-        'opt': 'Intel:-march=rocketlake;GCC:-march=znver5',
-        'partition': {
-            'cpu': 'zen5_mpi',
-            'gpu': 'ada_gpu',
+        'zen5-ib': {
+            DEFAULT: True,
+            PARTITION: {
+                CPU: 'zen5_mpi',
+                GPU: 'ada_gpu',
+            },
+            'cuda_cc': ['8.9', '9.0'],  # L40S, H200
+            'lmod_json_spider_cache': "1",
         },
-        'cuda_cc': ['8.9', '9.0'],  # L40S, H200
+    }, SOFIA: {
+        'zen5-ib': {
+            DEFAULT: True,
+            PARTITION: {
+                CPU: 'zen5_vis',
+                GPU: 'zen5_vis',
+            },
+            'cuda_cc': ['8.9'],
+        },
+        'zen4-ib': {
+            DEFAULT: True,
+            PARTITION: {
+                CPU: 'zen4_h200',
+                GPU: 'zen4_h200',
+            },
+            'cuda_cc': ['9.0'],
+        },
     },
 }
 
@@ -108,47 +143,59 @@ ARCHS = {
 
 PARTITIONS = {
     'ada_gpu': {
-        'cluster': 'anansi',
-        'arch': 'zen5-ib',
+        CLUSTER: ANANSI,
+        ARCH: 'zen5-ib',
     },
     'ampere_gpu': {
-        'cluster': 'hydra',
-        'arch': 'zen2-ib',
-    },
-    'haswell_mpi': {
-        'cluster': 'chimera',
-        'arch': 'haswell-ib',
+        CLUSTER: HYDRA,
+        ARCH: 'zen2-ib',
     },
     'hopper_gpu': {
-        'cluster': 'hydra',
-        'arch': 'zen5-ib',
+        CLUSTER: HYDRA,
+        ARCH: 'zen5-ib',
     },
     'pascal_gpu': {
-        'cluster': 'hydra',
-        'arch': 'broadwell',
+        CLUSTER: HYDRA,
+        ARCH: 'broadwell',
     },
     'skylake': {
-        'cluster': 'hydra',
-        'arch': 'skylake',
+        CLUSTER: HYDRA,
+        ARCH: 'skylake',
     },
     'skylake_mpi': {
-        'cluster': 'hydra',
-        'arch': 'skylake-ib',
+        CLUSTER: HYDRA,
+        ARCH: 'skylake-ib',
     },
     'zen3': {
-        'cluster': 'manticore',
-        'arch': 'zen3',
+        CLUSTER: MANTICORE,
+        ARCH: 'zen3',
     },
     'zen3_mpi': {
-        'cluster': 'manticore',
-        'arch': 'zen3-ib',
+        CLUSTER: MANTICORE,
+        ARCH: 'zen3-ib',
     },
     'zen4': {
-        'cluster': 'hydra',
-        'arch': 'zen4',
+        CLUSTER: HYDRA,
+        ARCH: 'zen4',
     },
     'zen5_mpi': {
-        'cluster': 'hydra',
-        'arch': 'zen5-ib',
+        CLUSTER: HYDRA,
+        ARCH: 'zen5-ib',
+    },
+    'zen4_h200': {
+        CLUSTER: SOFIA,
+        ARCH: 'zen4-ib',
+    },
+    'zen5_dense': {
+        CLUSTER: SOFIA,
+        ARCH: 'zen5-ib',
+    },
+    'zen5_himem': {
+        CLUSTER: SOFIA,
+        ARCH: 'zen5-ib',
+    },
+    'zen5_vis': {
+        CLUSTER: SOFIA,
+        ARCH: 'zen5-ib',
     },
 }

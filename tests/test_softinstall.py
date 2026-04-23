@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2026 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -67,6 +67,8 @@ def test_mk_job_name(test_name):
             'job_name': 'test-job',
             'langcode': 'C',
             'lmod_cache': '1',
+            'lmod_json_spider_cache': '1',
+            'machine': 'brussel',
             'nodes': 1,
             'partition': 'zen5_mpi',
             'postinstall': '',
@@ -88,6 +90,8 @@ def test_mk_job_name(test_name):
             'job_name': 'test-job-gpu',
             'langcode': 'C',
             'lmod_cache': '0',
+            'lmod_json_spider_cache': '0',
+            'machine': 'brussel',
             'nodes': 1,
             'partition': 'ampere_gpu',
             'postinstall': 'rsync src dest',

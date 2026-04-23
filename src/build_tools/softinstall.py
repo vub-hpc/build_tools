@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2026 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -88,7 +88,7 @@ def mk_job_name(easyconfig, host_arch, target_arch=None):
     return job_name
 
 
-def submit_job_script(job_file, sub_options='', cluster='hydra', local_exec=False, dry_run=False):
+def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, dry_run=False):
     """
     Execute sbatch command to submit job script to target cluster
     :param job_file: file name of the job script

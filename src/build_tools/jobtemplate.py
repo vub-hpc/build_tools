@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2026 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -32,7 +32,7 @@ BUILD_JOB = """\
 #SBATCH ${gpus}
 
 # activate build_tools virtual environment
-source "$$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"
+source "$$HOME/EB5/eb5env/bin/activate"
 
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
@@ -54,12 +54,6 @@ if [ "${bwrap}" != 1 ]; then
     # Outside of bwrap we can just rely on default EB environment
     # which prepends 'modules/collection' to MODULEPATH
     export MODULEPATH=""
-fi
-
-# update MODULEPATH for cross-compilations
-local_arch="$$VSC_ARCH_LOCAL$$VSC_ARCH_SUFFIX"
-if [ "${target_arch}" != "$$local_arch" ]; then
-    export MODULEPATH=$${MODULEPATH//$$local_arch/${target_arch}}
 fi
 
 EB='eb'
@@ -129,7 +123,7 @@ if [ "${bwrap}" == 1 ]; then
 fi
 
 builds_succeeded=$$(grep "^BUILD_TOOLS: builds_succeeded" "$$eb_stderr")
-if [[ "${lmod_cache}" == 1 && -n "$${builds_succeeded}" ]];then
+if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
     job_options=(
         --wait
         --time=1:0:0
@@ -143,9 +137,9 @@ if [[ "${lmod_cache}" == 1 && -n "$${builds_succeeded}" ]];then
         /usr/libexec/lmod/run_lmod_cache.py
         --create-cache
         --architecture ${target_arch}
-        --module-basedir /apps/brussel/$$VSC_OS_LOCAL
+        --module-basedir /apps/${machine}/$$VSC_OS_LOCAL
     )
-    if [[ ${target_arch} == "zen5-ib" ]]; then
+    if [[ "${lmod_json_spider_cache}" == "1" ]]; then
         cmd+=(--create-spider-cache)
     fi
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${target_arch}"

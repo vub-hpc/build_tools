@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2026 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -28,8 +28,8 @@ from vsc.utils.run import RunNoShell
 from vsc.utils.script_tools import SimpleOption
 
 from build_tools import hooks_hydra
-from build_tools.clusters import ARCHS, PARTITIONS
-from build_tools.filetools import APPS_BRUSSEL
+from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, GENT, GPU, MACHINE, PARTITION,
+                                  PARTITIONS, SOFIA, SOURCES)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -53,10 +53,23 @@ EASYCONFIG_REPOS = [
 ]
 EASYBLOCK_REPO = os.path.join("site-vub", "easyblocks", "*", "*.py")
 
-DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS.items() if prop['default']]
+SOURCEPATH = {
+    BRUSSEL: os.pathsep.join([
+        os.path.join(APPS, BRUSSEL, SOURCES),
+        os.path.join(APPS, GENT, SOURCES),
+    ]),
+    SOFIA: os.path.join(APPS, SOFIA, SOURCES),
+}
+
+DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS[MACHINE].items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
-if LOCAL_ARCH not in ARCHS:
+if LOCAL_ARCH not in ARCHS[MACHINE]:
     logger.error("Local system has unsupported architeture: '%s'", LOCAL_ARCH)
+    sys.exit(1)
+
+VSC_DEFAULT_CLUSTER_MODULE = os.getenv('VSC_DEFAULT_CLUSTER_MODULE')
+if not VSC_DEFAULT_CLUSTER_MODULE:
+    logger.error("VSC_DEFAULT_CLUSTER_MODULE environment variable is undefined")
     sys.exit(1)
 
 
@@ -66,10 +79,11 @@ def main():
     # Default job options
     job = {
         'bwrap': '0',
-        'cluster': 'hydra',
+        CLUSTER: VSC_DEFAULT_CLUSTER_MODULE,
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
         'lmod_cache': '1',
+        'machine': MACHINE,
         'target_arch': None,
         'tmp': '/dev/shm',
     }
@@ -81,10 +95,10 @@ def main():
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
         'hooks': hooks_hydra.__file__,
         'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
-        'installpath': os.path.join(APPS_BRUSSEL, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
+        'installpath': os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
         'prefer-python-search-path': 'EBPYTHONPREFIXES',
         'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
-        'sourcepath': '/apps/brussel/sources:/apps/gent/source',
+        'sourcepath': SOURCEPATH[MACHINE],
     }
 
     # Parse command line arguments
@@ -92,7 +106,6 @@ def main():
         "arch": ("CPU architecture of the host system and the build", 'strlist', 'add', None, 'a'),
         "bwrap": ("Reinstall in 2 steps via new namespace with bwrap (no robot)", None, "store_true", False, 'b'),
         "clang": ("Set LANG=C in the build (instead of unicode)", None, "store_true", False, 'c'),
-        "cross-compile": ("CPU architecture of the build (different than the build system)", None, "store", None, 'x'),
         "dry-run": ("Do not fetch/install, set debug log level", None, "store_true", False, 'D'),
         "extra-flags": ("Extra flags to pass to EasyBuild", None, "store", None, 'e'),
         "extra-mod-footer": ("Path to extra footer for module file", None, "store", None, 'f'),
@@ -122,7 +135,7 @@ def main():
 
     if opts.options.lmod_cache_only:
         for arch in DEFAULT_ARCHS:
-            submit_lmod_cache_job(ARCHS[arch]['partition']['cpu'], dry_run=dry_run)
+            submit_lmod_cache_job(ARCHS[MACHINE][arch][PARTITION]['cpu'], dry_run=dry_run)
         sys.exit(0)
 
     if not opts.args:
@@ -147,7 +160,7 @@ def main():
         arch_stack = [LOCAL_ARCH]
     elif opts.options.arch:
         arch_stack = opts.options.arch
-        unknown_archs = [arch for arch in arch_stack if arch not in ARCHS]
+        unknown_archs = [arch for arch in arch_stack if arch not in ARCHS[MACHINE]]
         if unknown_archs:
             logger.error("Unknown archs: %s", ", ".join(unknown_archs))
             sys.exit(1)
@@ -162,28 +175,17 @@ def main():
         partition_stack = [part for part in opts.options.partition if part in PARTITIONS]
         if opts.options.arch:
             logger.warning("Overwriting given architectures with the architectures of given partitions")
-        arch_stack = [PARTITIONS[part]['arch'] for part in partition_stack]
+        arch_stack = [PARTITIONS[part][ARCH] for part in partition_stack]
         build_hosts = list(zip(arch_stack, partition_stack))
     else:
         # initially target default CPU partitions for all selected architectures
         # in case of builds for GPUs, the build host might change down the line if suitable GPU partitions exist
-        build_hosts = [(arch, ARCHS[arch]['partition']['cpu']) for arch in arch_stack]
+        build_hosts = [(arch, ARCHS[MACHINE][arch][PARTITION]['cpu']) for arch in arch_stack]
 
     # remove duplicates and clean-up list of build hosts
     build_hosts = {(arch, part) for (arch, part) in build_hosts if arch and part}
 
     logger.debug("Initial target build hosts: %s", ', '.join([f'{p} ({a})' for (a, p) in build_hosts]))
-
-    # Cross compilation
-    if opts.options.cross_compile:
-        if len(build_hosts) > 1:
-            logger.error("Cross-compilation only supports 1 build architecture (--arch)")
-        target_arch = opts.options.cross_compile
-        if target_arch not in ARCHS:
-            logger.error("Unknown target arch: %s", target_arch)
-            sys.exit(1)
-        job['target_arch'] = target_arch
-        logger.info("Doing cross-compilation to target arch: %s", job['target_arch'])
 
     # Switch build language to C
     if opts.options.clang:
@@ -242,17 +244,15 @@ def main():
     # submit build jobs for each micro-architecture
     for (host_arch, host_partition) in build_hosts:
         job_options = dict(job)
-
-        # without special target arch, target host arch
-        if not job_options['target_arch']:
-            job_options['target_arch'] = host_arch
+        job_options['target_arch'] = host_arch
+        job_options['lmod_json_spider_cache'] = ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0')
 
         # Set tmp dir and update build path accordingly
         if opts.options.tmp:
-            job['tmp'] = '/tmp'
+            job_options['tmp'] = '/tmp'
         elif opts.options.tmp_scratch:
-            job['tmp'] = os.path.join('$VSC_SCRATCH', job_options['target_arch'])
-        ebconf['buildpath'] = os.path.join(job['tmp'], 'eb-submit-build')
+            job_options['tmp'] = os.path.join('$VSC_SCRATCH', job_options['target_arch'])
+        ebconf['buildpath'] = os.path.join(job_options['tmp'], 'eb-submit-build')
 
         # common EB command line options
         eb_options = [
@@ -274,19 +274,21 @@ def main():
             # robot is not supported with bwrap
             eb_options.append('--robot')
 
-        # cross-compilation
-        if job_options['target_arch'] != host_arch:
-            eb_options.extend(['--optarch', ARCHS[job_options['target_arch']]['opt']])
-
         # extra settings from user
         if opts.options.extra_flags:
             eb_options.append(opts.options.extra_flags)
 
         # update build and install paths of the EB job
         install_dir = job_options['target_arch']
-        ebconf['installpath'] = os.path.join(APPS_BRUSSEL, '${VSC_OS_LOCAL:?}', install_dir)
+        ebconf['installpath'] = os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', install_dir)
         for opt, path in ebconf.items():
             eb_options.append(f'--{opt}={path}')
+
+        cluster = PARTITIONS[host_partition].get(CLUSTER, VSC_DEFAULT_CLUSTER_MODULE)
+        if cluster == SOFIA:
+            cluster_module = None  # there is no cluster module in sofia
+        else:
+            cluster_module = cluster
 
         # set Slurm directives in job file
         job_options.update(
@@ -294,10 +296,10 @@ def main():
                 'job_name': mk_job_name(easyconfig, host_arch, job_options['target_arch']),
                 'walltime': '11:59:59',
                 'nodes': 1,
-                'tasks': 4,
+                'tasks': 8 if MACHINE == SOFIA else 4,
                 'gpus': '',
-                'partition': host_partition,
-                'cluster': PARTITIONS[host_partition].get('cluster', 'hydra'),
+                PARTITION: host_partition,
+                CLUSTER: cluster_module,
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
@@ -306,13 +308,15 @@ def main():
 
         # settings for builds with GPUs
         if opts.options.gpu:
-            if ARCHS[host_arch]['partition']['gpu']:
+            if ARCHS[MACHINE][host_arch][PARTITION][GPU]:
                 # user specified partitions have priority
                 if not opts.options.partition:
                     # install on GPU partition on archs with GPUs
-                    job_options['partition'] = ARCHS[host_arch]['partition']['gpu']
-                    job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster', 'hydra')
-                if job_options['cluster'] == 'anansi':
+                    job_options[PARTITION] = ARCHS[MACHINE][host_arch][PARTITION][GPU]
+                    if cluster != SOFIA:
+                        job_options[CLUSTER] = PARTITIONS[job_options[PARTITION]].get(CLUSTER,
+                                                                                      VSC_DEFAULT_CLUSTER_MODULE)
+                if job_options[CLUSTER] == ANANSI:
                     job_options['gpus'] = '--gres=shard:1'
                 else:
                     job_options['gpus'] = '--gpus-per-node=1'
@@ -324,13 +328,13 @@ def main():
         # submit build job
         buildjob_out = None
 
-        if job_options['partition']:
+        if job_options[PARTITION]:
             logger.debug('job_options: %s', job_options)
 
             logger.info(
                 "Building %s on %s (%s) for %s",
                 easyconfig,
-                job_options['partition'],
+                job_options[PARTITION],
                 host_arch,
                 job_options['target_arch'],
             )
@@ -339,7 +343,7 @@ def main():
                 job_options,
                 keep_job=opts.options.keep,
                 sub_options=opts.options.extra_sub_flags,
-                cluster=job_options['cluster'],
+                cluster=job_options[CLUSTER],
                 local_exec=local_exec,
                 dry_run=dry_run,
             )

@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2024 Vrije Universiteit Brussel
+# Copyright 2017-2026 Vrije Universiteit Brussel
 # All rights reserved.
 #
 # This file is part of build_tools (https://github.com/vub-hpc/build_tools),
@@ -50,6 +50,6 @@ from build_tools import hooks_hydra
 )
 def test_calc_tc_gen_subdir(toolchain, set_up_config):
     name, version, tcname, tcversion, easyblock, expected_generation = toolchain
-    generation, _ = hooks_hydra.calc_tc_gen_subdir(name, version, tcname, tcversion, easyblock)
+    generation, _ = hooks_hydra.calc_tc_gen_subdir(name, version, tcname, tcversion)
 
     assert generation == expected_generation

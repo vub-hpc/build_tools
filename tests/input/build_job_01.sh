@@ -9,7 +9,7 @@
 #SBATCH 
 
 # activate build_tools virtual environment
-source "$VSC_SCRATCH_VO_USER/EB5/eb5env/bin/activate"
+source "$HOME/EB5/eb5env/bin/activate"
 
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
@@ -31,12 +31,6 @@ if [ "0" != 1 ]; then
     # Outside of bwrap we can just rely on default EB environment
     # which prepends 'modules/collection' to MODULEPATH
     export MODULEPATH=""
-fi
-
-# update MODULEPATH for cross-compilations
-local_arch="$VSC_ARCH_LOCAL$VSC_ARCH_SUFFIX"
-if [ "zen5-ib" != "$local_arch" ]; then
-    export MODULEPATH=${MODULEPATH//$local_arch/zen5-ib}
 fi
 
 EB='eb'
@@ -106,7 +100,7 @@ if [ "0" == 1 ]; then
 fi
 
 builds_succeeded=$(grep "^BUILD_TOOLS: builds_succeeded" "$eb_stderr")
-if [[ "1" == 1 && -n "${builds_succeeded}" ]];then
+if [[ "1" == "1" && -n "${builds_succeeded}" ]];then
     job_options=(
         --wait
         --time=1:0:0
@@ -122,7 +116,7 @@ if [[ "1" == 1 && -n "${builds_succeeded}" ]];then
         --architecture zen5-ib
         --module-basedir /apps/brussel/$VSC_OS_LOCAL
     )
-    if [[ zen5-ib == "zen5-ib" ]]; then
+    if [[ "1" == "1" ]]; then
         cmd+=(--create-spider-cache)
     fi
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition zen5_mpi for architecture zen5-ib"
