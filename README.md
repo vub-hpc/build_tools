@@ -52,6 +52,48 @@ cd /path/to/build_tools/
 python -m pip install . --no-deps
 ```
 
+### Install instructions for sofia
+
+```bash
+# install + activate venv
+mkdir ~/EB5
+python3 -m venv ~/EB5/eb5env
+source ~/EB5/eb5env/bin/activate
+
+# install deps
+python -m pip install --upgrade pip
+python -m pip install wheel
+python -m pip install vsc-install --no-build-isolation
+python -m pip install vsc-base vsc-utils --no-build-isolation
+python -m pip install flufl.lock
+python -m pip install pyyaml
+python -m pip install archspec  # required for BLIS-1.1 in zen5
+
+# clone repos
+git clone https://github.com/vub-hpc/build_tools.git ~/EB5/build_tools
+git clone https://github.com/easybuilders/easybuild-easyconfigs.git ~/EB5/easybuild-easyconfigs
+git clone https://github.com/easybuilders/easybuild-easyblocks.git ~/EB5/easybuild-easyblocks
+git clone https://github.com/easybuilders/easybuild-framework.git ~/EB5/easybuild-framework
+git clone --single-branch -b site-vub https://github.com/vscentrum/vsc-software-stack.git ~/EB5/vsc-software-stack/site-vub
+
+# add extra python paths for the cloned easybuild repos
+cat <<EOF >~/EB5/eb5env/lib/python3.9/site-packages/extra_paths.pth
+$HOME/EB5/easybuild-easyconfigs
+$HOME/EB5/easybuild-easyblocks
+$HOME/EB5/easybuild-framework
+EOF
+
+# create symlink to the `eb` executable
+ln -sr ~/EB5/easybuild-framework/eb ~/EB5/eb5env/bin/eb
+
+# create symlink to default EB easyconfigs so it's added to the EB robot paths
+ln -sr ~/EB5/easybuild-easyconfigs/easybuild/easyconfigs/ ~/EB5/vsc-software-stack/easybuild
+
+# install/update build_tools
+git -C ~/EB5/vsc-software-stack/site-vub pull
+python -m pip install ~/EB5/build_tools --no-deps --upgrade
+```
+
 ## Testing
 
 Tests can be carried out with `pytest`:
