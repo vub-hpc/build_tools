@@ -17,6 +17,7 @@ Custom EasyBuild hooks for VUB-HPC Clusters
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
+import grp
 import json
 import os
 import re
@@ -61,7 +62,7 @@ SOFTWARE_GROUPS = {
     'QuantumATK': 'bquantumatk',
     'ReaxFF': 'breaxff',
     'Stata': 'brusselall',  # site license
-    'VASP': {r'^6\.': 'bvasp6', r'^5\.': 'bvasp'},
+    'VASP': {r'^6\.': 'bvasp6', r'^5\.': 'bvasp'},  # bvasp6 is an autogroup (bvasp, ...)
 }
 
 GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
@@ -366,11 +367,6 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
         ec['postinstallcmds'] = [f'ln -sfb {ec["license_file"]} %(installdir)s/licenses/']
         ec.log.info(f"[parse hook] Set parameter postinstallcmds: {ec['postinstallcmds']}")
 
-    group = get_group(ec.name, ec.version)
-    if group:
-        ec['group'] = group
-        ec.log.info(f"[parse hook] Set parameter group: {ec['group']}")
-
     # set optarch for intel compilers on AMD nodes
     optarchs_intel = {
         'zen2': '-march=core-avx2',
@@ -485,6 +481,16 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     # Must be done this way, updating self.cfg['modextravars']
     # directly doesn't work due to templating.
     with self.cfg.disable_templating():
+
+        ##########################
+        # ---- PERMISSIONS ----- #
+        ##########################
+
+        group = get_group(self.name, self.version)
+        if group:
+            group_id = grp.getgrnam(group).gr_gid
+            self.group = (group, group_id)
+            self.log.info(f"[pre-module hook] Set group to: {self.group}")
 
         ##########################
         # ------ MPI ----------- #
