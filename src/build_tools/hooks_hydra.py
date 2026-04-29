@@ -169,9 +169,9 @@ def get_group(name, version):
         if isinstance(SOFTWARE_GROUPS[name], str):
             group = SOFTWARE_GROUPS[name]
         else:
-            for regex, grp in SOFTWARE_GROUPS[name].items():
+            for regex, groupname in SOFTWARE_GROUPS[name].items():
                 if re.search(regex, version):
-                    group = grp
+                    group = groupname
                     break
             if group is None:
                 raise EasyBuildError(f"No group defined for version {version} of licensed software {name}")
