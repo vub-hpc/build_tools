@@ -62,7 +62,7 @@ SOFTWARE_GROUPS = {
     'QuantumATK': 'bquantumatk',
     'ReaxFF': 'breaxff',
     'Stata': 'brusselall',  # site license
-    'VASP': {r'^6\.': 'bvasp6', r'^5\.': 'bvasp'},  # bvasp6 is an autogroup (bvasp, ...)
+    'VASP': {r'^6\.': 'bli_vasp6', r'^5\.': 'bvasp'},  # bli_vasp6 is an autogroup (bvasp6->bvasp, g_vasp6, avasp6)
 }
 
 GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
