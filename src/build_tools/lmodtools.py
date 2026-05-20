@@ -27,7 +27,6 @@ logger = fancylogger.getLogger()
 
 LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 #SBATCH --time=1:0:0
-#SBATCH --mem=1g
 #SBATCH --output=%x_%j.log
 #SBATCH --job-name=lmod_cache_{archdir}
 #SBATCH --dependency=singleton{jobids_depend}
