@@ -104,7 +104,6 @@ if [[ "1" == "1" && -n "${builds_succeeded}" ]];then
     job_options=(
         --wait
         --time=1:0:0
-        --mem=1g
         --output=%x_%j.log
         --job-name=lmod_cache_zen5-ib
         --dependency=singleton
