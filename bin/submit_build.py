@@ -321,6 +321,11 @@ def main():
                 else:
                     job_options['gpus'] = '--gpus-per-node=1'
 
+        # sofia zen4_h200 requires at least 1 GPU and 24 cores per GPU
+        if cluster == SOFIA and host_partition == 'zen4_h200':
+            job_options['tasks'] = 24
+            job_options['gpus'] = '--gpus-per-node=1'
+
         # add extra footer if requested
         if opts.options.extra_mod_footer:
             job_options['eb_options'] += f' --modules-footer={job_options["extra_mod_footer"]}'
