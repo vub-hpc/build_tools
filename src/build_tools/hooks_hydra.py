@@ -99,6 +99,10 @@ VALID_TOOLCHAINS = {
         'toolchains': ['nvidia-compilers', 'NVHPC'],
         'subdir': '2024a',
     },
+    '25.3-CUDA-12.8.0': {
+        'toolchains': ['nvidia-compilers', 'NVHPC'],
+        'subdir': '2025a',
+    },
 }
 VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a']
 
