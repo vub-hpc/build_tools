@@ -28,7 +28,7 @@ import time
 from flufl.lock import Lock, TimeOutError, NotLockedError
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
-from easybuild.framework.easyconfig.easyconfig import letter_dir_for
+from easybuild.framework.easyconfig.easyconfig import letter_dir_for, resolve_template
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
 from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
@@ -246,7 +246,8 @@ def is_gpu_software(ec):
 
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
-    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec['versionsuffix'])
+    versionsuffix = ec.resolve_template(ec['versionsuffix'])
+    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, versionsuffix)
 
     if not tc_gen:
         raise EasyBuildError("[parse hook] " + log_msg)
