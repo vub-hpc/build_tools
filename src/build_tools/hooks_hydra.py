@@ -246,7 +246,7 @@ def is_gpu_software(ec):
 
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
-    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.versionsuffix, ec.toolchain.name, ec.toolchain.version)
+    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, ec['versionsuffix'])
 
     if not tc_gen:
         raise EasyBuildError("[parse hook] " + log_msg)
