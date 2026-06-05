@@ -28,7 +28,7 @@ import time
 from flufl.lock import Lock, TimeOutError, NotLockedError
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
-from easybuild.framework.easyconfig.easyconfig import letter_dir_for, resolve_template
+from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
 from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
