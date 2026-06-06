@@ -99,6 +99,10 @@ VALID_TOOLCHAINS = {
         'toolchains': ['nvidia-compilers', 'NVHPC'],
         'subdir': '2024a',
     },
+    '25.3-CUDA-12.8.0': {
+        'toolchains': ['nvidia-compilers', 'NVHPC'],
+        'subdir': '2025a',
+    },
 }
 VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a']
 
@@ -179,12 +183,13 @@ def get_group(name, version):
     return group
 
 
-def calc_tc_gen_subdir(name, version, tcname, tcversion):
+def calc_tc_gen_subdir(name, version, tcname, tcversion, versionsuffix=''):
     """
     calculate the toolchain generation subdir
     return False if not valid
     """
     name_version = {'name': name, 'version': version}
+    name_version_suffix = {'name': name, 'version': version + versionsuffix}
     toolchain = {'name': tcname, 'version': tcversion}
     software = [name, version, tcname, tcversion]
 
@@ -198,9 +203,14 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion):
         set_tc_versions()
 
     # (software with) valid (sub)toolchain-version combination
+    # if toolchain name is nvidia-compilers or NVHPC see if
+    # version + versionsuffix of the easyconfig matches tc_version
     for tcgen_spec in TC_VERSIONS.values():
         print(f"DEBUG: {tcgen_spec['toolchains']} --- {toolchain} : {name_version}")
-        if toolchain in tcgen_spec['toolchains'] or name_version in tcgen_spec['toolchains']:
+        if (toolchain in tcgen_spec['toolchains']
+                or name_version in tcgen_spec['toolchains']
+                or (name == 'nvidia-compilers' and name_version_suffix in tcgen_spec['toolchains'])
+                or (name == 'NVHPC' and name_version_suffix in tcgen_spec['toolchains'])):
             tcgen_subdir = tcgen_spec['subdir']
             log_msg = f"Determined toolchain generation subdir '{tcgen_subdir}' for {software}"
             print(f"DEBUG: return {tcgen_subdir}")
@@ -236,7 +246,8 @@ def is_gpu_software(ec):
 
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
-    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.toolchain.name, ec.toolchain.version)
+    versionsuffix = ec.resolve_template(ec['versionsuffix'])
+    tc_gen, log_msg = calc_tc_gen_subdir(ec.name, ec.version, ec.toolchain.name, ec.toolchain.version, versionsuffix)
 
     if not tc_gen:
         raise EasyBuildError("[parse hook] " + log_msg)

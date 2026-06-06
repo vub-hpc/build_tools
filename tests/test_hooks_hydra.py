@@ -32,8 +32,12 @@ from build_tools import hooks_hydra
         ('STREAM', '5.10', 'intel-compilers', '2024.2.0', 'MakeCp', '2024a'),
         ('SAMtools', '1.21', 'GCC', '13.3.0', 'EB_SAMtools', '2024a'),
         ('nvidia-compilers', '25.1', 'GCCcore', '13.3.0', 'Toolchain', '2024a'),
+        ('nvidia-compilers', '25.3-CUDA-12.8.0', 'GCCcore', '14.2.0', 'Toolchain', '2025a'),
+        ('nvidia-compilers', '25.3', 'system', 'system', 'Toolchain', False),
         ('nvidia-compilers', '24.0', 'system', 'system', 'Toolchain', False),
         ('NVHPC', '25.1', 'GCCcore', '13.3.0', 'Toolchain', '2024a'),
+        ('NVHPC', '25.3-CUDA-12.8.0', 'GCCcore', '14.2.0', 'Toolchain', '2025a'),
+        ('NVHPC', '25.3', 'system', 'system', 'Toolchain', False),
         ('NVHPC', '24.0', 'system', 'system', 'Toolchain', False),
         # (software with) toolchains with generation as their version
         ('foss', '2024a', 'system', 'system', 'Toolchain', '2024a'),
