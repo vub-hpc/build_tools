@@ -150,16 +150,17 @@ TC_VERSIONS = {}
 def set_tc_versions():
     " build dict of valid (sub)toolchain-version combinations per valid generation "
 
+    script = 'calc_toolchain_versions.py'
+
     try:
         result = subprocess.run(
-            ["calc_toolchain_versions.py"],
+            [script],
             check=True,
             input=json.dumps(VALID_TOOLCHAINS),
             capture_output=True,
             text=True)
     except subprocess.CalledProcessError as e:
-        print(f'stderr: {e}', file=sys.stderr)
-        raise
+        raise RuntimeError(f"{script} failed: {e.stderr}") from e
 
     TC_VERSIONS.update(json.loads(result.stdout))
 
