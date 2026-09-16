@@ -42,6 +42,7 @@ setuptools.setup(
         'bin/submit_build.py',
         'bin/ec2ml.py',
         'bin/calc_toolchain_versions.py',
+        'bin/easystack_group.py',
     ],
 
     python_requires='~=3.9',
