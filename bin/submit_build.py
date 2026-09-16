@@ -63,9 +63,6 @@ SOURCEPATH = {
 
 DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS[MACHINE].items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
-if LOCAL_ARCH not in ARCHS[MACHINE]:
-    logger.error("Local system has unsupported architeture: '%s'", LOCAL_ARCH)
-    sys.exit(1)
 
 VSC_DEFAULT_CLUSTER_MODULE = os.getenv('VSC_DEFAULT_CLUSTER_MODULE')
 if not VSC_DEFAULT_CLUSTER_MODULE:
@@ -157,6 +154,9 @@ def main():
     # Set host archs: define arch_stack
     local_exec = opts.options.local
     if local_exec:
+        if LOCAL_ARCH not in ARCHS[MACHINE]:
+            logger.error("Local system has unsupported architeture: '%s'", LOCAL_ARCH)
+            sys.exit(1)
         logger.info("Building on local architecture: %s", LOCAL_ARCH)
         arch_stack = [LOCAL_ARCH]
     elif opts.options.arch:
