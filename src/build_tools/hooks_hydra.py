@@ -47,7 +47,7 @@ SOFTWARE_GROUPS = {
     'ANSYS': 'bansys',
     'CASTEP': 'bcastep',
     'COMSOL': 'bcomsol_users',  # autogroup (bcomsol, bcomsol_efremov)
-    'CRYSTAL': 'bcrystal',  # autogroup (bcrystal-algc)
+    'CRYSTAL': {r'^23\.': 'bli_crystal23'},  # autogroup (bcrystal->bcrystal-algc)
     'FLUENT': 'bansys',
     'FreeSurfer': 'bfreesurfer',
     'FUNAERO': 'bfunaero',
