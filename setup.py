@@ -47,8 +47,6 @@ setuptools.setup(
 
     python_requires='~=3.9',
     install_requires=[
-        'vsc-base',
-        'vsc-utils',
         'easybuild',
         'flufl.lock',
         'pyyaml',

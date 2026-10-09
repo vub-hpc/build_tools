@@ -18,16 +18,41 @@ Functions related to the software installation
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
 import re
-
-from vsc.utils import fancylogger
-from vsc.utils.run import RunNoShell, RunLoopStdout
+import shlex
+import subprocess
+import sys
 
 from build_tools.filetools import write_tempfile
 from build_tools.jobtemplate import BuildJob
 
-logger = fancylogger.getLogger()
+logger = logging.getLogger(__name__)
+
+
+def run_no_shell(cmd):
+    """
+    Run a command without using a shell, return (exit_code, output)
+    """
+    proc = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+def run_loop_stdout(cmd):
+    """
+    Run a command using a shell, writing its output to stdout as it is produced,
+    return (exit_code, output)
+    """
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    out_lines = []
+    for line in proc.stdout:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        out_lines.append(line)
+    ec = proc.wait()
+    return ec, ''.join(out_lines)
+
 
 TOOLCHAIN_FORMAT = r"20[1-2][0-9][ab]"
 
@@ -113,10 +138,10 @@ def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, 
         ec, out = 0, log_msg
     elif local_exec:
         logger.debug("Local execution of job script: %s", job_file)
-        ec, out = RunLoopStdout.run(f"bash {job_file}")
+        ec, out = run_loop_stdout(f"bash {job_file}")
     else:
         logger.debug("Job submission command: %s", submit_cmd)
-        ec, out = RunNoShell.run(f'bash -c "{submit_cmd}"')
+        ec, out = run_no_shell(f'bash -c "{submit_cmd}"')
 
     return ec, out
 

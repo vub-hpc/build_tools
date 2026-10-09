@@ -19,24 +19,11 @@ pip install -e . --config-settings editable_mode=compat
 ```
 See https://github.com/easybuilders/easybuild-framework/issues/4451
 
-Newer versions of `setuptools` can cause trouble to install `vsc-base` and `vsc-utils` with `pip`. In such case, install the VSC packages with the traditional
-
-```
-python setup.py install
-```
-
 ### Virtual environment
 
 ```bash
 python -m venv /path/to/venv/hpcbuild
 source /path/to/venv/hpcbuild/activate
-# Install VSC dependencies
-cd /path/to/vsc-install/
-python3 setup.py install
-cd /path/to/vsc-base/
-python3 setup.py install
-cd /path/to/vsc-utils/
-python3 setup.py install
 # Install EasyBuild
 cd /path/to/easybuild-framework/
 python -m pip install --editable . --config-settings editable_mode=compat
@@ -63,8 +50,6 @@ source ~/EB5/eb5env/bin/activate
 # install deps
 python -m pip install --upgrade pip
 python -m pip install wheel
-python -m pip install vsc-install --no-build-isolation
-python -m pip install vsc-base vsc-utils --no-build-isolation
 python -m pip install flufl.lock
 python -m pip install pyyaml
 python -m pip install archspec  # required for BLIS-1.1 in zen5

@@ -16,15 +16,13 @@ Helper functions to handle temp files
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
 import re
 import sys
 import tempfile
 
-from vsc.utils import fancylogger
-
-
-logger = fancylogger.getLogger()
+logger = logging.getLogger(__name__)
 
 APPS_BRUSSEL = os.path.join(os.path.sep, 'apps', 'brussel')
 
