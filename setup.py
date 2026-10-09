@@ -47,7 +47,9 @@ setuptools.setup(
 
     python_requires='~=3.9',
     install_requires=[
-        'easybuild',
+        'easybuild-framework',
+        'easybuild-easyblocks',
+        'easybuild-easyconfigs',
         'flufl.lock',
         'pyyaml',
     ],
