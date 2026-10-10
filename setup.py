@@ -56,8 +56,5 @@ setuptools.setup(
     tests_require=[
         'pytest',
     ],
-    package_data={
-        "build_tools": ["footers/*.footer"],
-    },
     zip_safe=False,
 )
