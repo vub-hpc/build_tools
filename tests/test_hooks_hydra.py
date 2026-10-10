@@ -16,7 +16,13 @@ Unit tests for build_tools.softinstall
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import logging
+import types
+
 import pytest
+
+from easybuild.tools.build_log import EasyBuildError
+from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools import hooks_hydra
 
@@ -108,3 +114,49 @@ def test_calc_tc_gen_subdir(toolchain, tc_versions):
     generation, _ = hooks_hydra.calc_tc_gen_subdir(name, version, tcname, tcversion)
 
     assert generation == expected_generation
+
+
+class FakeEasyconfig(dict):
+    """minimal stand-in for an EasyConfig as used by the parse hook"""
+
+    def __init__(self, name, toolchain_name='foss'):
+        super().__init__(moduleclass=f'{name.lower()}/all', versionsuffix='')
+        self.name = name
+        self.version = '1.0'
+        self.toolchain = types.SimpleNamespace(name=toolchain_name, version='2024a')
+        self.log = logging.getLogger('test_parse_hook')
+
+
+@pytest.fixture
+def parse_hook_config(monkeypatch):
+    """stub out EasyBuild configuration accessors used by the parse hook"""
+    monkeypatch.setattr(hooks_hydra, 'ConfigurationVariables', lambda: {'subdir_modules': 'modules'})
+    monkeypatch.setattr(hooks_hydra, 'build_option', lambda opt: None)
+
+
+def test_parse_hook_gpu_unknown_arch(parse_hook_config, monkeypatch):
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_FULL', 'bogus-arch')
+    ec = FakeEasyconfig('CUDA')
+
+    with pytest.raises(EasyBuildError, match='Unknown local architecture'):
+        hooks_hydra.parse_hook(ec)
+
+
+def test_parse_hook_gpu_dummy_module(parse_hook_config, monkeypatch):
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_FULL', 'zen4')
+    ec = FakeEasyconfig('CUDA')
+
+    hooks_hydra.parse_hook(ec)
+
+    assert ec['modluafooter'] == hooks_hydra.GPU_DUMMY_MOD_FOOTER
+    assert ec['module_only'] is True
+    assert ec['skipsteps'] == [SANITYCHECK_STEP]
+
+
+def test_parse_hook_gpu_arch(parse_hook_config, monkeypatch):
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_FULL', 'zen5-ib')
+    ec = FakeEasyconfig('CUDA')
+
+    hooks_hydra.parse_hook(ec)
+
+    assert ec['cuda_compute_capabilities'] == hooks_hydra.ARCHS[hooks_hydra.MACHINE]['zen5-ib']['cuda_cc']

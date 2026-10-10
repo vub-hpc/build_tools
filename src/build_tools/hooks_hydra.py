@@ -68,8 +68,8 @@ SOFTWARE_GROUPS = {
 
 GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
 
-LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
-LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
+LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '')
+LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX', '')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
 # try to avoid uncommon toolchains
@@ -399,28 +399,33 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     # ------ GPU MODULES -------- #
     ###############################
 
-    # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
-    if is_gpu_software(ec) and LOCAL_ARCH_FULL not in GPU_ARCHS:
-        ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
-        # inject error message in module file
-        ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
-        # manually set some default CUDA version for dummy module (required by easyblock)
-        if ec.name in ('NVHPC', 'nvidia-compilers'):
-            ec['default_cuda_version'] = '0'
-            # remove external CUDA dep so prepare_step doesn't call nvcc on a non-GPU node
-            ec['dependencies'] = [d for d in ec['dependencies'] if 'CUDA' not in d]
-            ec.log.info("[parse hook] Removed CUDA from dependency list for dummy module")
-        # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
-        ec['module_only'] = True
-        ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
-        ec['skipsteps'] = [SANITYCHECK_STEP]
-        ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
+    if is_gpu_software(ec):
+        if LOCAL_ARCH_FULL not in ARCHS[MACHINE]:
+            known_archs = ', '.join(ARCHS[MACHINE])
+            raise EasyBuildError(
+                f"[parse hook] Unknown local architecture: '{LOCAL_ARCH_FULL}' (expected one of: {known_archs})",
+            )
 
-    # set cuda compute capabilities
-    elif is_gpu_software(ec):
-        # on GPU nodes set cuda compute capabilities
-        ec['cuda_compute_capabilities'] = ARCHS[MACHINE][LOCAL_ARCH_FULL]['cuda_cc']
-        ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
+        # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
+        if LOCAL_ARCH_FULL not in GPU_ARCHS:
+            ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
+            # inject error message in module file
+            ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
+            # manually set some default CUDA version for dummy module (required by easyblock)
+            if ec.name in ('NVHPC', 'nvidia-compilers'):
+                ec['default_cuda_version'] = '0'
+                # remove external CUDA dep so prepare_step doesn't call nvcc on a non-GPU node
+                ec['dependencies'] = [d for d in ec['dependencies'] if 'CUDA' not in d]
+                ec.log.info("[parse hook] Removed CUDA from dependency list for dummy module")
+            # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
+            ec['module_only'] = True
+            ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
+            ec['skipsteps'] = [SANITYCHECK_STEP]
+            ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
+        else:
+            # on GPU nodes set cuda compute capabilities
+            ec['cuda_compute_capabilities'] = ARCHS[MACHINE][LOCAL_ARCH_FULL]['cuda_cc']
+            ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
 
 def pre_fetch_hook(self):
