@@ -146,7 +146,12 @@ if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
         cmd+=(--create-spider-cache)
     fi
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${host_arch}"
-    sbatch "$${job_options[@]}" --wrap "$${cmd[*]}"
+    # quote each argument so options containing spaces survive --wrap
+    wrap_cmd=""
+    for arg in "$${cmd[@]}"; do
+        wrap_cmd+=" "$$(printf '%q' "$$arg")
+    done
+    sbatch "$${job_options[@]}" --wrap "$$wrap_cmd"
 fi
 
 if [[ -n "$${builds_succeeded}" ]]; then
