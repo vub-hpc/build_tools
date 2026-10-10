@@ -17,8 +17,11 @@ Cluster parameters for build submission script
 @author: Samuel Moors (Vrije Universiteit Brussel)
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
+import logging
 import os
+import sys
 
+logger = logging.getLogger(__name__)
 
 ANANSI = 'anansi'
 APPS = '/apps'
@@ -37,7 +40,8 @@ SOURCES = 'sources'
 
 VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
 if not VSC_INSTITUTE_CLUSTER:
-    raise ValueError("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+    logger.error("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+    sys.exit(1)
 
 if VSC_INSTITUTE_CLUSTER == SOFIA:
     MACHINE = SOFIA
