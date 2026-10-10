@@ -186,7 +186,11 @@ def main():
     # Set Slurm partitions: define build_hosts
     if opts.partition:
         # given list of partitions overwrites all other options
-        partition_stack = [part for part in opts.partition if part in PARTITIONS]
+        unknown_parts = [part for part in opts.partition if part not in PARTITIONS]
+        if unknown_parts:
+            logger.error("Unknown partitions: %s", ", ".join(unknown_parts))
+            sys.exit(1)
+        partition_stack = opts.partition
         if opts.arch:
             logger.warning("Overwriting given architectures with the architectures of given partitions")
         arch_stack = [PARTITIONS[part][ARCH] for part in partition_stack]
