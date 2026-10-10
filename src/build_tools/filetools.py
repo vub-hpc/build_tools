@@ -17,7 +17,6 @@ Helper functions to handle temp files
 """
 
 import logging
-import re
 import sys
 import tempfile
 
@@ -36,41 +35,3 @@ def write_tempfile(contents):
         sys.exit(1)
 
     return handle.name
-
-
-def clean_append(filepath, new_content):
-    """
-    Use first and last line of content to match block of text from existing file
-    Remove any existing content and append new content to clean file
-    - filepath: (string) path to new or existing file
-    - new_content: (string) content to be added to the file
-    """
-    if not new_content:
-        logger.debug("No content to append to '%s', doing nothing", filepath)
-        return
-
-    try:
-        with open(filepath, 'r', encoding='utf-8') as handle:
-            existing_content = handle.read()
-    except IOError:
-        existing_content = ''
-        logger.debug("File does not exits, creating it: %s", filepath)
-
-    if existing_content:
-        # clean up the existing file content of any previous text matching new content
-        # use first and last line in new content to match any block text
-        boundaries = new_content.split('\n')
-        boundaries = (re.escape(boundaries[0]), re.escape(boundaries[-1]))
-        block_pattern = re.compile('^%s.*%s$' % boundaries, re.MULTILINE | re.DOTALL)
-        existing_content = block_pattern.sub('', existing_content)
-
-    # update/create file with new content
-    file_content = existing_content + new_content
-    try:
-        with open(filepath, 'w+', encoding='utf-8') as handle:
-            handle.write(file_content)
-    except IOError as err:
-        logger.error("Error writing file '%s': %s", filepath, err)
-        sys.exit(1)
-    else:
-        logger.debug("Successfully appended data to: %s", filepath)

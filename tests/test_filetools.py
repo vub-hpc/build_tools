@@ -17,18 +17,7 @@ Unit tests for build_tools.filetools
 author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
-import os
-import shutil
-
 from build_tools import filetools
-
-MODULERC = """-- VERSION SWAPS FOR IB MODULES
-local arch_suffix=os.getenv("VSC_ARCH_SUFFIX") or ""
-if ( arch_suffix == "-ib") then
-    module_version("OpenMPI/4.1.1-GCC-10.3.0-ib", "4.1.1-GCC-10.3.0")
-    module_version("OpenMPI/4.0.5-GCC-10.2.0-ib", "4.0.5-GCC-10.2.0")
-end
--- END OF VERSION SWAPS FOR IB MODULES"""
 
 
 def test_write_tempfile():
@@ -39,47 +28,3 @@ def test_write_tempfile():
         tmp_file_contents = tf.read()
 
     assert tmp_file_contents == contents
-
-
-def test_clean_append_new(tmpdir):
-    modrc_path = os.path.join(tmpdir.strpath, '.modulerc.lua')
-    filetools.clean_append(modrc_path, MODULERC)
-
-    with open(modrc_path, 'r') as mf:
-        modrc_text = mf.read()
-
-    assert modrc_text == MODULERC
-
-
-def test_clean_append_empty_content(tmpdir):
-    modrc_path = os.path.join(tmpdir.strpath, '.modulerc.lua')
-    new_modrc_path = os.path.join(tmpdir.strpath, 'new.lua')
-    with open(modrc_path, 'w') as mf:
-        mf.write("existing content\n")
-
-    filetools.clean_append(modrc_path, '')
-    filetools.clean_append(new_modrc_path, '')
-
-    with open(modrc_path) as mf:
-        assert mf.read() == "existing content\n"
-    assert not os.path.exists(new_modrc_path)
-
-
-def test_clean_append_old(inputdir, tmpdir):
-    old_modulerc = os.path.join(inputdir, 'modulerc_01.lua')
-    modrc_path = os.path.join(tmpdir.strpath, '.modulerc.lua')
-
-    shutil.copyfile(old_modulerc, modrc_path)
-    filetools.clean_append(modrc_path, MODULERC)
-
-    with open(modrc_path, 'r') as mf:
-        modrc_text = mf.read()
-
-    ref_modrc_text = """-- default version of Java 1.8
-module_version("Java/1.8.0_281", "1.8")
-
--- hide all GCC v4.x
-hide_version("GCCcore/4")
-%s""" % MODULERC
-
-    assert modrc_text == ref_modrc_text
