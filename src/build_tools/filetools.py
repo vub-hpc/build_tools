@@ -17,14 +17,11 @@ Helper functions to handle temp files
 """
 
 import logging
-import os
 import re
 import sys
 import tempfile
 
 logger = logging.getLogger(__name__)
-
-APPS_BRUSSEL = os.path.join(os.path.sep, 'apps', 'brussel')
 
 
 def write_tempfile(contents):
