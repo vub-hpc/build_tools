@@ -366,30 +366,27 @@ def main():
             job_options['eb_options'] += f' --modules-footer={job_options["extra_mod_footer"]}'
 
         # submit build job
-        buildjob_out = None
+        logger.debug('job_options: %s', job_options)
 
-        if job_options[PARTITION]:
-            logger.debug('job_options: %s', job_options)
+        logger.info(
+            "Building %s on %s (%s)",
+            easyconfig,
+            job_options[PARTITION],
+            host_arch,
+        )
 
-            logger.info(
-                "Building %s on %s (%s)",
-                easyconfig,
-                job_options[PARTITION],
-                host_arch,
-            )
+        ec, buildjob_out = submit_build_job(
+            job_options,
+            keep_job=opts.keep,
+            sub_options=opts.extra_sub_flags,
+            cluster=job_options[CLUSTER],
+            local_exec=local_exec,
+            dry_run=dry_run,
+        )
 
-            ec, buildjob_out = submit_build_job(
-                job_options,
-                keep_job=opts.keep,
-                sub_options=opts.extra_sub_flags,
-                cluster=job_options[CLUSTER],
-                local_exec=local_exec,
-                dry_run=dry_run,
-            )
-
-            if ec != 0:
-                logger.error("Failed to submit or run build job for '%s': %s", easyconfig, buildjob_out)
-                sys.exit(1)
+        if ec != 0:
+            logger.error("Failed to submit or run build job for '%s': %s", easyconfig, buildjob_out)
+            sys.exit(1)
 
 
 if __name__ == '__main__':
