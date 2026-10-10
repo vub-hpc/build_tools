@@ -201,6 +201,16 @@ def test_pre_module_hook_group(monkeypatch):
     assert tool.group == ('bli_vasp6', 1234)
 
 
+def test_set_tc_versions_script_not_found(monkeypatch):
+    def fake_run(*args, **kwargs):
+        raise FileNotFoundError(args[0][0])
+
+    monkeypatch.setattr(hooks_hydra.subprocess, 'run', fake_run)
+
+    with pytest.raises(RuntimeError, match='not found in PATH'):
+        hooks_hydra.set_tc_versions()
+
+
 @pytest.mark.parametrize(('arch_suffix', 'expected'), [
     ('-ib', "'--foo=bar baz' --with-verbs"),
     ('', "'--foo=bar baz' --without-verbs --without-rdmacm"),

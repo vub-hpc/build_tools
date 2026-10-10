@@ -160,6 +160,9 @@ def set_tc_versions():
             input=json.dumps(VALID_TOOLCHAINS),
             capture_output=True,
             text=True)
+    except FileNotFoundError as e:
+        raise RuntimeError(f"{script} not found in PATH, "
+                           "is build_tools installed in the active virtual environment?") from e
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"{script} failed: {e.stderr}") from e
 
