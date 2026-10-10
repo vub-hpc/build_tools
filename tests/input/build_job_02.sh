@@ -60,6 +60,7 @@ if [ "1" == 1 ]; then
 fi
 
 eb_stderr=$(mktemp).eb_stderr
+trap 'rm -f "$eb_stderr"' EXIT
 $EB zlib-1.2.11.eb --cuda-compute-capabilities=8.0 2>"$eb_stderr"
 
 ec=$?
