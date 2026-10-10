@@ -63,13 +63,6 @@ ARCHS = {
             },
             'cuda_cc': ['6.0', '6.1'],  # Tesla P100, GeForce 1080Ti
         },
-        'haswell-ib': {
-            DEFAULT: False,
-            PARTITION: {
-                CPU: 'haswell_mpi',
-                GPU: None,
-            },
-        },
         'skylake': {
             DEFAULT: False,
             PARTITION: {

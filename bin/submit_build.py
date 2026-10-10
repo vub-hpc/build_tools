@@ -26,7 +26,7 @@ import re
 import sys
 
 from build_tools import hooks_hydra
-from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, GENT, GPU, MACHINE, PARTITION,
+from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, CPU, GENT, GPU, MACHINE, PARTITION,
                                   PARTITIONS, SOFIA, SOURCES)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
@@ -66,6 +66,14 @@ VSC_DEFAULT_CLUSTER_MODULE = os.getenv('VSC_DEFAULT_CLUSTER_MODULE')
 if not VSC_DEFAULT_CLUSTER_MODULE:
     logger.error("VSC_DEFAULT_CLUSTER_MODULE environment variable is undefined")
     sys.exit(1)
+
+# sanity check: all partitions defined in ARCHS must exist in PARTITIONS
+for _arch, _props in ARCHS[MACHINE].items():
+    for _kind in (CPU, GPU):
+        _part = _props[PARTITION][_kind]
+        if _part and _part not in PARTITIONS:
+            logger.error(f"Partition '{_part}' for architecture '{_arch}' is not defined in PARTITIONS")
+            sys.exit(1)
 
 
 def strlist(value):
