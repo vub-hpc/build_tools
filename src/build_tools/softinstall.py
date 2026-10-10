@@ -94,14 +94,21 @@ def set_toolchain_generation(easyconfig, user_toolchain=False):
     return toolchain_generation
 
 
-def mk_job_name(easyconfig, host_arch):
+def mk_job_name(easyconfigs, host_arch):
     """
-    Return name for job script as {easyconfig name}-{host_arch}
-    :param easyconfig: path to easyconfig
+    Return name for job script as {easyconfig names}-{host_arch},
+    where {easyconfig names} is a concatenation of the names of all given easyconfigs
+    :param easyconfigs: space-separated string with path(s) to easyconfig(s)
     :param host_arch: name of host architecture
     """
+    names = []
+    for easyconfig in easyconfigs.split():
+        name = os.path.basename(easyconfig)
+        if name.endswith('.eb'):
+            name = name[:-3]
+        names.append(name)
 
-    job_name = re.sub('.eb$', '', os.path.basename(easyconfig))
+    job_name = '-'.join(names)
 
     if host_arch:
         job_name += '-%s' % host_arch

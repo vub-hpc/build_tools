@@ -37,6 +37,14 @@ from build_tools import softinstall
             'zlib-1.2.11-skylake',
             ['test/subdir/zlib-1.2.11.eb', 'skylake'],
         ),
+        (
+            'zlib-1.2.11-ngzip-2.3.3',
+            ['zlib-1.2.11.eb ngzip-2.3.3.eb', None]
+        ),
+        (
+            'zlib-1.2.11-ngzip-2.3.3-skylake',
+            ['zlib-1.2.11.eb test/subdir/ngzip-2.3.3.eb', 'skylake'],
+        ),
     ]
 )
 def test_mk_job_name(test_name):
