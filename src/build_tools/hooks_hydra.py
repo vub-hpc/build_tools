@@ -124,7 +124,8 @@ if ( os.getenv("SLURM_JOB_ID") ) then
 end
 """
 JAVA_MOD_FOOTER = """
-local mem_str = capture("cat /sys/fs/cgroup/$(</proc/self/cpuset)/../../../memory.max 2>/dev/null")
+local cpuset = capture("cat /proc/self/cpuset 2>/dev/null"):gsub("%s+$", "")
+local mem_str = capture("cat /sys/fs/cgroup/" .. cpuset .. "/../../../memory.max 2>/dev/null")
 local mem = tonumber(mem_str)
 if mem == 9223372036854771712 then
     mem = nil
