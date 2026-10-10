@@ -18,11 +18,15 @@ Unit tests configuration file
 """
 
 import os
+import sys
 import pytest
 
 from easybuild.tools.options import set_up_configuration
 
 os.environ["VSC_INSTITUTE_CLUSTER"] = "hydra"
+
+# test the source tree of this repository, even if a different build_tools is installed
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
 
 def pytest_addoption(parser):

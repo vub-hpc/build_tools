@@ -20,6 +20,57 @@ import pytest
 
 from build_tools import hooks_hydra
 
+# valid (sub)toolchain-version combinations per toolchain generation,
+# as computed by calc_toolchain_versions.py from the installed easyconfigs
+TC_VERSIONS = {
+    '2024a': {
+        'toolchains': [
+            {'name': 'foss', 'version': '2024a'},
+            {'name': 'gfbf', 'version': '2024a'},
+            {'name': 'GCC', 'version': '13.3.0'},
+            {'name': 'GCCcore', 'version': '13.3.0'},
+            {'name': 'intel', 'version': '2024a'},
+            {'name': 'intel-compilers', 'version': '2024.2.0'},
+        ],
+        'subdir': '2024a',
+    },
+    '2025a': {
+        'toolchains': [
+            {'name': 'foss', 'version': '2025a'},
+            {'name': 'GCC', 'version': '14.2.0'},
+            {'name': 'GCCcore', 'version': '14.2.0'},
+            {'name': 'intel', 'version': '2025a'},
+            {'name': 'intel-compilers', 'version': '2025.1.1'},
+        ],
+        'subdir': '2025a',
+    },
+    '25.1': {
+        'toolchains': [
+            {'name': 'nvidia-compilers', 'version': '25.1'},
+            {'name': 'NVHPC', 'version': '25.1'},
+        ],
+        'subdir': '2024a',
+    },
+    '25.3-CUDA-12.8.0': {
+        'toolchains': [
+            {'name': 'nvidia-compilers', 'version': '25.3-CUDA-12.8.0'},
+            {'name': 'NVHPC', 'version': '25.3-CUDA-12.8.0'},
+        ],
+        'subdir': '2025a',
+    },
+}
+
+
+@pytest.fixture
+def tc_versions():
+    """
+    Populate TC_VERSIONS with a known set of toolchain versions,
+    without running calc_toolchain_versions.py in a subprocess
+    """
+    hooks_hydra.TC_VERSIONS.update(TC_VERSIONS)
+    yield
+    hooks_hydra.TC_VERSIONS.clear()
+
 
 @pytest.mark.parametrize(
     'toolchain',
@@ -52,7 +103,7 @@ from build_tools import hooks_hydra
         ('fosscuda', '2023a', 'system', 'system', 'Toolchain', False),
     ],
 )
-def test_calc_tc_gen_subdir(toolchain, set_up_config):
+def test_calc_tc_gen_subdir(toolchain, tc_versions):
     name, version, tcname, tcversion, easyblock, expected_generation = toolchain
     generation, _ = hooks_hydra.calc_tc_gen_subdir(name, version, tcname, tcversion)
 
