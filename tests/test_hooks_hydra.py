@@ -199,3 +199,17 @@ def test_pre_module_hook_group(monkeypatch):
     hooks_hydra.pre_module_hook(tool)
 
     assert tool.group == ('bli_vasp6', 1234)
+
+
+@pytest.mark.parametrize(('arch_suffix', 'expected'), [
+    ('-ib', "'--foo=bar baz' --with-verbs"),
+    ('', "'--foo=bar baz' --without-verbs --without-rdmacm"),
+])
+def test_pre_configure_hook_ib_configopts(monkeypatch, arch_suffix, expected):
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_SUFFIX', arch_suffix)
+    tool = FakeModuleContext('UCX', '1.16.0')
+    tool.cfg['configopts'] = '--with-verbs --foo="bar baz"'
+
+    hooks_hydra.pre_configure_hook(tool)
+
+    assert tool.cfg['configopts'] == expected

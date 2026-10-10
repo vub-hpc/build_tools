@@ -21,6 +21,7 @@ import grp
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -467,9 +468,10 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
 
         # convert any non-list parameters to a list
         if ec_param == 'configopts':
-            ec_config = self.cfg['configopts'].split(' ')
+            ec_config_opt = self.cfg['configopts'] or ''
+            ec_config = shlex.split(ec_config_opt) if isinstance(ec_config_opt, str) else list(ec_config_opt)
         else:
-            ec_config = self.cfg[ec_param]
+            ec_config = self.cfg[ec_param] or []
 
         # clean any settings about IB
         ib_free_config = [opt for opt in ec_config if not any(mark in opt for mark in IB_OPT_MARK)]
@@ -482,11 +484,11 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
             self.log.info("[pre-configure hook] Disabling verbs in %s", self.name)
             ib_opt = IB_MODULE_SOFTWARE[self.name]['options'][2]
 
-        ib_config = ib_free_config + [ib_opt]
+        ib_config = ib_free_config + shlex.split(ib_opt)
 
         # consolidate changes
         if ec_param == 'configopts':
-            self.cfg['configopts'] = ' '.join(ib_config)
+            self.cfg['configopts'] = ' '.join(shlex.quote(opt) for opt in ib_config)
         else:
             self.cfg[ec_param] = ib_config
 
