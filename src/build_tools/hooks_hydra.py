@@ -277,7 +277,11 @@ def acquire_fetch_lock(self):
     wait_interval = 60
     wait_limit = 3600
 
-    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=wait_limit, default_timeout=1)
+    # the lock lifetime must be larger than wait_limit, so that a held lock
+    # cannot expire while other builds are still waiting for it
+    lock_lifetime = 86400
+
+    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=lock_lifetime, default_timeout=1)
     self.fetch_hook_lock = lock
 
     while True:
