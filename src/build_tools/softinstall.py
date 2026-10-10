@@ -20,7 +20,6 @@ Functions related to the software installation
 
 import logging
 import os
-import re
 import shlex
 import subprocess
 import sys
@@ -52,46 +51,6 @@ def run_loop_stdout(cmd):
         out_lines.append(line)
     ec = proc.wait()
     return ec, ''.join(out_lines)
-
-
-TOOLCHAIN_FORMAT = r"20[1-2][0-9][ab]"
-
-SUBTOOLCHAINS = {
-    '2024a': ['GCCcore-13.3.0', 'GCC-13.3.0', 'intel-compilers-2024.2.0'],
-    '2025a': ['GCCcore-14.2.0', 'GCC-14.2.0', 'intel-compilers-2025.1.1'],
-}
-
-
-def set_toolchain_generation(easyconfig, user_toolchain=False):
-    """
-    Determine toolchain generation from easyconfig
-    Use user_toolchain if it is a valid toolchain_generation
-    :param easyconfig: filename of the target easyconfig
-    :param easycinfig: string with toolchain specification
-    """
-    toolchain_generation = None
-
-    if user_toolchain:
-        if re.match('^' + TOOLCHAIN_FORMAT + '$', user_toolchain):
-            toolchain_generation = user_toolchain
-        else:
-            logger.error("Specified toolchain generation is not valid: %s", user_toolchain)
-            return False
-    else:
-        found_tc = re.findall(TOOLCHAIN_FORMAT, easyconfig)
-        found_tc = set(found_tc)  # remove duplicates (multiple toolchain labels might present in long paths)
-        if len(found_tc) == 1:
-            toolchain_generation = found_tc.pop()
-        else:
-            # Try to determine toolchain generation based on sub-toolchain
-            for main_tc, sub_tc in SUBTOOLCHAINS.items():
-                if any([re.search(tc, easyconfig) for tc in sub_tc]):
-                    toolchain_generation = main_tc
-                    break
-
-    logger.debug("Toolchain generation: %s", toolchain_generation)
-
-    return toolchain_generation
 
 
 def mk_job_name(easyconfigs, host_arch):
