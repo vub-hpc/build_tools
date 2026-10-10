@@ -211,6 +211,27 @@ def test_set_tc_versions_script_not_found(monkeypatch):
         hooks_hydra.set_tc_versions()
 
 
+def test_parse_hook_ib_missing_constant(parse_hook_config, monkeypatch):
+    monkeypatch.setattr(hooks_hydra, 'EASYCONFIG_CONSTANTS', {})
+    ec = FakeEasyconfig('UCX')
+    ec['osdependencies'] = []
+    ec.easyblock = 'ConfigureMake'
+
+    with pytest.raises(EasyBuildError, match='OS_PKG_IBVERBS_DEV'):
+        hooks_hydra.parse_hook(ec)
+
+
+def test_parse_hook_ib_removes_ibverbs(parse_hook_config):
+    pkg_ibverbs = hooks_hydra.EASYCONFIG_CONSTANTS['OS_PKG_IBVERBS_DEV'][0]
+    ec = FakeEasyconfig('UCX')
+    ec['osdependencies'] = [pkg_ibverbs, 'gcc']
+    ec.easyblock = 'ConfigureMake'
+
+    hooks_hydra.parse_hook(ec)
+
+    assert ec['osdependencies'] == ['gcc']
+
+
 @pytest.mark.parametrize(('arch_suffix', 'expected'), [
     ('-ib', "'--foo=bar baz' --with-verbs"),
     ('', "'--foo=bar baz' --without-verbs --without-rdmacm"),

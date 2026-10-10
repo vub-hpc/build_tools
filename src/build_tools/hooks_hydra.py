@@ -352,7 +352,11 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     if ec.name in IB_MODULE_SOFTWARE and ec.easyblock == IB_MODULE_SOFTWARE[ec.name]['easyblock-ec']:
         # remove any OS dependency on libverbs in non-IB nodes
         if LOCAL_ARCH_SUFFIX != IB_MODULE_SUFFIX:
-            pkg_ibverbs = EASYCONFIG_CONSTANTS['OS_PKG_IBVERBS_DEV'][0]
+            ibverbs_dev = EASYCONFIG_CONSTANTS.get('OS_PKG_IBVERBS_DEV')
+            if not ibverbs_dev:
+                raise EasyBuildError("[parse hook] OS package for ibverbs (OS_PKG_IBVERBS_DEV) "
+                                     "not found in EASYCONFIG_CONSTANTS")
+            pkg_ibverbs = ibverbs_dev[0]
             ec['osdependencies'] = [d for d in ec['osdependencies'] if d != pkg_ibverbs]
             ec.log.info("[parse hook] Removed IB from OS dependencies on non-IB system: %s", ec['osdependencies'])
 
