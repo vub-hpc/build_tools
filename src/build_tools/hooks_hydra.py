@@ -509,7 +509,11 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
 
         group = get_group(self.name, self.version)
         if group:
-            group_id = grp.getgrnam(group).gr_gid
+            try:
+                group_id = grp.getgrnam(group).gr_gid
+            except KeyError as err:
+                error_msg = f"[pre-module hook] User group '{group}' for {self.name} not found on this system"
+                raise EasyBuildError(error_msg) from err
             self.group = (group, group_id)
             self.log.info(f"[pre-module hook] Set group to: {self.group}")
 

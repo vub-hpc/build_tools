@@ -16,6 +16,7 @@ Unit tests for build_tools.softinstall
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import contextlib
 import logging
 import types
 
@@ -160,3 +161,41 @@ def test_parse_hook_gpu_arch(parse_hook_config, monkeypatch):
     hooks_hydra.parse_hook(ec)
 
     assert ec['cuda_compute_capabilities'] == hooks_hydra.ARCHS[hooks_hydra.MACHINE]['zen5-ib']['cuda_cc']
+
+
+class FakeCfg(dict):
+    """minimal stand-in for an EasyConfig parameter dict as used by the hooks"""
+    easyblock = 'ConfigureMake'
+
+    def disable_templating(self):
+        return contextlib.nullcontext()
+
+
+class FakeModuleContext:
+    """minimal stand-in for the EasyBuild tool object in the pre-module hook"""
+
+    def __init__(self, name, version):
+        self.name = name
+        self.version = version
+        self.cfg = FakeCfg()
+        self.log = logging.getLogger('test_pre_module_hook')
+
+
+def test_pre_module_hook_unknown_group(monkeypatch):
+    def fake_getgrnam(name):
+        raise KeyError(name)
+
+    monkeypatch.setattr(hooks_hydra.grp, 'getgrnam', fake_getgrnam)
+    tool = FakeModuleContext('VASP', '6.2.0')
+
+    with pytest.raises(EasyBuildError, match='User group .* not found on this system'):
+        hooks_hydra.pre_module_hook(tool)
+
+
+def test_pre_module_hook_group(monkeypatch):
+    monkeypatch.setattr(hooks_hydra.grp, 'getgrnam', lambda name: types.SimpleNamespace(gr_gid=1234))
+    tool = FakeModuleContext('VASP', '6.2.0')
+
+    hooks_hydra.pre_module_hook(tool)
+
+    assert tool.group == ('bli_vasp6', 1234)
