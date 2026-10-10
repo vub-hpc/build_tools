@@ -132,7 +132,11 @@ def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, 
         submit_cmd.append("module --force purge")
         submit_cmd.append(f"module load cluster/{cluster}")
 
-    submit_cmd.append(f"sbatch --parsable {sub_options} {job_file}")
+    sbatch_args = ['sbatch', '--parsable']
+    if sub_options:
+        sbatch_args.extend(shlex.split(sub_options))
+    sbatch_args.append(job_file)
+    submit_cmd.append(" ".join(shlex.quote(arg) for arg in sbatch_args))
     submit_cmd = " && ".join(submit_cmd)
 
     if dry_run:

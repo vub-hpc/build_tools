@@ -136,3 +136,15 @@ def test_submit_job_script():
     assert out == ("(DRY RUN) Job submission command: module --force purge && "
                    "module load cluster/chimera && "
                    "sbatch --parsable --mem=32G test.job")
+
+
+def test_submit_job_script_quoted_options():
+    job_file = 'test.job'
+    sub_options = '--mem=32G --comment="my job"'
+
+    ec, out = softinstall.submit_job_script(
+        job_file, sub_options, cluster=None, local_exec=False, dry_run=True
+    )
+
+    assert out == ("(DRY RUN) Job submission command: "
+                   "sbatch --parsable --mem=32G '--comment=my job' test.job")
