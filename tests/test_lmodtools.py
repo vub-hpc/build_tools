@@ -52,3 +52,20 @@ def test_submit_lmod_cache_job_gpu_required(inputdir):
         ref_job_contents = rj.read().rstrip()
 
     assert new_job_contents == ref_job_contents
+
+
+def test_submit_lmod_cache_job_spider_cache(inputdir):
+    # brussel zen5-ib has lmod_json_spider_cache enabled in the arch definitions
+    job_script = 'lmod_cache_job_03.sh'
+
+    _, out = submit_lmod_cache_job('zen5_mpi', dry_run=True)
+
+    new_job = out.split(' ')[-1]
+    with open(new_job) as nj:
+        new_job_contents = nj.read().rstrip()
+
+    ref_job = os.path.join(inputdir, job_script)
+    with open(ref_job) as rj:
+        ref_job_contents = rj.read().rstrip()
+
+    assert new_job_contents == ref_job_contents

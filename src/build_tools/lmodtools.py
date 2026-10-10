@@ -18,7 +18,7 @@ Functions related to running the Lmod cache
 import logging
 import sys
 
-from build_tools.clusters import ARCH, APPS, CLUSTER, MACHINE, PARTITIONS, SOFIA
+from build_tools.clusters import ARCH, APPS, ARCHS, CLUSTER, MACHINE, PARTITIONS, SOFIA
 from build_tools.filetools import write_tempfile
 from build_tools.softinstall import submit_job_script
 
@@ -56,8 +56,9 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
         f'--module-basedir {APPS}/{MACHINE}/${{VSC_OS_LOCAL:?}}',
     ]
 
-    # TODO: also create spider cache on sofia when the updated run_lmod_cache.py script is installed there
-    if PARTITIONS[partition][ARCH] == 'zen5-ib' and PARTITIONS[partition][CLUSTER] != SOFIA:
+    # TODO: also create spider cache on sofia (set lmod_json_spider_cache for the sofia archs)
+    # when the updated run_lmod_cache.py script is installed there
+    if ARCHS[MACHINE].get(archdir, {}).get('lmod_json_spider_cache', '0') == '1':
         cache_cmd.append('--create-spider-cache')
 
     # sofia zen4_h200 requires at least 1 GPU per job
