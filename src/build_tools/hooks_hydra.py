@@ -37,7 +37,7 @@ from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS, GPU, MACHINE, PARTITION
-from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
+from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, is_ib_option
 
 # user groups for licensed software
 SOFTWARE_GROUPS = {
@@ -486,7 +486,7 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
             ec_config = self.cfg[ec_param] or []
 
         # clean any settings about IB
-        ib_free_config = [opt for opt in ec_config if not any(mark in opt for mark in IB_OPT_MARK)]
+        ib_free_config = [opt for opt in ec_config if not is_ib_option(opt)]
 
         # update IB settings
         if LOCAL_ARCH_SUFFIX == IB_MODULE_SUFFIX:
