@@ -129,7 +129,7 @@ def main():
     parser.add_argument('-e', '--extra-flags', default=None, help='Extra flags to pass to EasyBuild')
     parser.add_argument('-f', '--extra-mod-footer', default=None, help='Path to extra footer for module file')
     parser.add_argument('-q', '--extra-sub-flags', default='', help='Extra flags to pass to Slurm')
-    parser.add_argument('-g', '--gpu', action='store_true', default=None, help='Request a GPU in the GPU partitions')
+    parser.add_argument('-g', '--gpu', action='store_true', help='Request a GPU in the GPU partitions')
     parser.add_argument('-k', '--keep', action='store_true', help='Do not delete the job file at the end')
     parser.add_argument('-o', '--lmod-cache-only', action='store_true',
                         help='Run Lmod cache and exit, no software installation')
