@@ -34,7 +34,7 @@ setuptools.setup(
     description="Tools to build and install software",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://vub-hpc/build_tools",
+    url="https://github.com/vub-hpc/build_tools",
 
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
