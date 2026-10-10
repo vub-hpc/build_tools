@@ -94,21 +94,17 @@ def set_toolchain_generation(easyconfig, user_toolchain=False):
     return toolchain_generation
 
 
-def mk_job_name(easyconfig, host_arch, target_arch=None):
+def mk_job_name(easyconfig, host_arch):
     """
-    Return name for job script as {easyconfig name}-{host_arch}-{target_arch}
+    Return name for job script as {easyconfig name}-{host_arch}
     :param easyconfig: path to easyconfig
     :param host_arch: name of host architecture
-    :param host_arch: name of target architecture
     """
 
     job_name = re.sub('.eb$', '', os.path.basename(easyconfig))
 
     if host_arch:
         job_name += '-%s' % host_arch
-
-    if target_arch and target_arch != host_arch:
-        job_name += '-%s' % target_arch
 
     return job_name
 

@@ -84,7 +84,6 @@ def main():
         'langcode': 'en_US.utf8',
         'lmod_cache': '1',
         'machine': MACHINE,
-        'target_arch': None,
         'tmp': '/dev/shm',
     }
 
@@ -259,14 +258,14 @@ def main():
     # submit build jobs for each micro-architecture
     for (host_arch, host_partition) in build_hosts:
         job_options = dict(job)
-        job_options['target_arch'] = host_arch
+        job_options['host_arch'] = host_arch
         job_options['lmod_json_spider_cache'] = ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0')
 
         # Set tmp dir and update build path accordingly
         if opts.tmp:
             job_options['tmp'] = '/tmp'
         elif opts.tmp_scratch:
-            job_options['tmp'] = os.path.join('$VSC_SCRATCH_VO_USER', job_options['target_arch'])
+            job_options['tmp'] = os.path.join('$VSC_SCRATCH_VO_USER', host_arch)
         ebconf['buildpath'] = os.path.join(job_options['tmp'], 'eb-submit-build')
 
         # common EB command line options
@@ -294,7 +293,7 @@ def main():
             eb_options.append(opts.extra_flags)
 
         # update build and install paths of the EB job
-        install_dir = job_options['target_arch']
+        install_dir = host_arch
         ebconf['installpath'] = os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', install_dir)
         for opt, path in ebconf.items():
             eb_options.append(f'--{opt}={path}')
@@ -308,7 +307,7 @@ def main():
         # set Slurm directives in job file
         job_options.update(
             {
-                'job_name': mk_job_name(easyconfig, host_arch, job_options['target_arch']),
+                'job_name': mk_job_name(easyconfig, host_arch),
                 'walltime': '11:59:59',
                 'nodes': 1,
                 'tasks': 8 if MACHINE == SOFIA else 4,
@@ -352,11 +351,10 @@ def main():
             logger.debug('job_options: %s', job_options)
 
             logger.info(
-                "Building %s on %s (%s) for %s",
+                "Building %s on %s (%s)",
                 easyconfig,
                 job_options[PARTITION],
                 host_arch,
-                job_options['target_arch'],
             )
 
             ec, buildjob_out = submit_build_job(

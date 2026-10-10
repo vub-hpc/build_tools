@@ -34,16 +34,8 @@ from build_tools import softinstall
             ['zlib-1.2.11.eb', 'skylake']
         ),
         (
-            'zlib-1.2.11-skylake-ivybridge',
-            ['zlib-1.2.11.eb', 'skylake', 'ivybridge'],
-        ),
-        (
             'zlib-1.2.11-skylake',
             ['test/subdir/zlib-1.2.11.eb', 'skylake'],
-        ),
-        (
-            'zlib-1.2.11-skylake',
-            ['test/subdir/zlib-1.2.11.eb', 'skylake', 'skylake'],
         ),
     ]
 )
@@ -74,8 +66,8 @@ def test_mk_job_name(test_name):
             'postinstall': '',
             'pre_eb_options': '',
             'robot_paths': '/some/path',
+            'host_arch': 'zen5-ib',
             'subdir_modules_bwrap': '.modules_bwrap',
-            'target_arch': 'zen5-ib',
             'tasks': 4,
             'tmp': '/tmp/eb-test-build',
             'walltime': '23:59:59',
@@ -96,8 +88,8 @@ def test_mk_job_name(test_name):
             'partition': 'ampere_gpu',
             'postinstall': 'rsync src dest',
             'robot_paths': '/some/path',
+            'host_arch': 'zen2-ib',
             'subdir_modules_bwrap': '.modules_bwrap',
-            'target_arch': 'zen2-ib',
             'tasks': 4,
             'tmp': '/tmp/eb-test-build',
             'walltime': '23:59:59',

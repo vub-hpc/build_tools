@@ -68,8 +68,8 @@ if [ "${bwrap}" == 1 ]; then
     echo "BUILD_TOOLS: modname $$modname modversion $$modversion"
     [[ -n $$modname && -n $$modversion ]] || { echo "ERROR: failed to get modname and/or modversion"; exit 1; }
     appsmnt="/vscmnt/brussel_pixiu_apps/_apps_brussel"
-    softbwrap="/apps/brussel/bwrap/$$VSC_OS_LOCAL/${target_arch}/software/$$modname"
-    softreal="$$appsmnt/$$VSC_OS_LOCAL/${target_arch}/software/$$modname"
+    softbwrap="/apps/brussel/bwrap/$$VSC_OS_LOCAL/${host_arch}/software/$$modname"
+    softreal="$$appsmnt/$$VSC_OS_LOCAL/${host_arch}/software/$$modname"
     mkdir -p "$$softbwrap"
     bwrap_cmd=(
         bwrap
@@ -99,7 +99,7 @@ fi
 if [ "${bwrap}" == 1 ]; then
     source_installdir="$$softbwrap/$$modversion/"
     dest_installdir="$$softreal/$$modversion/"
-    installbase="/apps/brussel/$$VSC_OS_LOCAL/${target_arch}"
+    installbase="/apps/brussel/$$VSC_OS_LOCAL/${host_arch}"
     source_modfile="$$installbase/$$SUBDIR_MODULES_BWRAP/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
     source_modsymlink=$$(echo $$installbase/$$SUBDIR_MODULES_BWRAP/*/$$SUFFIX_MODULES_SYMLINK/$$modname/$$modversion.lua)
     dest_modfile="$$installbase/$$SUBDIR_MODULES/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
@@ -128,7 +128,7 @@ if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
         --wait
         --time=1:0:0
         --output=%x_%j.log
-        --job-name=lmod_cache_${target_arch}
+        --job-name=lmod_cache_${host_arch}
         --dependency=singleton
         --partition=${partition}
     )
@@ -139,18 +139,18 @@ if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
     cmd=(
         /usr/libexec/lmod/run_lmod_cache.py
         --create-cache
-        --architecture ${target_arch}
+        --architecture ${host_arch}
         --module-basedir /apps/${machine}/$$VSC_OS_LOCAL
     )
     if [[ "${lmod_json_spider_cache}" == "1" ]]; then
         cmd+=(--create-spider-cache)
     fi
-    echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${target_arch}"
+    echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${host_arch}"
     sbatch "$${job_options[@]}" --wrap "$${cmd[*]}"
 fi
 
 if [[ -n "$${builds_succeeded}" ]]; then
-    logger -t build_tools -p user.notice -- "partition=${partition} architecture=${target_arch} easyconfig=${easyconfig}"
+    logger -t build_tools -p user.notice -- "partition=${partition} architecture=${host_arch} easyconfig=${easyconfig}"
 fi
 """  # noqa
 
