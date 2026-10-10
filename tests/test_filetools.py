@@ -51,6 +51,20 @@ def test_clean_append_new(tmpdir):
     assert modrc_text == MODULERC
 
 
+def test_clean_append_empty_content(tmpdir):
+    modrc_path = os.path.join(tmpdir.strpath, '.modulerc.lua')
+    new_modrc_path = os.path.join(tmpdir.strpath, 'new.lua')
+    with open(modrc_path, 'w') as mf:
+        mf.write("existing content\n")
+
+    filetools.clean_append(modrc_path, '')
+    filetools.clean_append(new_modrc_path, '')
+
+    with open(modrc_path) as mf:
+        assert mf.read() == "existing content\n"
+    assert not os.path.exists(new_modrc_path)
+
+
 def test_clean_append_old(inputdir, tmpdir):
     old_modulerc = os.path.join(inputdir, 'modulerc_01.lua')
     modrc_path = os.path.join(tmpdir.strpath, '.modulerc.lua')

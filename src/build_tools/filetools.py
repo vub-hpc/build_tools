@@ -48,6 +48,10 @@ def clean_append(filepath, new_content):
     - filepath: (string) path to new or existing file
     - new_content: (string) content to be added to the file
     """
+    if not new_content:
+        logger.debug("No content to append to '%s', doing nothing", filepath)
+        return
+
     try:
         with open(filepath, 'r', encoding='utf-8') as handle:
             existing_content = handle.read()
