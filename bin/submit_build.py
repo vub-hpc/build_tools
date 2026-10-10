@@ -43,7 +43,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 # repositories with easyconfigs
-VSCSOFTSTACK_ROOT = os.path.join(os.path.dirname(os.getenv("VIRTUAL_ENV", "")), "vsc-software-stack")
 EASYCONFIG_REPOS = [
     # our site repo (https://github.com/vscentrum/vsc-software-stack/tree/site-vub)
     os.path.join("site-vub", "easyconfigs"),
@@ -84,6 +83,13 @@ def strlist(value):
 def main():
     """Submit job script to deploy software installation with EasyBuild"""
 
+    venv = os.getenv('VIRTUAL_ENV')
+    if not venv:
+        logger.error("VIRTUAL_ENV environment variable is undefined, "
+                     "please activate the build_tools virtual environment")
+        sys.exit(1)
+    vscsoftstack_root = os.path.join(os.path.dirname(venv), 'vsc-software-stack')
+
     # Default job options
     job = {
         'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
@@ -103,10 +109,10 @@ def main():
         'accept-eula-for': 'Intel-oneAPI,CUDA,cuDNN,NVHPC',
         'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
         'hooks': hooks_hydra.__file__,
-        'include-easyblocks': os.path.join(VSCSOFTSTACK_ROOT, EASYBLOCK_REPO),
+        'include-easyblocks': os.path.join(vscsoftstack_root, EASYBLOCK_REPO),
         'installpath': os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
         'prefer-python-search-path': 'EBPYTHONPREFIXES',
-        'robot-paths': ":".join([os.path.join(VSCSOFTSTACK_ROOT, repo) for repo in EASYCONFIG_REPOS]),
+        'robot-paths': ":".join([os.path.join(vscsoftstack_root, repo) for repo in EASYCONFIG_REPOS]),
         'sourcepath': SOURCEPATH[MACHINE],
     }
 
@@ -163,9 +169,9 @@ def main():
         logger.error("No easyconfig is given...")
         sys.exit(1)
 
-    if not os.path.isdir(VSCSOFTSTACK_ROOT):
+    if not os.path.isdir(vscsoftstack_root):
         logger.error(
-            f"Cannot locate 'vsc-software-stack' repo in: {VSCSOFTSTACK_ROOT} - "
+            f"Cannot locate 'vsc-software-stack' repo in: {vscsoftstack_root} - "
             "Please clone that repo in the parent folder of your virtual environment directory"
         )
         sys.exit(1)
