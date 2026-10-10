@@ -77,21 +77,3 @@ def clean_append(filepath, new_content):
         sys.exit(1)
     else:
         logger.debug("Successfully appended data to: %s", filepath)
-
-
-def poke(filename):
-    """
-    Update timestamp of existing file to current time
-    """
-    try:
-        os.utime(filename, None)
-    except OSError as err:
-        if err.errno == 2:
-            logger.error("Could not update timestamp of '%s', file does not exist", filename)
-        elif err.errno == 13:
-            logger.error("Could not update timestamp of '%s', permission denied", filename)
-        else:
-            logger.error("Could not update timestamp of '%s', unknown error", filename)
-        sys.exit(1)
-    else:
-        return True
