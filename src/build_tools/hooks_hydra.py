@@ -75,7 +75,7 @@ LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 # try to avoid uncommon toolchains
 INVALID_TC_NAMES = [
     'fosscuda',
-    'gmpflf', 'gmpich'
+    'gmpflf', 'gmpich',
     'iomkl', 'iompi',
     'lmpflf', 'lmpich',
     'nvofbf', 'nvompi',
