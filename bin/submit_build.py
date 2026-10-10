@@ -275,13 +275,14 @@ def main():
         # common EB command line options
         eb_options = [
             '--logtostdout',
-            '--debug',
             '--module-extensions',
             '--zip-logs=bzip2',
             '--module-depends-on',
             f'--suffix-modules-path={SUFFIX_MODULES_PATH}',
             f'--moduleclasses={",".join(os.path.join(x, SUFFIX_MODULES_SYMLINK) for x in VALID_MODULES_SUBDIRS)}',
         ]
+        if opts.debug:
+            eb_options.append('--debug')
 
         if bwrap:
             eb_options.extend([
