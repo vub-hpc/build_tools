@@ -58,6 +58,7 @@ def test_mk_job_name(test_name):
     'test_job',
     [
         ('build_job_01.sh', {
+            'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
             'bwrap': '0',
             'easyconfig': 'zlib-1.2.11.eb',
             'eb_buildpath': '/tmp/eb-test-build',
@@ -78,9 +79,11 @@ def test_mk_job_name(test_name):
             'subdir_modules_bwrap': '.modules_bwrap',
             'tasks': 4,
             'tmp': '/tmp/eb-test-build',
+            'venv_activate': '$HOME/EB5/eb5env/bin/activate',
             'walltime': '23:59:59',
         }),
         ('build_job_02.sh', {
+            'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
             'bwrap': 1,
             'easyconfig': 'zlib-1.2.11.eb',
             'eb_buildpath': '/tmp/eb-test-build',
@@ -100,6 +103,7 @@ def test_mk_job_name(test_name):
             'subdir_modules_bwrap': '.modules_bwrap',
             'tasks': 4,
             'tmp': '/tmp/eb-test-build',
+            'venv_activate': '$HOME/EB5/eb5env/bin/activate',
             'walltime': '23:59:59',
         }),
     ]

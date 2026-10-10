@@ -86,6 +86,7 @@ def main():
 
     # Default job options
     job = {
+        'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
         'bwrap': '0',
         CLUSTER: VSC_DEFAULT_CLUSTER_MODULE,
         'extra_mod_footer': None,
@@ -93,6 +94,7 @@ def main():
         'lmod_cache': '1',
         'machine': MACHINE,
         'tmp': '/dev/shm',
+        'venv_activate': os.getenv('VSC_VENV_ACTIVATE', '$HOME/EB5/eb5env/bin/activate'),
     }
 
     # Easybuild default paths

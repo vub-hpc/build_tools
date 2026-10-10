@@ -32,7 +32,7 @@ BUILD_JOB = """\
 #SBATCH ${gpus}
 
 # activate build_tools virtual environment
-source "$$HOME/EB5/eb5env/bin/activate"
+source "${venv_activate}"
 
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
@@ -67,8 +67,8 @@ if [ "${bwrap}" == 1 ]; then
     done <<< "$$output"
     echo "BUILD_TOOLS: modname $$modname modversion $$modversion"
     [[ -n $$modname && -n $$modversion ]] || { echo "ERROR: failed to get modname and/or modversion"; exit 1; }
-    appsmnt="/vscmnt/brussel_pixiu_apps/_apps_brussel"
-    softbwrap="/apps/brussel/bwrap/$$VSC_OS_LOCAL/${host_arch}/software/$$modname"
+    appsmnt="${appsmnt}"
+    softbwrap="/apps/${machine}/bwrap/$$VSC_OS_LOCAL/${host_arch}/software/$$modname"
     softreal="$$appsmnt/$$VSC_OS_LOCAL/${host_arch}/software/$$modname"
     mkdir -p "$$softbwrap"
     bwrap_cmd=(
@@ -99,7 +99,7 @@ fi
 if [ "${bwrap}" == 1 ]; then
     source_installdir="$$softbwrap/$$modversion/"
     dest_installdir="$$softreal/$$modversion/"
-    installbase="/apps/brussel/$$VSC_OS_LOCAL/${host_arch}"
+    installbase="/apps/${machine}/$$VSC_OS_LOCAL/${host_arch}"
     source_modfile="$$installbase/$$SUBDIR_MODULES_BWRAP/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
     source_modsymlink=$$(echo $$installbase/$$SUBDIR_MODULES_BWRAP/*/$$SUFFIX_MODULES_SYMLINK/$$modname/$$modversion.lua)
     dest_modfile="$$installbase/$$SUBDIR_MODULES/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
