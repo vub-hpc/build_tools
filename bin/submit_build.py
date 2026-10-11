@@ -320,10 +320,6 @@ def main():
             eb_options.append(f'--{opt}={path}')
 
         cluster = PARTITIONS[host_partition].get(CLUSTER, VSC_DEFAULT_CLUSTER_MODULE)
-        if cluster == SOFIA:
-            cluster_module = None  # there is no cluster module in sofia
-        else:
-            cluster_module = cluster
 
         # set Slurm directives in job file
         job_options.update(
@@ -334,7 +330,7 @@ def main():
                 'tasks': 8 if MACHINE == SOFIA else 4,
                 'gpus': '',
                 PARTITION: host_partition,
-                CLUSTER: cluster_module,
+                CLUSTER: cluster,
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
