@@ -212,14 +212,12 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, versionsuffix=''):
     # if toolchain name is nvidia-compilers or NVHPC see if
     # version + versionsuffix of the easyconfig matches tc_version
     for tcgen_spec in TC_VERSIONS.values():
-        print(f"DEBUG: {tcgen_spec['toolchains']} --- {toolchain} : {name_version}")
         if (toolchain in tcgen_spec['toolchains']
                 or name_version in tcgen_spec['toolchains']
                 or (name == 'nvidia-compilers' and name_version_suffix in tcgen_spec['toolchains'])
                 or (name == 'NVHPC' and name_version_suffix in tcgen_spec['toolchains'])):
             tcgen_subdir = tcgen_spec['subdir']
             log_msg = f"Determined toolchain generation subdir '{tcgen_subdir}' for {software}"
-            print(f"DEBUG: return {tcgen_subdir}")
             return tcgen_subdir, log_msg
 
     # invalid toolchain version
