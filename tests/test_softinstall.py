@@ -178,3 +178,24 @@ def test_submit_job_script_local_exec(tmp_path):
 
     assert ec == 0
     assert "local-run" in out
+
+
+def test_submit_job_script_sbatch(monkeypatch):
+    submitted = []
+
+    def fake_run_no_shell(cmd):
+        submitted.append(cmd)
+        return 0, '12345'
+
+    monkeypatch.setattr(softinstall, 'run_no_shell', fake_run_no_shell)
+
+    ec, out = softinstall.submit_job_script('test.job', sub_options='--mem=32G', cluster='chimera')
+
+    assert ec == 0
+    assert out == '12345'
+    assert len(submitted) == 1
+    submit_cmd = submitted[0]
+    assert submit_cmd.startswith('bash -c "')
+    assert "module --force purge" in submit_cmd
+    assert "module load cluster/chimera" in submit_cmd
+    assert "sbatch --parsable --mem=32G test.job" in submit_cmd
