@@ -14,7 +14,7 @@
 Unit tests for build_tools.filetools
 
 @author: Alex Domingo (Vrije Universiteit Brussel)
-author: Samuel Moors (Vrije Universiteit Brussel)
+@author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
 from build_tools import filetools
