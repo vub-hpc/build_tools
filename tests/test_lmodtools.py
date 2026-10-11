@@ -16,8 +16,12 @@ Unit tests for build_tools.lmodtools
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
 
+import pytest
+
+from build_tools import lmodtools
 from build_tools.lmodtools import submit_lmod_cache_job
 
 
@@ -69,3 +73,15 @@ def test_submit_lmod_cache_job_spider_cache(inputdir):
         ref_job_contents = rj.read().rstrip()
 
     assert new_job_contents == ref_job_contents
+
+
+def test_submit_lmod_cache_job_failure(monkeypatch, caplog):
+    monkeypatch.setattr(lmodtools, 'write_tempfile', lambda script: '/tmp/fake_cache_job.sh')
+    monkeypatch.setattr(lmodtools, 'submit_job_script', lambda *args, **kwargs: (1, 'fake submission error'))
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(SystemExit) as exc:
+            submit_lmod_cache_job('zen5_mpi')
+
+    assert exc.value.code == 1
+    assert "Failed to submit Lmod cache job: fake submission error" in caplog.text
