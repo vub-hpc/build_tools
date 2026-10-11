@@ -571,7 +571,7 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
             self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**ansys_intel_mpi)
             # remove restrictions on UCX transport layer, IB 'dc' not supported at system level
-            self.log.info("[pre-module hook] Allow all trasnports in UCX for ANSYS")
+            self.log.info("[pre-module hook] Allow all transports in UCX for ANSYS")
             self.cfg['modextravars'].update({'UCX_TLS': "all"})
             # the following mimics what ANSYS FLUENT does when it uses its integrated slurm capabilities
             # with command: `fluent 2dpp -scheduler=slurm -t2 --mpi=openmpi -mpitest`
