@@ -452,7 +452,7 @@ def post_fetch_hook(self):
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     """Hook at pre-configure level to alter configopts"""
 
-    # don’t remove installdir when installing with Tarball easyblock for bwrap (only for the vsc bot)
+    # don't remove installdir when installing with Tarball easyblock for bwrap (only for the vsc bot)
     if os.getenv('BWRAP', '') == '1' and 'install_type' in self.cfg:
         self.cfg['install_type'] = 'merge'
         self.log.info("[pre-configure hook] Set install_type to %s for bwrap", self.cfg['install_type'])

@@ -42,7 +42,7 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
     :param cluster: the Slurm cluster to submit the job to.
 
     if cluster is None, load the cluster module corresponding to the current partition
-    if cluster is False, don’t purge/load a cluster module (use the currently active cluster)
+    if cluster is False, don't purge/load a cluster module (use the currently active cluster)
     """
 
     archdir = PARTITIONS[partition][ARCH]
