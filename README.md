@@ -23,7 +23,7 @@ See https://github.com/easybuilders/easybuild-framework/issues/4451
 
 ```bash
 python -m venv /path/to/venv/hpcbuild
-source /path/to/venv/hpcbuild/activate
+source /path/to/venv/hpcbuild/bin/activate
 # Install EasyBuild
 cd /path/to/easybuild-framework/
 python -m pip install --editable . --config-settings editable_mode=compat
