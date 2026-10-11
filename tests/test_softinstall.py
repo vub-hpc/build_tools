@@ -132,9 +132,8 @@ def test_submit_job_script():
         job_file, sub_options, cluster=cluster, local_exec=False, dry_run=True
     )
 
-    assert out == ("(DRY RUN) Job submission command: module --force purge && "
-                   "module load cluster/chimera && "
-                   "sbatch --parsable --mem=32G test.job")
+    assert out == ("(DRY RUN) Job submission command: "
+                   "sbatch -M chimera --parsable --mem=32G test.job")
 
 
 def test_submit_job_script_quoted_options():
@@ -196,11 +195,7 @@ def test_submit_job_script_sbatch(monkeypatch):
     assert ec == 0
     assert out == '12345'
     assert len(submitted) == 1
-    submit_cmd = submitted[0]
-    assert submit_cmd.startswith('bash -c "')
-    assert "module --force purge" in submit_cmd
-    assert "module load cluster/chimera" in submit_cmd
-    assert "sbatch --parsable --mem=32G test.job" in submit_cmd
+    assert submitted[0] == 'bash -c "sbatch -M chimera --parsable --mem=32G test.job"'
 
 
 def test_submit_build_job_removes_job_file(monkeypatch, caplog):

@@ -85,18 +85,15 @@ def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, 
     :param dry_run: print submit command
     """
 
-    submit_cmd = []
-    # switch to corresponding cluster and submit
+    sbatch_args = ['sbatch']
+    # switch to corresponding cluster via the Slurm -M option
     if cluster:
-        submit_cmd.append("module --force purge")
-        submit_cmd.append(f"module load cluster/{cluster}")
-
-    sbatch_args = ['sbatch', '--parsable']
+        sbatch_args.extend(['-M', cluster])
+    sbatch_args.append('--parsable')
     if sub_options:
         sbatch_args.extend(shlex.split(sub_options))
     sbatch_args.append(job_file)
-    submit_cmd.append(" ".join(shlex.quote(arg) for arg in sbatch_args))
-    submit_cmd = " && ".join(submit_cmd)
+    submit_cmd = " ".join(shlex.quote(arg) for arg in sbatch_args)
 
     if dry_run:
         log_msg = f"(DRY RUN) Job submission command: {submit_cmd}"
