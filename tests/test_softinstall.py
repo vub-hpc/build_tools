@@ -145,3 +145,14 @@ def test_submit_job_script_quoted_options():
 
     assert out == ("(DRY RUN) Job submission command: "
                    "sbatch --parsable --mem=32G '--comment=my job' test.job")
+
+
+def test_run_no_shell():
+    ec, out = softinstall.run_no_shell("echo hello")
+
+    assert ec == 0
+    assert out == "hello\n"
+
+    ec, out = softinstall.run_no_shell("false")
+
+    assert ec != 0
