@@ -38,7 +38,7 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
     """
     Run Lmod cache in a Slurm job
     :param partition: the partition to submit the job to
-    :param jobids_depend: list of strings: jobids on with to set job dependency
+    :param jobids_depend: list of strings: jobids on which to set job dependency
     :param cluster: the Slurm cluster to submit the job to.
 
     if cluster is None, load the cluster module corresponding to the current partition
