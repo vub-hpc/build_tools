@@ -17,6 +17,8 @@ Unit tests for build_tools.filetools
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import os
+
 from build_tools import filetools
 
 
@@ -24,7 +26,10 @@ def test_write_tempfile():
     contents = "Hello world!"
     tmp_file = filetools.write_tempfile(contents)
 
-    with open(tmp_file) as tf:
-        tmp_file_contents = tf.read()
+    try:
+        with open(tmp_file) as tf:
+            tmp_file_contents = tf.read()
 
-    assert tmp_file_contents == contents
+        assert tmp_file_contents == contents
+    finally:
+        os.unlink(tmp_file)
