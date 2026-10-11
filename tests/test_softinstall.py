@@ -168,3 +168,13 @@ def test_run_loop_stdout(capsys):
     captured = capsys.readouterr()
     assert "line1" in captured.out
     assert "line2" in captured.out
+
+
+def test_submit_job_script_local_exec(tmp_path):
+    job_file = tmp_path / 'test.job'
+    job_file.write_text("#!/bin/bash\necho local-run\n")
+
+    ec, out = softinstall.submit_job_script(str(job_file), local_exec=True)
+
+    assert ec == 0
+    assert "local-run" in out
