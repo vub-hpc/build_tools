@@ -150,7 +150,7 @@ TC_VERSIONS = {}
 
 
 def set_tc_versions():
-    " build dict of valid (sub)toolchain-version combinations per valid generation "
+    "build dict of valid (sub)toolchain-version combinations per valid generation"
 
     script = 'calc_toolchain_versions.py'
 
