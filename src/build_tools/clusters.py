@@ -49,10 +49,10 @@ else:
     MACHINE = BRUSSEL
 
 # CPU architecture name including suffix with network fabric
-# default: software will be installed by default using this partitions
+# default: software will be installed by default using this partition
 # eb: extra options for EasyBuild in this architecture
 # partition: dict with default CPU and GPU partitions for this arch
-# cuda_cc: suported CUDA compute capabilities in the GPU partition
+# cuda_cc: supported CUDA compute capabilities in the GPU partition
 ARCHS = {
     BRUSSEL: {
         'broadwell': {
