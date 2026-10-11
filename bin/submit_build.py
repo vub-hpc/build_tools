@@ -184,7 +184,7 @@ def main():
     local_exec = opts.local
     if local_exec:
         if LOCAL_ARCH not in ARCHS[MACHINE]:
-            logger.error("Local system has unsupported architeture: '%s'", LOCAL_ARCH)
+            logger.error("Local system has unsupported architecture: '%s'", LOCAL_ARCH)
             sys.exit(1)
         logger.info("Building on local architecture: %s", LOCAL_ARCH)
         arch_stack = [LOCAL_ARCH]
