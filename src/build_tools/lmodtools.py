@@ -15,14 +15,14 @@ Functions related to running the Lmod cache
 
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
-import logging
 import sys
 
+from build_tools import stdlib_logger
 from build_tools.clusters import ARCH, APPS, ARCHS, CLUSTER, MACHINE, PARTITIONS, SOFIA
 from build_tools.filetools import write_tempfile
 from build_tools.softinstall import submit_job_script
 
-logger = logging.getLogger(__name__)
+logger = stdlib_logger(__name__)
 
 LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 #SBATCH --time=1:0:0

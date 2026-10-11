@@ -17,11 +17,12 @@ Cluster parameters for build submission script
 @author: Samuel Moors (Vrije Universiteit Brussel)
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
-import logging
 import os
 import sys
 
-logger = logging.getLogger(__name__)
+from build_tools import stdlib_logger
+
+logger = stdlib_logger(__name__)
 
 ANANSI = 'anansi'
 APPS = '/apps'

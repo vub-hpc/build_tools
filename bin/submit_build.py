@@ -25,7 +25,7 @@ import os
 import re
 import sys
 
-from build_tools import hooks_hydra
+from build_tools import hooks_hydra, stdlib_logger
 from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, CPU, GENT, GPU, MACHINE, PARTITION,
                                   PARTITIONS, SOFIA, SOURCES)
 from build_tools.hooks_hydra import (
@@ -38,7 +38,7 @@ from build_tools.lmodtools import submit_lmod_cache_job
 from build_tools.package import VERSION
 from build_tools.softinstall import mk_job_name, run_no_shell, submit_build_job
 
-logger = logging.getLogger(__name__)
+logger = stdlib_logger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 

@@ -16,11 +16,12 @@ Helper functions to handle temp files
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
-import logging
 import sys
 import tempfile
 
-logger = logging.getLogger(__name__)
+from build_tools import stdlib_logger
+
+logger = stdlib_logger(__name__)
 
 
 def write_tempfile(contents):

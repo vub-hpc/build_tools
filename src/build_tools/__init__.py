@@ -17,3 +17,19 @@ Tools to build and deploy installations with EasyBuild
 @author: Samuel Moors (Vrije Universiteit Brussel)
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
+import logging
+
+
+def stdlib_logger(name):
+    """
+    Return a plain standard library logger with the given name.
+
+    EasyBuild's easybuild.tools.build_log sets logging.LoggerClass to
+    EasyBuildLog at import time, so logging.getLogger() returns loggers
+    whose error() messages are rewritten with "EasyBuild encountered an
+    error". Demote the logger to a plain standard library Logger instance.
+    """
+    logger = logging.getLogger(name)
+    if isinstance(logger, logging.Logger) and type(logger) is not logging.Logger:
+        logger.__class__ = logging.Logger
+    return logger

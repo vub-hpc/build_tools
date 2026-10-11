@@ -18,16 +18,16 @@ Functions related to the software installation
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
-import logging
 import os
 import shlex
 import subprocess
 import sys
 
+from build_tools import stdlib_logger
 from build_tools.filetools import write_tempfile
 from build_tools.jobtemplate import BuildJob
 
-logger = logging.getLogger(__name__)
+logger = stdlib_logger(__name__)
 
 
 def run_no_shell(cmd):
