@@ -156,3 +156,15 @@ def test_run_no_shell():
     ec, out = softinstall.run_no_shell("false")
 
     assert ec != 0
+
+
+def test_run_loop_stdout(capsys):
+    ec, out = softinstall.run_loop_stdout("bash -c 'echo line1; echo line2'")
+
+    assert ec == 0
+    assert out == "line1\nline2\n"
+
+    # the output must also be written to stdout as it is produced
+    captured = capsys.readouterr()
+    assert "line1" in captured.out
+    assert "line2" in captured.out
