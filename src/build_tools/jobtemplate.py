@@ -104,7 +104,7 @@ if [ "${bwrap}" == 1 ]; then
     source_modfile="$$installbase/$$SUBDIR_MODULES_BWRAP/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
     source_modsymlink=$$(echo $$installbase/$$SUBDIR_MODULES_BWRAP/*/$$SUFFIX_MODULES_SYMLINK/$$modname/$$modversion.lua)
     dest_modfile="$$installbase/$$SUBDIR_MODULES/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
-    dest_modsymlink=$${source_modsymlink/$$installbase\/$$SUBDIR_MODULES_BWRAP\//$$installbase\/$$SUBDIR_MODULES\/}
+    dest_modsymlink=$${source_modsymlink/$$installbase\\/$$SUBDIR_MODULES_BWRAP\\//$$installbase\\/$$SUBDIR_MODULES\\/}
     echo "BUILD_TOOLS: source/dest install dir: $$source_installdir $$dest_installdir"
     echo "BUILD_TOOLS: source/dest module file: $$source_modfile $$dest_modfile"
     echo "BUILD_TOOLS: source/dest module symlink: $$source_modsymlink $$dest_modsymlink"
