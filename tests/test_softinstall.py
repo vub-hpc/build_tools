@@ -16,7 +16,9 @@ Unit tests for build_tools.softinstall
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
+
 import pytest
 
 from build_tools import softinstall
@@ -199,3 +201,50 @@ def test_submit_job_script_sbatch(monkeypatch):
     assert "module --force purge" in submit_cmd
     assert "module load cluster/chimera" in submit_cmd
     assert "sbatch --parsable --mem=32G test.job" in submit_cmd
+
+
+def test_submit_build_job_removes_job_file(monkeypatch, caplog):
+    job_options = {
+        'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
+        'bwrap': '0',
+        'easyconfig': 'zlib-1.2.11.eb',
+        'eb_buildpath': '/tmp/eb-test-build',
+        'eb_options': '',
+        'gpus': '',
+        'job_name': 'test-job',
+        'langcode': 'C',
+        'lmod_cache': '1',
+        'lmod_json_spider_cache': '1',
+        'machine': 'brussel',
+        'nodes': 1,
+        'partition': 'zen5_mpi',
+        'robot_paths': '/some/path',
+        'host_arch': 'zen5-ib',
+        'tasks': 4,
+        'tmp': '/tmp/eb-test-build',
+        'venv_activate': '$HOME/EB5/eb5env/bin/activate',
+        'walltime': '23:59:59',
+    }
+
+    # with keep_job=False the job script file is removed after submission
+    ec, out = softinstall.submit_build_job(
+        job_options, keep_job=False, sub_options='', cluster='hydra', local_exec=False, dry_run=True
+    )
+
+    assert ec == 0
+    job_file = out.split(' ')[-1]
+    assert not os.path.exists(job_file)
+
+    # an error removing the job file is logged, not raised
+    def fake_remove(path):
+        raise IOError("fake remove error")
+
+    monkeypatch.setattr(softinstall.os, 'remove', fake_remove)
+
+    with caplog.at_level(logging.ERROR):
+        ec, out = softinstall.submit_build_job(
+            job_options, keep_job=False, sub_options='', cluster='hydra', local_exec=False, dry_run=True
+        )
+
+    assert ec == 0
+    assert "Failed to remove job file" in caplog.text
