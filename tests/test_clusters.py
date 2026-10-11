@@ -1,0 +1,43 @@
+#
+# Copyright 2017-2026 Vrije Universiteit Brussel
+# All rights reserved.
+#
+# This file is part of build_tools (https://github.com/vub-hpc/build_tools),
+# originally created by the HPC team of Vrije Universiteit Brussel (https://hpc.vub.be),
+# with support of Vrije Universiteit Brussel (https://www.vub.be),
+# the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
+# the Flemish Research Foundation (FWO) (http://www.fwo.be/en)
+# and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
+#
+##
+"""
+Unit tests for build_tools.clusters
+
+@author: Alex Domingo (Vrije Universiteit Brussel)
+"""
+
+import os
+import subprocess
+import sys
+
+
+def _import_clusters(rootdir, cluster_env=None):
+    """Import build_tools.clusters in a fresh interpreter
+
+    The module reads VSC_INSTITUTE_CLUSTER at import time, so each
+    scenario needs its own interpreter.
+    """
+    env = os.environ.copy()
+    env.pop('VSC_INSTITUTE_CLUSTER', None)
+    if cluster_env is not None:
+        env['VSC_INSTITUTE_CLUSTER'] = cluster_env
+    env['PYTHONPATH'] = os.path.join(rootdir, '..', 'src')
+    code = "from build_tools import clusters; print(clusters.MACHINE)"
+    return subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, env=env)
+
+
+def test_import_without_cluster_env_exits(rootdir):
+    result = _import_clusters(rootdir)
+
+    assert result.returncode == 1
+    assert "VSC_INSTITUTE_CLUSTER environment variable is undefined" in result.stderr
