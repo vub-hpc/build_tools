@@ -53,8 +53,10 @@ setuptools.setup(
         'flufl.lock',
         'pyyaml',
     ],
-    tests_require=[
-        'pytest',
-    ],
+    extras_require={
+        'test': [
+            'pytest',
+        ],
+    },
     zip_safe=False,
 )
