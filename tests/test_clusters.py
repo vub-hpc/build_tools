@@ -41,3 +41,15 @@ def test_import_without_cluster_env_exits(rootdir):
 
     assert result.returncode == 1
     assert "VSC_INSTITUTE_CLUSTER environment variable is undefined" in result.stderr
+
+
+def test_machine_sofia(rootdir):
+    result = _import_clusters(rootdir, cluster_env='sofia')
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == 'sofia'
+
+    result = _import_clusters(rootdir, cluster_env='hydra')
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == 'brussel'
