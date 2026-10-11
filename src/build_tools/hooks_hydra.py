@@ -646,7 +646,7 @@ setenv("FS_LICENSE", licfile)
             self.cfg['modloadmsg'] = "%(name)s databases are located in /databases/bio/%(namelower)s-%(version)s"
 
         if self.name == 'BUSCO':
-            if LooseVersion(self.version) >= '5.0.0':
+            if LooseVersion(self.version) >= LooseVersion('5.0.0'):
                 self.cfg['modloadmsg'] += """
 Use local DBs with command: `busco --offline --download_path /databases/bio/BUSCO-5 ...`
 """
