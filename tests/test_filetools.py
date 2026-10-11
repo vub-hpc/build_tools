@@ -17,7 +17,10 @@ Unit tests for build_tools.filetools
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
+
+import pytest
 
 from build_tools import filetools
 
@@ -33,3 +36,17 @@ def test_write_tempfile():
         assert tmp_file_contents == contents
     finally:
         os.unlink(tmp_file)
+
+
+def test_write_tempfile_ioerror(monkeypatch, caplog):
+    def fake_named_tempfile(*args, **kwargs):
+        raise IOError("fake IO error")
+
+    monkeypatch.setattr(filetools.tempfile, 'NamedTemporaryFile', fake_named_tempfile)
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(SystemExit) as exc:
+            filetools.write_tempfile("Hello world!")
+
+    assert exc.value.code == 1
+    assert "Error writing tmp file" in caplog.text
