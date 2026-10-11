@@ -11,7 +11,7 @@
 #
 ##
 """
-Unit tests for build_tools.softinstall
+Unit tests for build_tools.hooks_hydra
 
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
