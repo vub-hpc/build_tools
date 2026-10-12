@@ -26,7 +26,7 @@ import re
 import sys
 
 from build_tools import hooks_hydra, stdlib_logger
-from build_tools.clusters import (APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES, THREEHOURS)
+from build_tools.clusters import (APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES, DEFAULT_WALLTIME)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -125,7 +125,7 @@ def main():
     parser.add_argument('-g', '--gpu', action='store_true', help='Request a GPU in the GPU partitions')
     parser.add_argument('-k', '--keep', action='store_true', help='Do not delete the job file at the end')
     parser.add_argument('--long-job', action='store_true',
-                        help='Submit the build jobs with the long walltime of the partition (default is 3 hours)')
+                        help=f'Submit the build jobs with the long walltime of the partition (default is {DEFAULT_WALLTIME})')
     parser.add_argument('-o', '--lmod-cache-only', action='store_true',
                         help='Run Lmod cache and exit, no software installation')
     parser.add_argument('-l', '--local', action='store_true', help='Do not submit as job, run locally')
@@ -322,15 +322,13 @@ def main():
                 # update partition to install on GPU partition on archs with GPUs
                 job_partition = ARCHS[MACHINE][host_arch]['partition']['gpu']
 
-        job_cluster = PARTITIONS[job_partition]['cluster']
-
         # set Slurm directives in job file
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch),
-                'cluster': job_cluster,
                 'partition': job_partition,
-                'walltime': PARTITIONS[job_partition]['long_walltime'] if opts.long_job else THREEHOURS,
+                'cluster': PARTITIONS[job_partition]['cluster'],
+                'walltime': PARTITIONS[job_partition]['long_walltime'] if opts.long_job else DEFAULT_WALLTIME,
                 'nodes': PARTITIONS[job_partition]['nodes'],
                 'tasks': PARTITIONS[job_partition]['tasks'],
                 'gpus': PARTITIONS[job_partition]['gpus'],
