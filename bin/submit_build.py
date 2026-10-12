@@ -26,7 +26,8 @@ import re
 import sys
 
 from build_tools import hooks_hydra, stdlib_logger
-from build_tools.clusters import APPS, ARCHS, BRUSSEL, DEFAULT_WALLTIME, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES
+from build_tools.clusters import (APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES,
+                                  SMALL_JOB)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -106,9 +107,9 @@ def main():
                              'force-nodevice (force without a GPU device)')
     parser.add_argument('-k', '--keep', action='store_true',
                         help='Do not delete the job file at the end')
-    parser.add_argument('-j', '--long-job', action='store_true',
-                        help=f'Submit the build jobs with the long walltime of the partition '
-                             f'(default is {DEFAULT_WALLTIME})')
+    parser.add_argument('-j', '--job-small', action='store_true',
+                        help='Submit the jobs with a 3 hour walltime and 2 tasks, '
+                             'regardless of the partition')
     parser.add_argument('-m', '--lmod-cache', choices=['after', 'only', 'skip'], default='after',
                         help='Lmod cache behaviour: after (make cache after the installation, default), '
                              'only (just refresh the cache) or skip (install without making the cache)')
@@ -361,9 +362,9 @@ def main():
                 'job_name': mk_job_name(easyconfig, host_arch),
                 'partition': job_partition,
                 'cluster': PARTITIONS[job_partition]['cluster'],
-                'walltime': PARTITIONS[job_partition]['long_walltime'] if opts.long_job else DEFAULT_WALLTIME,
+                'walltime': PARTITIONS[job_partition]['walltime'] if not opts.job_small else SMALL_JOB['walltime'],
                 'nodes': PARTITIONS[job_partition]['nodes'],
-                'tasks': PARTITIONS[job_partition]['tasks'],
+                'tasks': PARTITIONS[job_partition]['tasks'] if not opts.job_small else SMALL_JOB['tasks'],
                 'gpus': PARTITIONS[job_partition]['gpus'] if job_gpu_device else '',
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
