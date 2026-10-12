@@ -33,6 +33,10 @@ MANTICORE = 'manticore'
 SOFIA = 'sofia'
 SOURCES = 'sources'
 
+# default job options
+SINGLENODE = 1
+HALFDAY = '11:59:59'
+
 VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
 if not VSC_INSTITUTE_CLUSTER:
     logger.error("VSC_INSTITUTE_CLUSTER environment variable is undefined")
@@ -132,62 +136,109 @@ ARCHS = {
 
 # The key name should match the partition name in Slurm
 # cluster: name of the cluster
+# arch: architecture of the partition
+# walltime: default walltime for build jobs on this partition
+# nodes: default number of nodes for build jobs on this partition
+# tasks: default number of tasks for build jobs on this partition
 
 PARTITIONS = {
     'ada_gpu': {
         'cluster': ANANSI,
         'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'ampere_gpu': {
         'cluster': HYDRA,
         'arch': 'zen2-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'hopper_gpu': {
         'cluster': HYDRA,
         'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'pascal_gpu': {
         'cluster': HYDRA,
         'arch': 'broadwell',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'skylake': {
         'cluster': HYDRA,
         'arch': 'skylake',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'skylake_mpi': {
         'cluster': HYDRA,
         'arch': 'skylake-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'zen3': {
         'cluster': MANTICORE,
         'arch': 'zen3',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'zen3_mpi': {
         'cluster': MANTICORE,
         'arch': 'zen3-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'zen4': {
         'cluster': HYDRA,
         'arch': 'zen4',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
     'zen5_mpi': {
         'cluster': HYDRA,
         'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
     },
+    # zen4_h200 requires at least 24 cores per GPU
     'zen4_h200': {
         'cluster': SOFIA,
         'arch': 'zen4-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 24,
     },
     'zen5_dense': {
         'cluster': SOFIA,
         'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 8,
     },
     'zen5_himem': {
         'cluster': SOFIA,
         'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 8,
     },
     'zen5_vis': {
         'cluster': SOFIA,
         'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 8,
     },
 }

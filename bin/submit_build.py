@@ -324,9 +324,9 @@ def main():
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch),
-                'walltime': '11:59:59',
-                'nodes': 1,
-                'tasks': 8 if MACHINE == SOFIA else 4,
+                'walltime': PARTITIONS[host_partition]['walltime'],
+                'nodes': PARTITIONS[host_partition]['nodes'],
+                'tasks': PARTITIONS[host_partition]['tasks'],
                 'gpus': '',
                 'partition': host_partition,
                 'cluster': cluster,
@@ -351,9 +351,8 @@ def main():
                 else:
                     job_options['gpus'] = '--gpus-per-node=1'
 
-        # sofia zen4_h200 requires at least 1 GPU and 24 cores per GPU
+        # sofia zen4_h200 requires at least 1 GPU
         if cluster == SOFIA and host_partition == 'zen4_h200':
-            job_options['tasks'] = 24
             job_options['gpus'] = '--gpus-per-node=1'
 
         # add extra footer if requested

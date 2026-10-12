@@ -17,8 +17,11 @@ Unit tests for build_tools.clusters
 """
 
 import os
+import re
 import subprocess
 import sys
+
+from build_tools import clusters
 
 
 def _import_clusters(rootdir, cluster_env=None):
@@ -53,3 +56,11 @@ def test_machine_sofia(rootdir):
 
     assert result.returncode == 0
     assert result.stdout.strip() == 'brussel'
+
+
+def test_partitions_slurm_job_options():
+    # every partition must define the Slurm job options used by submit_build.py
+    for props in clusters.PARTITIONS.values():
+        assert re.fullmatch(r'\d+:\d+:\d+', props['walltime'])
+        assert isinstance(props['nodes'], int) and props['nodes'] >= 1
+        assert isinstance(props['tasks'], int) and props['tasks'] >= 1
