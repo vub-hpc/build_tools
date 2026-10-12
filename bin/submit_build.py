@@ -38,7 +38,8 @@ from build_tools.package import VERSION
 from build_tools.softinstall import mk_job_name, run_no_shell, submit_build_job
 
 logger = stdlib_logger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s',
+                    datefmt='%d-%m-%Y %H:%M:%S')
 
 
 # repositories with easyconfigs
