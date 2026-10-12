@@ -58,9 +58,13 @@ def test_machine_sofia(rootdir):
     assert result.stdout.strip() == 'brussel'
 
 
-def test_partitions_slurm_job_options():
-    # every partition must define the Slurm job options used by submit_build.py
-    for props in clusters.PARTITIONS.values():
+def test_partitions_configuration():
+    # every partition must define the keys used by submit_build.py and lmodtools.py
+    required_keys = {'cluster', 'arch', 'walltime', 'nodes', 'tasks', 'gpus'}
+    for partition, props in clusters.PARTITIONS.items():
+        assert required_keys <= props.keys(), f"partition {partition} is missing keys"
+        assert props['cluster'] in (clusters.ANANSI, clusters.HYDRA, clusters.MANTICORE, clusters.SOFIA)
+        assert isinstance(props['arch'], str) and props['arch']
         assert re.fullmatch(r'\d+:\d+:\d+', props['walltime'])
         assert isinstance(props['nodes'], int) and props['nodes'] >= 1
         assert isinstance(props['tasks'], int) and props['tasks'] >= 1
