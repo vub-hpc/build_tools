@@ -96,6 +96,10 @@ VALID_TOOLCHAINS = {
         'toolchains': ['foss', 'intel'],
         'subdir': '2025a',
     },
+    '2026.1': {
+        'toolchains': ['foss', 'intel'],
+        'subdir': '2026.1',
+    },
     '25.1': {
         'toolchains': ['nvidia-compilers', 'NVHPC'],
         'subdir': '2024a',
@@ -105,7 +109,7 @@ VALID_TOOLCHAINS = {
         'subdir': '2025a',
     },
 }
-VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a']
+VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a', '2026.1']
 
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
