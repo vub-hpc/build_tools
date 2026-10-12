@@ -116,32 +116,43 @@ def main():
                         help='CPU architecture of the host system and the build')
     parser.add_argument('-b', '--bwrap', action='store_true',
                         help='Reinstall in 2 steps via new namespace with bwrap (no robot)')
-    parser.add_argument('-c', '--lang-c', action='store_true', help='Set LANG=C in the build (instead of unicode)')
-    parser.add_argument('-d', '--debug', action='store_true', help='Set log level to DEBUG (default is INFO)')
-    parser.add_argument('-D', '--dry-run', action='store_true', help='Do not fetch/install, set debug log level')
-    parser.add_argument('-e', '--extra-eb-flags', default=None, help='Extra flags to pass to EasyBuild')
-    parser.add_argument('-f', '--append-mod-footer', default=None, help='Path to extra footer for module file')
-    parser.add_argument('-q', '--extra-job-flags', default='', help='Extra flags to pass to Slurm')
-    parser.add_argument('-g', '--gpu', action='store_true', help='Request a GPU in the GPU partitions')
-    parser.add_argument('-k', '--keep', action='store_true', help='Do not delete the job file at the end')
-    parser.add_argument('--long-job', action='store_true',
+    parser.add_argument('-c', '--lang-c', action='store_true',
+                        help='Set LANG=C in the build (instead of unicode)')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='Set log level to DEBUG (default is INFO)')
+    parser.add_argument('-D', '--dry-run', action='store_true',
+                        help='Do not fetch/install, set debug log level')
+    parser.add_argument('-e', '--extra-eb-flags', default=None,
+                        help='Extra flags to pass to EasyBuild')
+    parser.add_argument('-f', '--append-mod-footer', default=None,
+                        help='Path to extra footer for module file')
+    parser.add_argument('-q', '--extra-job-flags', default='',
+                        help='Extra flags to pass to Slurm')
+    parser.add_argument('-g', '--gpu', action='store_true',
+                        help='Request a GPU in the GPU partitions')
+    parser.add_argument('-k', '--keep', action='store_true',
+                        help='Do not delete the job file at the end')
+    parser.add_argument('-j', '--long-job', action='store_true',
                         help=f'Submit the build jobs with the long walltime of the partition '
                              f'(default is {DEFAULT_WALLTIME})')
-    parser.add_argument('--lmod-cache', choices=['after', 'only', 'skip'], default='after',
+    parser.add_argument('-m', '--lmod-cache', choices=['after', 'only', 'skip'], default='after',
                         help='Lmod cache behaviour: after (run after the installation job, default), '
                              'only (run the Lmod cache and skip the installation) or skip (do not run it)')
-    parser.add_argument('-l', '--local', action='store_true', help='Do not submit as job, run locally')
-    parser.add_argument('-P', '--partition', type=strlist, default=None, help='Slurm partition for the build')
+    parser.add_argument('-l', '--local', action='store_true',
+                        help='Do not submit as job, run locally')
+    parser.add_argument('-p', '--partition', type=strlist, default=None,
+                        help='Slurm partition for the build')
     parser.add_argument('-n', '--pre-fetch', action='store_true',
                         help='Pre-fetch sources before submitting build jobs')
-    parser.add_argument('-p', '--append-robot-cwd', action='store_true',
+    parser.add_argument('-r', '--append-robot-cwd', action='store_true',
                         help='Append current working dir to robot path')
-
     parser.add_argument('-t', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
                         help='Temporary disk for the build: shm (/dev/shm, default), '
                              'tmp (/tmp) or scratch ($VSC_SCRATCH_VO_USER)')
-    parser.add_argument('-v', '--version', action='store_true', help='Show the version')
-    parser.add_argument('easyconfigs', nargs='*', help='easyconfig file(s) to install')
+    parser.add_argument('-v', '--version', action='store_true',
+                        help='Show the version')
+    parser.add_argument('easyconfigs', nargs='*',
+                        help='easyconfig file(s) to install')
     opts = parser.parse_args()
 
     if opts.debug:
