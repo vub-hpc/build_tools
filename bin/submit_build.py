@@ -60,11 +60,6 @@ SOURCEPATH = {
 DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS[MACHINE].items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
 
-VSC_DEFAULT_CLUSTER_MODULE = os.getenv('VSC_DEFAULT_CLUSTER_MODULE')
-if not VSC_DEFAULT_CLUSTER_MODULE:
-    logger.error("VSC_DEFAULT_CLUSTER_MODULE environment variable is undefined")
-    sys.exit(1)
-
 # sanity check: all partitions defined in ARCHS must exist in PARTITIONS
 for _arch, _props in ARCHS[MACHINE].items():
     for _kind in ('cpu', 'gpu'):
@@ -93,7 +88,6 @@ def main():
     job = {
         'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
         'bwrap': '0',
-        'cluster': VSC_DEFAULT_CLUSTER_MODULE,
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
         'lmod_cache': '1',
@@ -318,39 +312,29 @@ def main():
         for opt, path in ebconf.items():
             eb_options.append(f'--{opt}={path}')
 
-        cluster = PARTITIONS[host_partition].get('cluster', VSC_DEFAULT_CLUSTER_MODULE)
+        # set this job's partition and cluster
+        job_partition = host_partition
+        if opts.gpu and ARCHS[MACHINE][host_arch]['partition']['gpu']:
+            # user specified partitions have priority
+            if not opts.partition:
+                # update partition to install on GPU partition on archs with GPUs
+                job_partition = ARCHS[MACHINE][host_arch]['partition']['gpu']
+
+        job_cluster = PARTITIONS[job_partition]['cluster']
 
         # set Slurm directives in job file
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch),
-                'partition': host_partition,
-                'cluster': cluster,
+                'cluster': job_cluster,
+                'partition': job_partition,
+                'walltime': PARTITIONS[job_partition]['walltime'],
+                'nodes': PARTITIONS[job_partition]['nodes'],
+                'tasks': PARTITIONS[job_partition]['tasks'],
+                'gpus': PARTITIONS[job_partition]['gpus'],
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
-            }
-        )
-
-        # settings for builds with GPUs
-        if opts.gpu:
-            if ARCHS[MACHINE][host_arch]['partition']['gpu']:
-                # user specified partitions have priority
-                if not opts.partition:
-                    # install on GPU partition on archs with GPUs
-                    job_options['partition'] = ARCHS[MACHINE][host_arch]['partition']['gpu']
-                    if cluster != SOFIA:
-                        job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster',
-                                                                                          VSC_DEFAULT_CLUSTER_MODULE)
-
-        # Slurm job options of the partition the job runs on
-        partition_props = PARTITIONS[job_options['partition']]
-        job_options.update(
-            {
-                'walltime': partition_props['walltime'],
-                'nodes': partition_props['nodes'],
-                'tasks': partition_props['tasks'],
-                'gpus': partition_props['gpus'],
             }
         )
 
