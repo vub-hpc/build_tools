@@ -38,9 +38,8 @@ jobs:
         run: pytest
       - name: Sanity check submit_build.py script
         run: |
-          export VSC_ARCH_LOCAL=skylake
+          export VSC_ARCH_LOCAL=zen5
           export VSC_ARCH_SUFFIX=-ib
           export VSC_OS_LOCAL=RL8
           export VSC_INSTITUTE_CLUSTER=hydra
-          export VSC_DEFAULT_CLUSTER_MODULE=hydra
           submit_build.py --help

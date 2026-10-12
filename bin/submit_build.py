@@ -77,38 +77,6 @@ def strlist(value):
 def main():
     """Submit job script to deploy software installation with EasyBuild"""
 
-    venv = os.getenv('VIRTUAL_ENV')
-    if not venv:
-        logger.error("VIRTUAL_ENV environment variable is undefined, "
-                     "please activate the build_tools virtual environment")
-        sys.exit(1)
-    vscsoftstack_root = os.path.join(os.path.dirname(venv), 'vsc-software-stack')
-
-    # Default job options
-    job = {
-        'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
-        'bwrap': '0',
-        'extra_mod_footer': None,
-        'langcode': 'en_US.utf8',
-        'lmod_cache': '1',
-        'machine': MACHINE,
-        'tmp': '/dev/shm',
-        'venv_activate': os.getenv('VSC_VENV_ACTIVATE', '$HOME/EB5/eb5env/bin/activate'),
-    }
-
-    # Easybuild default paths
-    # start using environment from local machine, job scripts get custom paths
-    ebconf = {
-        'accept-eula-for': 'Intel-oneAPI,CUDA,cuDNN,NVHPC',
-        'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
-        'hooks': hooks_hydra.__file__,
-        'include-easyblocks': os.path.join(vscsoftstack_root, EASYBLOCK_REPO),
-        'installpath': os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
-        'prefer-python-search-path': 'EBPYTHONPREFIXES',
-        'robot-paths': ":".join([os.path.join(vscsoftstack_root, repo) for repo in EASYCONFIG_REPOS]),
-        'sourcepath': SOURCEPATH[MACHINE],
-    }
-
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description='Submit easyconfig as jobs to all different architectures.')
@@ -161,6 +129,38 @@ def main():
     if opts.version:
         print(VERSION)
         sys.exit(0)
+
+    venv = os.getenv('VIRTUAL_ENV')
+    if not venv:
+        logger.error("VIRTUAL_ENV environment variable is undefined, "
+                     "please activate the build_tools virtual environment")
+        sys.exit(1)
+    vscsoftstack_root = os.path.join(os.path.dirname(venv), 'vsc-software-stack')
+
+    # Default job options
+    job = {
+        'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
+        'bwrap': '0',
+        'extra_mod_footer': None,
+        'langcode': 'en_US.utf8',
+        'lmod_cache': '1',
+        'machine': MACHINE,
+        'tmp': '/dev/shm',
+        'venv_activate': os.getenv('VSC_VENV_ACTIVATE', '$HOME/EB5/eb5env/bin/activate'),
+    }
+
+    # Easybuild default paths
+    # start using environment from local machine, job scripts get custom paths
+    ebconf = {
+        'accept-eula-for': 'Intel-oneAPI,CUDA,cuDNN,NVHPC',
+        'buildpath': os.path.join(job['tmp'], 'eb-submit-build-fetch'),
+        'hooks': hooks_hydra.__file__,
+        'include-easyblocks': os.path.join(vscsoftstack_root, EASYBLOCK_REPO),
+        'installpath': os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', LOCAL_ARCH),
+        'prefer-python-search-path': 'EBPYTHONPREFIXES',
+        'robot-paths': ":".join([os.path.join(vscsoftstack_root, repo) for repo in EASYCONFIG_REPOS]),
+        'sourcepath': SOURCEPATH[MACHINE],
+    }
 
     dry_run = opts.dry_run
     if dry_run:
