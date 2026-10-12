@@ -32,20 +32,20 @@ from build_tools import softinstall
             ['zlib-1.2.11.eb', None]
         ),
         (
-            'zlib-1.2.11-skylake',
-            ['zlib-1.2.11.eb', 'skylake']
+            'zlib-1.2.11-zen5-ib',
+            ['zlib-1.2.11.eb', 'zen5-ib']
         ),
         (
-            'zlib-1.2.11-skylake',
-            ['test/subdir/zlib-1.2.11.eb', 'skylake'],
+            'zlib-1.2.11-zen5-ib',
+            ['test/subdir/zlib-1.2.11.eb', 'zen5-ib'],
         ),
         (
             'zlib-1.2.11-ngzip-2.3.3',
             ['zlib-1.2.11.eb ngzip-2.3.3.eb', None]
         ),
         (
-            'zlib-1.2.11-ngzip-2.3.3-skylake',
-            ['zlib-1.2.11.eb test/subdir/ngzip-2.3.3.eb', 'skylake'],
+            'zlib-1.2.11-ngzip-2.3.3-zen5-ib',
+            ['zlib-1.2.11.eb test/subdir/ngzip-2.3.3.eb', 'zen5-ib'],
         ),
     ]
 )

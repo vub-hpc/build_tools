@@ -28,7 +28,7 @@ from build_tools.lmodtools import submit_lmod_cache_job
 def test_submit_lmod_cache_job(inputdir):
     job_script = 'lmod_cache_job_01.sh'
 
-    _, out = submit_lmod_cache_job('skylake_mpi', jobids_depend=['123', '456'], dry_run=True)
+    _, out = submit_lmod_cache_job('zen5_mpi', jobids_depend=['123', '456'], dry_run=True)
 
     new_job = out.split(' ')[-1]
     with open(new_job) as nj:

@@ -62,20 +62,6 @@ ARCHS = {
             },
             'cuda_cc': ['6.0', '6.1'],  # Tesla P100, GeForce 1080Ti
         },
-        'skylake': {
-            'default': False,
-            'partition': {
-                'cpu': 'skylake',
-                'gpu': None,
-            },
-        },
-        'skylake-ib': {
-            'default': False,
-            'partition': {
-                'cpu': 'skylake_mpi',
-                'gpu': None,
-            },
-        },
         'zen2-ib': {
             'default': True,
             'partition': {
@@ -174,22 +160,6 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gpus-per-node=1',
-    },
-    'skylake': {
-        'cluster': HYDRA,
-        'arch': 'skylake',
-        'walltime': HALFDAY,
-        'nodes': SINGLENODE,
-        'tasks': 4,
-        'gpus': '',
-    },
-    'skylake_mpi': {
-        'cluster': HYDRA,
-        'arch': 'skylake-ib',
-        'walltime': HALFDAY,
-        'nodes': SINGLENODE,
-        'tasks': 4,
-        'gpus': '',
     },
     'zen3': {
         'cluster': MANTICORE,
