@@ -140,6 +140,34 @@ class FakeEasyconfig(dict):
         self.log = logging.getLogger('test_parse_hook')
 
 
+@pytest.mark.parametrize(
+    'gpu_software',
+    [
+        # (name, toolchain_name, versionsuffix, expected)
+        # GPU components and toolchain packages
+        ('CUDA', 'system', '', True),
+        ('nvidia-compilers', 'system', '', True),
+        ('NVHPC', 'system', '', True),
+        # software built with a GPU toolchain
+        ('zlib', 'nvidia-compilers', '', True),
+        ('zlib', 'NVHPC', '', True),
+        # software with a GPU versionsuffix
+        ('zlib', 'foss', '-CUDA', True),
+        ('zlib', 'foss', '-CUDA-12.8.0', True),
+        # regular software
+        ('zlib', 'foss', '', False),
+        ('zlib', 'intel', '-OpenMP', False),
+        ('zlib', 'system', '', False),
+    ],
+)
+def test_is_gpu_software(gpu_software):
+    name, toolchain_name, versionsuffix, expected = gpu_software
+    ec = FakeEasyconfig(name, toolchain_name)
+    ec['versionsuffix'] = versionsuffix
+
+    assert hooks_hydra.is_gpu_software(ec) == expected
+
+
 @pytest.fixture
 def parse_hook_config(monkeypatch):
     """stub out EasyBuild configuration accessors used by the parse hook"""
