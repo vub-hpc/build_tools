@@ -26,7 +26,7 @@ import re
 import sys
 
 from build_tools import hooks_hydra, stdlib_logger
-from build_tools.clusters import (APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES, DEFAULT_WALLTIME)
+from build_tools.clusters import APPS, ARCHS, BRUSSEL, DEFAULT_WALLTIME, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
