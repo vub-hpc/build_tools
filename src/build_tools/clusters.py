@@ -140,6 +140,7 @@ ARCHS = {
 # walltime: default walltime for build jobs on this partition
 # nodes: default number of nodes for build jobs on this partition
 # tasks: default number of tasks for build jobs on this partition
+# gpus: Slurm GPU options for build jobs on this partition (empty for CPU partitions)
 
 PARTITIONS = {
     'ada_gpu': {
@@ -148,6 +149,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '--gres=shard:1',
     },
     'ampere_gpu': {
         'cluster': HYDRA,
@@ -155,6 +157,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '--gpus-per-node=1',
     },
     'hopper_gpu': {
         'cluster': HYDRA,
@@ -162,6 +165,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '--gpus-per-node=1',
     },
     'pascal_gpu': {
         'cluster': HYDRA,
@@ -169,6 +173,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '--gpus-per-node=1',
     },
     'skylake': {
         'cluster': HYDRA,
@@ -176,6 +181,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '',
     },
     'skylake_mpi': {
         'cluster': HYDRA,
@@ -183,6 +189,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '',
     },
     'zen3': {
         'cluster': MANTICORE,
@@ -190,6 +197,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '',
     },
     'zen3_mpi': {
         'cluster': MANTICORE,
@@ -197,6 +205,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '',
     },
     'zen4': {
         'cluster': HYDRA,
@@ -204,6 +213,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '',
     },
     'zen5_mpi': {
         'cluster': HYDRA,
@@ -211,14 +221,16 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
+        'gpus': '',
     },
-    # zen4_h200 requires at least 24 cores per GPU
+    # zen4_h200 requires at least 1 GPU and 24 cores per GPU
     'zen4_h200': {
         'cluster': SOFIA,
         'arch': 'zen4-ib',
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 24,
+        'gpus': '--gpus-per-node=1',
     },
     'zen5_dense': {
         'cluster': SOFIA,
@@ -226,6 +238,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 8,
+        'gpus': '',
     },
     'zen5_himem': {
         'cluster': SOFIA,
@@ -233,6 +246,7 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 8,
+        'gpus': '',
     },
     'zen5_vis': {
         'cluster': SOFIA,
@@ -240,5 +254,6 @@ PARTITIONS = {
         'walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 8,
+        'gpus': '',
     },
 }

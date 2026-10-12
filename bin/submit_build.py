@@ -26,7 +26,7 @@ import re
 import sys
 
 from build_tools import hooks_hydra, stdlib_logger
-from build_tools.clusters import (ANANSI, APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES)
+from build_tools.clusters import (APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -324,10 +324,6 @@ def main():
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch),
-                'walltime': PARTITIONS[host_partition]['walltime'],
-                'nodes': PARTITIONS[host_partition]['nodes'],
-                'tasks': PARTITIONS[host_partition]['tasks'],
-                'gpus': '',
                 'partition': host_partition,
                 'cluster': cluster,
                 'eb_options': " ".join(eb_options),
@@ -346,14 +342,17 @@ def main():
                     if cluster != SOFIA:
                         job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster',
                                                                                           VSC_DEFAULT_CLUSTER_MODULE)
-                if job_options['cluster'] == ANANSI:
-                    job_options['gpus'] = '--gres=shard:1'
-                else:
-                    job_options['gpus'] = '--gpus-per-node=1'
 
-        # sofia zen4_h200 requires at least 1 GPU
-        if cluster == SOFIA and host_partition == 'zen4_h200':
-            job_options['gpus'] = '--gpus-per-node=1'
+        # Slurm job options of the partition the job runs on
+        partition_props = PARTITIONS[job_options['partition']]
+        job_options.update(
+            {
+                'walltime': partition_props['walltime'],
+                'nodes': partition_props['nodes'],
+                'tasks': partition_props['tasks'],
+                'gpus': partition_props['gpus'],
+            }
+        )
 
         # add extra footer if requested
         if opts.extra_mod_footer:

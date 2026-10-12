@@ -64,3 +64,4 @@ def test_partitions_slurm_job_options():
         assert re.fullmatch(r'\d+:\d+:\d+', props['walltime'])
         assert isinstance(props['nodes'], int) and props['nodes'] >= 1
         assert isinstance(props['tasks'], int) and props['tasks'] >= 1
+        assert isinstance(props['gpus'], str)
