@@ -137,9 +137,9 @@ def main():
                         help='Append current working dir to robot path')
     parser.add_argument('-s', '--skip-lmod-cache', action='store_true',
                         help='Do not run Lmod cache after installation')
-    parser.add_argument('-m', '--tmp', action='store_true', help='Use /tmp as temporary disk instead of /dev/shm')
-    parser.add_argument('-M', '--tmp-scratch', action='store_true',
-                        help='Use VSC_SCRATCH_VO_USER as temporary disk instead of /dev/shm')
+    parser.add_argument('-m', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
+                        help='Temporary disk for the build: shm (/dev/shm, default), '
+                             'tmp (/tmp) or scratch ($VSC_SCRATCH_VO_USER)')
     parser.add_argument('-v', '--version', action='store_true', help='Show the version')
     parser.add_argument('easyconfigs', nargs='*', help='easyconfig file(s) to install')
     opts = parser.parse_args()
@@ -278,9 +278,9 @@ def main():
         job_options['lmod_json_spider_cache'] = ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0')
 
         # Set tmp dir and update build path accordingly
-        if opts.tmp:
+        if opts.tmp == 'tmp':
             job_options['tmp'] = '/tmp'
-        elif opts.tmp_scratch:
+        elif opts.tmp == 'scratch':
             job_options['tmp'] = os.path.join('$VSC_SCRATCH_VO_USER', host_arch)
         ebconf['buildpath'] = os.path.join(job_options['tmp'], 'eb-submit-build')
 
