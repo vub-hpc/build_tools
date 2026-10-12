@@ -26,7 +26,7 @@ import re
 import sys
 
 from build_tools import hooks_hydra, stdlib_logger
-from build_tools.clusters import (APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES)
+from build_tools.clusters import (APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES, THREEHOURS)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -124,6 +124,8 @@ def main():
     parser.add_argument('-q', '--extra-sub-flags', default='', help='Extra flags to pass to Slurm')
     parser.add_argument('-g', '--gpu', action='store_true', help='Request a GPU in the GPU partitions')
     parser.add_argument('-k', '--keep', action='store_true', help='Do not delete the job file at the end')
+    parser.add_argument('--long-job', action='store_true',
+                        help='Submit the build jobs with the long walltime of the partition (default is 3 hours)')
     parser.add_argument('-o', '--lmod-cache-only', action='store_true',
                         help='Run Lmod cache and exit, no software installation')
     parser.add_argument('-l', '--local', action='store_true', help='Do not submit as job, run locally')
@@ -328,7 +330,7 @@ def main():
                 'job_name': mk_job_name(easyconfig, host_arch),
                 'cluster': job_cluster,
                 'partition': job_partition,
-                'walltime': PARTITIONS[job_partition]['walltime'],
+                'walltime': PARTITIONS[job_partition]['long_walltime'] if opts.long_job else THREEHOURS,
                 'nodes': PARTITIONS[job_partition]['nodes'],
                 'tasks': PARTITIONS[job_partition]['tasks'],
                 'gpus': PARTITIONS[job_partition]['gpus'],

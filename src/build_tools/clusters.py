@@ -35,6 +35,7 @@ SOURCES = 'sources'
 
 # default job options
 SINGLENODE = 1
+THREEHOURS = '03:00:00'
 HALFDAY = '11:59:59'
 
 VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
@@ -123,7 +124,7 @@ ARCHS = {
 # The key name should match the partition name in Slurm
 # cluster: name of the cluster
 # arch: architecture of the partition
-# walltime: default walltime for build jobs on this partition
+# long_walltime: walltime for build jobs submitted with --long-job on this partition
 # nodes: default number of nodes for build jobs on this partition
 # tasks: default number of tasks for build jobs on this partition
 # gpus: Slurm GPU options for build jobs on this partition (empty for CPU partitions)
@@ -132,7 +133,7 @@ PARTITIONS = {
     'ada_gpu': {
         'cluster': ANANSI,
         'arch': 'zen5-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gres=shard:1',
@@ -140,7 +141,7 @@ PARTITIONS = {
     'ampere_gpu': {
         'cluster': HYDRA,
         'arch': 'zen2-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gpus-per-node=1',
@@ -148,7 +149,7 @@ PARTITIONS = {
     'hopper_gpu': {
         'cluster': HYDRA,
         'arch': 'zen5-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gpus-per-node=1',
@@ -156,7 +157,7 @@ PARTITIONS = {
     'pascal_gpu': {
         'cluster': HYDRA,
         'arch': 'broadwell',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gpus-per-node=1',
@@ -164,7 +165,7 @@ PARTITIONS = {
     'zen3': {
         'cluster': MANTICORE,
         'arch': 'zen3',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
@@ -172,7 +173,7 @@ PARTITIONS = {
     'zen3_mpi': {
         'cluster': MANTICORE,
         'arch': 'zen3-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
@@ -180,7 +181,7 @@ PARTITIONS = {
     'zen4': {
         'cluster': HYDRA,
         'arch': 'zen4',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
@@ -188,7 +189,7 @@ PARTITIONS = {
     'zen5_mpi': {
         'cluster': HYDRA,
         'arch': 'zen5-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
@@ -197,7 +198,7 @@ PARTITIONS = {
     'zen4_h200': {
         'cluster': SOFIA,
         'arch': 'zen4-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 24,
         'gpus': '--gpus-per-node=1',
@@ -205,7 +206,7 @@ PARTITIONS = {
     'zen5_dense': {
         'cluster': SOFIA,
         'arch': 'zen5-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 8,
         'gpus': '',
@@ -213,7 +214,7 @@ PARTITIONS = {
     'zen5_himem': {
         'cluster': SOFIA,
         'arch': 'zen5-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 8,
         'gpus': '',
@@ -221,7 +222,7 @@ PARTITIONS = {
     'zen5_vis': {
         'cluster': SOFIA,
         'arch': 'zen5-ib',
-        'walltime': HALFDAY,
+        'long_walltime': HALFDAY,
         'nodes': SINGLENODE,
         'tasks': 8,
         'gpus': '',
