@@ -97,16 +97,21 @@ def main():
                         help='Path to extra footer for module file')
     parser.add_argument('-q', '--extra-job-flags', default='',
                         help='Extra flags to pass to Slurm')
-    parser.add_argument('-g', '--gpu', choices=['device', 'nodevice'], default=None,
-                        help='Force the GPU partition: device (also request a GPU device) or nodevice (no GPU device)')
+    parser.add_argument('-g', '--gpu',
+                        choices=['detect', 'detect-nodevice', 'force', 'force-nodevice'],
+                        default='detect',
+                        help='GPU behaviour: detect (detect GPU software from easyconfig filename, default), '
+                             'detect-nodevice (detect and run job without a GPU device), '
+                             'force (use GPU partitions on supported archs) or '
+                             'force-nodevice (force without a GPU device)')
     parser.add_argument('-k', '--keep', action='store_true',
                         help='Do not delete the job file at the end')
     parser.add_argument('-j', '--long-job', action='store_true',
                         help=f'Submit the build jobs with the long walltime of the partition '
                              f'(default is {DEFAULT_WALLTIME})')
     parser.add_argument('-m', '--lmod-cache', choices=['after', 'only', 'skip'], default='after',
-                        help='Lmod cache behaviour: after (run after the installation job, default), '
-                             'only (run the Lmod cache and skip the installation) or skip (do not run it)')
+                        help='Lmod cache behaviour: after (make cache after the installation, default), '
+                             'only (just refresh the cache) or skip (install without making the cache)')
     parser.add_argument('-l', '--local', action='store_true',
                         help='Do not submit as job, run locally')
     parser.add_argument('-p', '--partition', type=strlist, default=None,
@@ -191,11 +196,12 @@ def main():
     # determine if the installation is GPU software
     # (GPU component or toolchain name in the easyconfig filename)
     gpu_software = False
-    for path in opts.easyconfigs:
-        filename = os.path.basename(path)
-        if any(x in filename for x in hooks_hydra.GPU_COMPONENTS + hooks_hydra.GPU_TOOLCHAINS):
-            logger.info("GPU software detected in %s", filename)
-            gpu_software = True
+    if opts.gpu in ('detect', 'detect-nodevice'):
+        for path in opts.easyconfigs:
+            filename = os.path.basename(path)
+            if any(x in filename for x in hooks_hydra.GPU_COMPONENTS + hooks_hydra.GPU_TOOLCHAINS):
+                logger.info("GPU software detected in %s", filename)
+                gpu_software = True
 
     # Set host archs: define arch_stack
     local_exec = opts.local
@@ -338,16 +344,18 @@ def main():
 
         # set this job's partition and cluster
         job_partition = host_partition
-        if not opts.partition and (gpu_software or opts.gpu):
-            # GPU software or forced with --gpu: use the GPU partition on archs that support it
-            # (user specified partitions have priority)
+        # GPU software, or forced with --gpu force* use the GPU partition on archs that support it
+        use_gpu_partition = gpu_software or opts.gpu in ('force', 'force-nodevice')
+        # user specified partitions have priority
+        if not opts.partition and use_gpu_partition:
             gpu_partition = ARCHS[MACHINE][host_arch]['partition']['gpu']
             if gpu_partition:
                 job_partition = gpu_partition
 
+        # --gpu with *-nodevice options never request a GPU device)
+        job_gpu_device = opts.gpu not in ('detect-nodevice', 'force-nodevice')
+
         # set Slurm directives in job file
-        # (--gpu nodevice: GPU partition without requesting a GPU device)
-        job_gpus = '' if opts.gpu == 'nodevice' else PARTITIONS[job_partition]['gpus']
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch),
@@ -356,7 +364,7 @@ def main():
                 'walltime': PARTITIONS[job_partition]['long_walltime'] if opts.long_job else DEFAULT_WALLTIME,
                 'nodes': PARTITIONS[job_partition]['nodes'],
                 'tasks': PARTITIONS[job_partition]['tasks'],
-                'gpus': job_gpus,
+                'gpus': PARTITIONS[job_partition]['gpus'] if job_gpu_device else '',
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],

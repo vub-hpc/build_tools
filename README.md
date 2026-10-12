@@ -79,6 +79,31 @@ git -C ~/EB5/vsc-software-stack/site-vub pull
 python -m pip install ~/EB5/build_tools --no-deps --upgrade
 ```
 
+## GPU job submission
+
+`submit_build.py` decides per architecture whether a job is submitted to a
+GPU partition or to a regular CPU partition, and whether the job requests
+a GPU device (the `gpus` job option of the partition). This is controlled
+with the `--gpu` option:
+
+* `--gpu detect` (default): an easyconfig is considered GPU software when
+  its filename contains a GPU component or toolchain name (`CUDA`,
+  `nvidia-compilers`, `NVHPC`). Jobs for GPU software are submitted to the
+  GPU partitions of the architectures that have them, with the partition's
+  `gpus` job option; other software and architectures without a GPU
+  partition use the regular CPU partitions.
+* `--gpu detect-nodevice`: same detection, but the `gpus` job option is
+  never added to the job file: the jobs run either on CPU partitions or on
+  GPU partitions, in both cases without a GPU device.
+* `--gpu force`: the detection of GPU software is disabled and all jobs
+  are submitted to the GPU partitions of the architectures that have them,
+  with the partition's `gpus` job option; architectures without a GPU
+  partition use their regular CPU partition.
+* `--gpu force-nodevice`: same as `--gpu force`, but the `gpus` job option
+  is never added to the job file.
+
+An explicitly given `--partition` always overrides this behaviour.
+
 ## Testing
 
 Tests can be carried out with `pytest`:
