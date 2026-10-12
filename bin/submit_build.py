@@ -116,7 +116,7 @@ def main():
                         help='CPU architecture of the host system and the build')
     parser.add_argument('-b', '--bwrap', action='store_true',
                         help='Reinstall in 2 steps via new namespace with bwrap (no robot)')
-    parser.add_argument('-c', '--clang', action='store_true', help='Set LANG=C in the build (instead of unicode)')
+    parser.add_argument('-c', '--lang-c', action='store_true', help='Set LANG=C in the build (instead of unicode)')
     parser.add_argument('-d', '--debug', action='store_true', help='Set log level to DEBUG (default is INFO)')
     parser.add_argument('-D', '--dry-run', action='store_true', help='Do not fetch/install, set debug log level')
     parser.add_argument('-e', '--extra-flags', default=None, help='Extra flags to pass to EasyBuild')
@@ -218,7 +218,7 @@ def main():
     logger.debug("Initial target build hosts: %s", ', '.join([f'{p} ({a})' for (a, p) in build_hosts]))
 
     # Switch build language to C
-    if opts.clang:
+    if opts.lang_c:
         job['langcode'] = 'C'
 
     # Set robot paths
