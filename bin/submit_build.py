@@ -125,7 +125,8 @@ def main():
     parser.add_argument('-g', '--gpu', action='store_true', help='Request a GPU in the GPU partitions')
     parser.add_argument('-k', '--keep', action='store_true', help='Do not delete the job file at the end')
     parser.add_argument('--long-job', action='store_true',
-                        help=f'Submit the build jobs with the long walltime of the partition (default is {DEFAULT_WALLTIME})')
+                        help=f'Submit the build jobs with the long walltime of the partition '
+                             f'(default is {DEFAULT_WALLTIME})')
     parser.add_argument('-o', '--lmod-cache-only', action='store_true',
                         help='Run Lmod cache and exit, no software installation')
     parser.add_argument('-l', '--local', action='store_true', help='Do not submit as job, run locally')
