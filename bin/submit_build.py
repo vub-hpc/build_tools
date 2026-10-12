@@ -97,8 +97,8 @@ def main():
                         help='Path to extra footer for module file')
     parser.add_argument('-q', '--extra-job-flags', default='',
                         help='Extra flags to pass to Slurm')
-    parser.add_argument('-g', '--gpu', action='store_true',
-                        help='Request a GPU in the GPU partitions')
+    parser.add_argument('-g', '--gpu', choices=['device', 'nodevice'], default=None,
+                        help='Force the GPU partition: device (also request a GPU device) or nodevice (no GPU device)')
     parser.add_argument('-k', '--keep', action='store_true',
                         help='Do not delete the job file at the end')
     parser.add_argument('-j', '--long-job', action='store_true',
@@ -187,6 +187,15 @@ def main():
     easyconfig = ' '.join(opts.easyconfigs)
     job['easyconfig'] = easyconfig
     logger.info("Preparing to install %s", easyconfig)
+
+    # determine if the installation is GPU software
+    # (GPU component or toolchain name in the easyconfig filename)
+    gpu_software = False
+    for path in opts.easyconfigs:
+        filename = os.path.basename(path)
+        if any(x in filename for x in hooks_hydra.GPU_COMPONENTS + hooks_hydra.GPU_TOOLCHAINS):
+            logger.info("GPU software detected in %s", filename)
+            gpu_software = True
 
     # Set host archs: define arch_stack
     local_exec = opts.local
@@ -329,13 +338,16 @@ def main():
 
         # set this job's partition and cluster
         job_partition = host_partition
-        if opts.gpu and ARCHS[MACHINE][host_arch]['partition']['gpu']:
-            # user specified partitions have priority
-            if not opts.partition:
-                # update partition to install on GPU partition on archs with GPUs
-                job_partition = ARCHS[MACHINE][host_arch]['partition']['gpu']
+        if not opts.partition and (gpu_software or opts.gpu):
+            # GPU software or forced with --gpu: use the GPU partition on archs that support it
+            # (user specified partitions have priority)
+            gpu_partition = ARCHS[MACHINE][host_arch]['partition']['gpu']
+            if gpu_partition:
+                job_partition = gpu_partition
 
         # set Slurm directives in job file
+        # (--gpu nodevice: GPU partition without requesting a GPU device)
+        job_gpus = '' if opts.gpu == 'nodevice' else PARTITIONS[job_partition]['gpus']
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch),
@@ -344,7 +356,7 @@ def main():
                 'walltime': PARTITIONS[job_partition]['long_walltime'] if opts.long_job else DEFAULT_WALLTIME,
                 'nodes': PARTITIONS[job_partition]['nodes'],
                 'tasks': PARTITIONS[job_partition]['tasks'],
-                'gpus': PARTITIONS[job_partition]['gpus'],
+                'gpus': job_gpus,
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],

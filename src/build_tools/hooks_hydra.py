@@ -115,6 +115,10 @@ SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
 SUFFIX_MODULES_SYMLINK = 'all'
 
+# GPU components and toolchain names
+GPU_COMPONENTS = ['CUDA']
+GPU_TOOLCHAINS = ['nvidia-compilers', 'NVHPC']
+
 ##################
 # MODULE FOOTERS #
 ##################
@@ -242,12 +246,9 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, versionsuffix=''):
 
 def is_gpu_software(ec):
     "determine if it is a GPU-only installation"
-    gpu_components = ['CUDA']
-    gpu_toolchains = ['nvidia-compilers', 'NVHPC']
-
-    is_gpu_package = ec.name in gpu_components or ec.name in gpu_toolchains
-    needs_gpu_toolchain = ec.toolchain.name in gpu_toolchains
-    needs_gpu_component = any(x in ec['versionsuffix'] for x in gpu_components)
+    is_gpu_package = ec.name in GPU_COMPONENTS or ec.name in GPU_TOOLCHAINS
+    needs_gpu_toolchain = ec.toolchain.name in GPU_TOOLCHAINS
+    needs_gpu_component = any(x in ec['versionsuffix'] for x in GPU_COMPONENTS)
 
     return is_gpu_package or needs_gpu_toolchain or needs_gpu_component
 
