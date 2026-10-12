@@ -127,16 +127,16 @@ def main():
     parser.add_argument('--long-job', action='store_true',
                         help=f'Submit the build jobs with the long walltime of the partition '
                              f'(default is {DEFAULT_WALLTIME})')
-    parser.add_argument('-o', '--lmod-cache-only', action='store_true',
-                        help='Run Lmod cache and exit, no software installation')
+    parser.add_argument('--lmod-cache', choices=['after', 'only', 'skip'], default='after',
+                        help='Lmod cache behaviour: after (run after the installation job, default), '
+                             'only (run the Lmod cache and skip the installation) or skip (do not run it)')
     parser.add_argument('-l', '--local', action='store_true', help='Do not submit as job, run locally')
     parser.add_argument('-P', '--partition', type=strlist, default=None, help='Slurm partition for the build')
     parser.add_argument('-n', '--pre-fetch', action='store_true',
                         help='Pre-fetch sources before submitting build jobs')
     parser.add_argument('-p', '--pwd-robot-append', action='store_true',
                         help='Append current working dir to robot path')
-    parser.add_argument('-s', '--skip-lmod-cache', action='store_true',
-                        help='Do not run Lmod cache after installation')
+
     parser.add_argument('-t', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
                         help='Temporary disk for the build: shm (/dev/shm, default), '
                              'tmp (/tmp) or scratch ($VSC_SCRATCH_VO_USER)')
@@ -156,7 +156,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
         logger.info('Doing a dry-run, no fetch/install/lmod-cache')
 
-    if opts.lmod_cache_only:
+    if opts.lmod_cache == 'only':
         for arch in DEFAULT_ARCHS:
             submit_lmod_cache_job(ARCHS[MACHINE][arch]['partition']['cpu'], dry_run=dry_run)
         sys.exit(0)
@@ -266,7 +266,7 @@ def main():
     if bwrap:
         job['bwrap'] = 1
 
-    if opts.skip_lmod_cache:
+    if opts.lmod_cache == 'skip':
         job['lmod_cache'] = '0'
         logger.info("Not running Lmod cache after installation")
 
