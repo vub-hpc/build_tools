@@ -49,9 +49,9 @@ else:
 
 # CPU architecture name including suffix with network fabric
 # default: software will be installed by default using this partition
-# eb: extra options for EasyBuild in this architecture
 # partition: dict with default CPU and GPU partitions for this arch
 # cuda_cc: supported CUDA compute capabilities in the GPU partition
+# lmod_json_spider_cache: also create the Lmod spider cache for this arch (default: 0)
 ARCHS = {
     BRUSSEL: {
         'broadwell': {

@@ -69,3 +69,30 @@ def test_partitions_configuration():
         assert isinstance(props['nodes'], int) and props['nodes'] >= 1
         assert isinstance(props['tasks'], int) and props['tasks'] >= 1
         assert isinstance(props['gpus'], str)
+
+
+def test_archs_configuration():
+    # every arch must define the keys used by submit_build.py, hooks_hydra.py and lmodtools.py
+    for machine in (clusters.BRUSSEL, clusters.SOFIA):
+        assert machine in clusters.ARCHS, f"machine {machine} is missing from ARCHS"
+        for arch, props in clusters.ARCHS[machine].items():
+            assert {'default', 'partition'} <= props.keys(), f"arch {arch} of {machine} is missing keys"
+            assert isinstance(props['default'], bool)
+            assert {'cpu', 'gpu'} <= props['partition'].keys()
+            for kind in ('cpu', 'gpu'):
+                partition = props['partition'][kind]
+                if partition is not None:
+                    assert isinstance(partition, str)
+                    # the partition must exist and point back to this arch
+                    assert partition in clusters.PARTITIONS
+                    assert clusters.PARTITIONS[partition]['arch'] == arch
+            # every arch has a CPU partition
+            assert props['partition']['cpu'] is not None
+            if props['partition']['gpu'] is not None:
+                # GPU archs must define the CUDA compute capabilities (used by hooks_hydra)
+                assert 'cuda_cc' in props, f"GPU arch {arch} of {machine} is missing cuda_cc"
+                cuda_cc = props['cuda_cc']
+                assert isinstance(cuda_cc, list) and cuda_cc
+                assert all(re.fullmatch(r'\d+\.\d+', cc) for cc in cuda_cc)
+            if 'lmod_json_spider_cache' in props:
+                assert props['lmod_json_spider_cache'] in ('0', '1')
