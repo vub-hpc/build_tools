@@ -137,7 +137,7 @@ def main():
                         help='Append current working dir to robot path')
     parser.add_argument('-s', '--skip-lmod-cache', action='store_true',
                         help='Do not run Lmod cache after installation')
-    parser.add_argument('-m', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
+    parser.add_argument('-t', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
                         help='Temporary disk for the build: shm (/dev/shm, default), '
                              'tmp (/tmp) or scratch ($VSC_SCRATCH_VO_USER)')
     parser.add_argument('-v', '--version', action='store_true', help='Show the version')
