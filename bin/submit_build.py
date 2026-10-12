@@ -26,8 +26,7 @@ import re
 import sys
 
 from build_tools import hooks_hydra, stdlib_logger
-from build_tools.clusters import (ANANSI, APPS, ARCH, ARCHS, BRUSSEL, CLUSTER, CPU, GENT, GPU, MACHINE, PARTITION,
-                                  PARTITIONS, SOFIA, SOURCES)
+from build_tools.clusters import (ANANSI, APPS, ARCHS, BRUSSEL, GENT, MACHINE, PARTITIONS, SOFIA, SOURCES)
 from build_tools.hooks_hydra import (
     SUBDIR_MODULES_BWRAP,
     SUFFIX_MODULES_PATH,
@@ -68,8 +67,8 @@ if not VSC_DEFAULT_CLUSTER_MODULE:
 
 # sanity check: all partitions defined in ARCHS must exist in PARTITIONS
 for _arch, _props in ARCHS[MACHINE].items():
-    for _kind in (CPU, GPU):
-        _part = _props[PARTITION][_kind]
+    for _kind in ('cpu', 'gpu'):
+        _part = _props['partition'][_kind]
         if _part and _part not in PARTITIONS:
             logger.error(f"Partition '{_part}' for architecture '{_arch}' is not defined in PARTITIONS")
             sys.exit(1)
@@ -94,7 +93,7 @@ def main():
     job = {
         'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
         'bwrap': '0',
-        CLUSTER: VSC_DEFAULT_CLUSTER_MODULE,
+        'cluster': VSC_DEFAULT_CLUSTER_MODULE,
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
         'lmod_cache': '1',
@@ -162,7 +161,7 @@ def main():
 
     if opts.lmod_cache_only:
         for arch in DEFAULT_ARCHS:
-            submit_lmod_cache_job(ARCHS[MACHINE][arch][PARTITION]['cpu'], dry_run=dry_run)
+            submit_lmod_cache_job(ARCHS[MACHINE][arch]['partition']['cpu'], dry_run=dry_run)
         sys.exit(0)
 
     if not opts.easyconfigs:
@@ -209,12 +208,12 @@ def main():
         partition_stack = opts.partition
         if opts.arch:
             logger.warning("Overwriting given architectures with the architectures of given partitions")
-        arch_stack = [PARTITIONS[part][ARCH] for part in partition_stack]
+        arch_stack = [PARTITIONS[part]['arch'] for part in partition_stack]
         build_hosts = list(zip(arch_stack, partition_stack))
     else:
         # initially target default CPU partitions for all selected architectures
         # in case of builds for GPUs, the build host might change down the line if suitable GPU partitions exist
-        build_hosts = [(arch, ARCHS[MACHINE][arch][PARTITION]['cpu']) for arch in arch_stack]
+        build_hosts = [(arch, ARCHS[MACHINE][arch]['partition']['cpu']) for arch in arch_stack]
 
     # remove duplicates and clean-up list of build hosts
     build_hosts = {(arch, part) for (arch, part) in build_hosts if arch and part}
@@ -319,7 +318,7 @@ def main():
         for opt, path in ebconf.items():
             eb_options.append(f'--{opt}={path}')
 
-        cluster = PARTITIONS[host_partition].get(CLUSTER, VSC_DEFAULT_CLUSTER_MODULE)
+        cluster = PARTITIONS[host_partition].get('cluster', VSC_DEFAULT_CLUSTER_MODULE)
 
         # set Slurm directives in job file
         job_options.update(
@@ -329,8 +328,8 @@ def main():
                 'nodes': 1,
                 'tasks': 8 if MACHINE == SOFIA else 4,
                 'gpus': '',
-                PARTITION: host_partition,
-                CLUSTER: cluster,
+                'partition': host_partition,
+                'cluster': cluster,
                 'eb_options': " ".join(eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
@@ -339,15 +338,15 @@ def main():
 
         # settings for builds with GPUs
         if opts.gpu:
-            if ARCHS[MACHINE][host_arch][PARTITION][GPU]:
+            if ARCHS[MACHINE][host_arch]['partition']['gpu']:
                 # user specified partitions have priority
                 if not opts.partition:
                     # install on GPU partition on archs with GPUs
-                    job_options[PARTITION] = ARCHS[MACHINE][host_arch][PARTITION][GPU]
+                    job_options['partition'] = ARCHS[MACHINE][host_arch]['partition']['gpu']
                     if cluster != SOFIA:
-                        job_options[CLUSTER] = PARTITIONS[job_options[PARTITION]].get(CLUSTER,
-                                                                                      VSC_DEFAULT_CLUSTER_MODULE)
-                if job_options[CLUSTER] == ANANSI:
+                        job_options['cluster'] = PARTITIONS[job_options['partition']].get('cluster',
+                                                                                          VSC_DEFAULT_CLUSTER_MODULE)
+                if job_options['cluster'] == ANANSI:
                     job_options['gpus'] = '--gres=shard:1'
                 else:
                     job_options['gpus'] = '--gpus-per-node=1'
@@ -367,7 +366,7 @@ def main():
         logger.info(
             "Building %s on %s (%s)",
             easyconfig,
-            job_options[PARTITION],
+            job_options['partition'],
             host_arch,
         )
 
@@ -375,7 +374,7 @@ def main():
             job_options,
             keep_job=opts.keep,
             sub_options=opts.extra_sub_flags,
-            cluster=job_options[CLUSTER],
+            cluster=job_options['cluster'],
             local_exec=local_exec,
             dry_run=dry_run,
         )

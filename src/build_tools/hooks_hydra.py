@@ -36,7 +36,7 @@ from easybuild.tools.config import build_option, ConfigurationVariables, source_
 from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
-from build_tools.clusters import ARCHS, GPU, MACHINE, PARTITION
+from build_tools.clusters import ARCHS, MACHINE
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, is_ib_option
 
 # user groups for licensed software
@@ -67,7 +67,7 @@ SOFTWARE_GROUPS = {
     'Victory-TCAD': 'btcad',
 }
 
-GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y[PARTITION][GPU]]
+GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
 
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '')
 LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX', '')

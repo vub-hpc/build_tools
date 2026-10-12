@@ -18,7 +18,7 @@ Functions related to running the Lmod cache
 import sys
 
 from build_tools import stdlib_logger
-from build_tools.clusters import ARCH, APPS, ARCHS, CLUSTER, MACHINE, PARTITIONS, SOFIA
+from build_tools.clusters import APPS, ARCHS, MACHINE, PARTITIONS, SOFIA
 from build_tools.filetools import write_tempfile
 from build_tools.softinstall import submit_job_script
 
@@ -45,9 +45,9 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
     if cluster is False, don't purge/load a cluster module (use the currently active cluster)
     """
 
-    archdir = PARTITIONS[partition][ARCH]
+    archdir = PARTITIONS[partition]['arch']
     if cluster is None:
-        cluster = PARTITIONS[partition][CLUSTER]
+        cluster = PARTITIONS[partition]['cluster']
 
     cache_cmd = [
         '/usr/libexec/lmod/run_lmod_cache.py',
