@@ -51,6 +51,13 @@ TC_VERSIONS = {
         ],
         'subdir': '2025a',
     },
+    '2026.1': {
+        'toolchains': [
+            {'name': 'foss', 'version': '2026.1'},
+            {'name': 'intel', 'version': '2026.1'},
+        ],
+        'subdir': '2026.1',
+    },
     '25.1': {
         'toolchains': [
             {'name': 'nvidia-compilers', 'version': '25.1'},
@@ -102,6 +109,11 @@ def tc_versions():
         ('foss', '2021a', 'system', 'system', 'Toolchain', False),
         ('SciPy-bundle', '2024.05', 'gfbf', '2024a', 'EB_Bundle', '2024a'),
         ('R-bundle-CRAN', '2024.11', 'foss', '2024a', 'EB_R', '2024a'),
+        # (software with) toolchains with a dot in their version
+        ('foss', '2026.1', 'system', 'system', 'Toolchain', '2026.1'),
+        ('intel', '2026.1', 'system', 'system', 'Toolchain', '2026.1'),
+        ('zlib', '1.3.1', 'foss', '2026.1', 'ConfigureMake', '2026.1'),
+        ('foss', '2026.05', 'system', 'system', 'Toolchain', False),
         # software with system toolchain
         ('zlib', '1.2.11', 'system', 'system', 'ConfigureMake', 'system'),
         ('MATLAB', '2023a', 'system', 'system', 'EB_MATLAB', 'system'),
