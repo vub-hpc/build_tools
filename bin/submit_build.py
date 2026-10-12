@@ -119,9 +119,9 @@ def main():
     parser.add_argument('-c', '--lang-c', action='store_true', help='Set LANG=C in the build (instead of unicode)')
     parser.add_argument('-d', '--debug', action='store_true', help='Set log level to DEBUG (default is INFO)')
     parser.add_argument('-D', '--dry-run', action='store_true', help='Do not fetch/install, set debug log level')
-    parser.add_argument('-e', '--extra-flags', default=None, help='Extra flags to pass to EasyBuild')
-    parser.add_argument('-f', '--extra-mod-footer', default=None, help='Path to extra footer for module file')
-    parser.add_argument('-q', '--extra-sub-flags', default='', help='Extra flags to pass to Slurm')
+    parser.add_argument('-e', '--extra-eb-flags', default=None, help='Extra flags to pass to EasyBuild')
+    parser.add_argument('-f', '--append-mod-footer', default=None, help='Path to extra footer for module file')
+    parser.add_argument('-q', '--extra-job-flags', default='', help='Extra flags to pass to Slurm')
     parser.add_argument('-g', '--gpu', action='store_true', help='Request a GPU in the GPU partitions')
     parser.add_argument('-k', '--keep', action='store_true', help='Do not delete the job file at the end')
     parser.add_argument('--long-job', action='store_true',
@@ -134,7 +134,7 @@ def main():
     parser.add_argument('-P', '--partition', type=strlist, default=None, help='Slurm partition for the build')
     parser.add_argument('-n', '--pre-fetch', action='store_true',
                         help='Pre-fetch sources before submitting build jobs')
-    parser.add_argument('-p', '--pwd-robot-append', action='store_true',
+    parser.add_argument('-p', '--append-robot-cwd', action='store_true',
                         help='Append current working dir to robot path')
 
     parser.add_argument('-t', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
@@ -222,24 +222,24 @@ def main():
         job['langcode'] = 'C'
 
     # Set robot paths
-    if opts.pwd_robot_append:
+    if opts.append_robot_cwd:
         ebconf['robot-paths'] += ':' + os.getcwd()
     job['robot_paths'] = ebconf['robot-paths']
 
     # Add extra footer
-    if opts.extra_mod_footer:
+    if opts.append_mod_footer:
         # if explicitly requested
-        if os.path.exists(opts.extra_mod_footer):
-            job['extra_mod_footer'] = opts.extra_mod_footer
+        if os.path.exists(opts.append_mod_footer):
+            job['extra_mod_footer'] = opts.append_mod_footer
         else:
-            logger.error("Could not find extra footer: %s", opts.extra_mod_footer)
+            logger.error("Could not find extra footer: %s", opts.append_mod_footer)
             sys.exit(1)
 
     if opts.pre_fetch:
         # fetch sources before submitting build jobs
         fetch_opts = ['--stop=fetch', '--robot', '--ignore-locks']
-        if opts.extra_flags:
-            fetch_opts.append(opts.extra_flags)
+        if opts.extra_eb_flags:
+            fetch_opts.append(opts.extra_eb_flags)
         for opt, path in ebconf.items():
             # exclude --hooks and empty options from the fetch command
             if opt not in ['hooks'] and path is not None:
@@ -306,8 +306,8 @@ def main():
             eb_options.append('--robot')
 
         # extra settings from user
-        if opts.extra_flags:
-            eb_options.append(opts.extra_flags)
+        if opts.extra_eb_flags:
+            eb_options.append(opts.extra_eb_flags)
 
         # update build and install paths of the EB job
         install_dir = host_arch
@@ -340,7 +340,7 @@ def main():
         )
 
         # add extra footer if requested
-        if opts.extra_mod_footer:
+        if opts.append_mod_footer:
             job_options['eb_options'] += f' --modules-footer={job_options["extra_mod_footer"]}'
 
         # submit build job
@@ -356,7 +356,7 @@ def main():
         ec, buildjob_out = submit_build_job(
             job_options,
             keep_job=opts.keep,
-            sub_options=opts.extra_sub_flags,
+            sub_options=opts.extra_job_flags,
             cluster=job_options['cluster'],
             local_exec=local_exec,
             dry_run=dry_run,
