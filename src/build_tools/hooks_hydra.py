@@ -287,6 +287,7 @@ def acquire_fetch_lock(self):
 
     lock = Lock(os.path.join(lock_dir, lock_name), lifetime=lock_lifetime, default_timeout=1)
     self.fetch_hook_lock = lock
+    self.log.debug("[pre-fetch hook] Acquiring lock %s", lock.lockfile)
 
     while True:
         try:
