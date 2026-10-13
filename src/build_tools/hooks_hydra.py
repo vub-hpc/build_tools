@@ -24,19 +24,15 @@ import re
 import shlex
 import subprocess
 import sys
-import time
-
-from flufl.lock import Lock, LockState, TimeOutError, NotLockedError
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
-from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
-from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
-from easybuild.tools.filetools import mkdir
+from easybuild.tools.config import build_option, ConfigurationVariables, update_build_option
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS, MACHINE
+from build_tools.filetools import acquire_fetch_lock, release_fetch_lock
 from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, is_ib_option
 
 # user groups for licensed software
@@ -268,72 +264,6 @@ def update_moduleclass(ec):
     ec.log.info("[parse hook] updated moduleclass to %s", ec['moduleclass'])
 
 
-def acquire_fetch_lock(self):
-    " acquire fetch lock "
-    source_path = source_paths()[0]
-    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
-    lock_name = full_source_path.replace('/', '_') + '.lock'
-
-    lock_dir = os.path.join(source_path, '.locks')
-    mkdir(lock_dir, parents=True)
-
-    wait_time = 0
-    wait_interval = 60
-    wait_limit = 1800
-
-    # the lock lifetime must be larger than wait_limit, so that a held lock
-    # cannot expire while other builds are still waiting for it
-    lock_lifetime = 10800
-
-    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=lock_lifetime, default_timeout=1)
-    self.fetch_hook_lock = lock
-    self.log.debug("[pre-fetch hook] Acquiring lock %s", lock.lockfile)
-
-    while True:
-        try:
-            # try to acquire the lock
-            lock.lock()
-            self.log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
-            break
-
-        except TimeOutError as err:
-            if lock.state == LockState.stale:
-                # flufl only reports stale when the lock was taken on this
-                # host and the holder process is no longer running there
-                # (e.g. its job was killed). Locks taken on other hosts
-                # report unknown and are never broken here; they expire
-                # after the lock lifetime instead
-                # break the stale lock and try again
-                self.log.info("[pre-fetch hook] Lock %s is stale (holder no longer running), breaking it",
-                              lock.lockfile)
-                try:
-                    os.remove(lock.lockfile)
-                except FileNotFoundError:
-                    # another build already broke the stale lock
-                    pass
-                continue
-
-            if wait_time >= wait_limit:
-                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
-                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
-
-            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
-            self.log.debug(msg, lock.lockfile, wait_interval)
-            time.sleep(wait_interval)
-            wait_time += wait_interval
-
-
-def release_fetch_lock(self):
-    " release fetch lock "
-    lock = self.fetch_hook_lock
-    try:
-        lock.unlock()
-        self.log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
-
-    except NotLockedError:
-        self.log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)
-
-
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     """Alter build options and easyconfig parameters"""
 
@@ -463,12 +393,12 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
 def pre_fetch_hook(self):
     """Hook at pre-fetch level"""
-    acquire_fetch_lock(self)
+    self.fetch_hook_lock = acquire_fetch_lock(self.name, self.log)
 
 
 def post_fetch_hook(self):
     """Hook at post-fetch level"""
-    release_fetch_lock(self)
+    release_fetch_lock(self.fetch_hook_lock, self.log)
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
