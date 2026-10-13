@@ -18,6 +18,7 @@ Unit tests for build_tools.hooks_hydra
 
 import contextlib
 import logging
+import os
 import types
 
 import pytest
@@ -284,3 +285,74 @@ def test_pre_configure_hook_ib_configopts(monkeypatch, arch_suffix, expected):
     hooks_hydra.pre_configure_hook(tool)
 
     assert tool.cfg['configopts'] == expected
+
+
+@pytest.fixture
+def fetch_lock_config(monkeypatch, tmp_path):
+    """stub out the EasyBuild accessors used by the fetch hooks"""
+    monkeypatch.setattr(hooks_hydra, 'source_paths', lambda: [str(tmp_path)])
+    monkeypatch.setattr(hooks_hydra, 'mkdir', lambda path, **kwargs: os.makedirs(path, exist_ok=True))
+
+
+def test_acquire_fetch_lock(tmp_path, fetch_lock_config):
+    tool = FakeModuleContext('zlib', '1.2.11')
+
+    hooks_hydra.acquire_fetch_lock(tool)
+
+    lock_name = f'{tmp_path}/z/zlib'.replace('/', '_') + '.lock'
+    assert (tmp_path / '.locks' / lock_name).is_file()
+    assert tool.fetch_hook_lock.lockfile == str(tmp_path / '.locks' / lock_name)
+
+
+def test_release_fetch_lock(tmp_path, caplog, fetch_lock_config):
+    tool = FakeModuleContext('zlib', '1.2.11')
+
+    hooks_hydra.acquire_fetch_lock(tool)
+    hooks_hydra.release_fetch_lock(tool)
+
+    assert not (tmp_path / '.locks' / tool.fetch_hook_lock.lockfile.split('/.locks/')[1]).is_file()
+
+    # releasing an already released lock only logs a warning
+    with caplog.at_level(logging.WARNING):
+        hooks_hydra.release_fetch_lock(tool)
+    assert 'was already released' in caplog.text
+
+
+def test_acquire_fetch_lock_waits(monkeypatch, tmp_path, fetch_lock_config):
+    sleeps = []
+    monkeypatch.setattr(hooks_hydra.time, 'sleep', sleeps.append)
+    attempts = []
+
+    class FakeLock:
+        def __init__(self, lockfile, **kwargs):
+            self.lockfile = lockfile
+
+        def lock(self):
+            attempts.append(1)
+            if len(attempts) <= 2:
+                raise hooks_hydra.TimeOutError('held')
+
+    monkeypatch.setattr(hooks_hydra, 'Lock', FakeLock)
+    tool = FakeModuleContext('zlib', '1.2.11')
+
+    hooks_hydra.acquire_fetch_lock(tool)
+
+    assert len(attempts) == 3
+    assert sleeps == [60, 60]
+
+
+def test_acquire_fetch_lock_timeout(monkeypatch, tmp_path, fetch_lock_config):
+    monkeypatch.setattr(hooks_hydra.time, 'sleep', lambda s: None)
+
+    class FakeLock:
+        def __init__(self, lockfile, **kwargs):
+            self.lockfile = lockfile
+
+        def lock(self):
+            raise hooks_hydra.TimeOutError('held')
+
+    monkeypatch.setattr(hooks_hydra, 'Lock', FakeLock)
+    tool = FakeModuleContext('zlib', '1.2.11')
+
+    with pytest.raises(EasyBuildError, match='Maximum wait time'):
+        hooks_hydra.acquire_fetch_lock(tool)
