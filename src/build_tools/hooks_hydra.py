@@ -298,8 +298,12 @@ def acquire_fetch_lock(self):
 
         except TimeOutError as err:
             if lock.state == LockState.stale:
-                # the lock holder is no longer running on this host (e.g. its
-                # job was killed): break the stale lock and try again
+                # flufl only reports stale when the lock was taken on this
+                # host and the holder process is no longer running there
+                # (e.g. its job was killed). Locks taken on other hosts
+                # report unknown and are never broken here; they expire
+                # after the lock lifetime instead
+                # break the stale lock and try again
                 self.log.info("[pre-fetch hook] Lock %s is stale (holder no longer running), breaking it",
                               lock.lockfile)
                 try:
