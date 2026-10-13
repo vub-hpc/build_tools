@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-from flufl.lock import Lock, TimeOutError, NotLockedError
+from flufl.lock import Lock, LockState, TimeOutError, NotLockedError
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.framework.easyconfig.easyconfig import letter_dir_for
@@ -279,11 +279,11 @@ def acquire_fetch_lock(self):
 
     wait_time = 0
     wait_interval = 60
-    wait_limit = 3600
+    wait_limit = 1800
 
     # the lock lifetime must be larger than wait_limit, so that a held lock
     # cannot expire while other builds are still waiting for it
-    lock_lifetime = 86400
+    lock_lifetime = 10800
 
     lock = Lock(os.path.join(lock_dir, lock_name), lifetime=lock_lifetime, default_timeout=1)
     self.fetch_hook_lock = lock
@@ -297,6 +297,18 @@ def acquire_fetch_lock(self):
             break
 
         except TimeOutError as err:
+            if lock.state == LockState.stale:
+                # the lock holder is no longer running on this host (e.g. its
+                # job was killed): break the stale lock and try again
+                self.log.info("[pre-fetch hook] Lock %s is stale (holder no longer running), breaking it",
+                              lock.lockfile)
+                try:
+                    os.remove(lock.lockfile)
+                except FileNotFoundError:
+                    # another build already broke the stale lock
+                    pass
+                continue
+
             if wait_time >= wait_limit:
                 error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
                 raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err

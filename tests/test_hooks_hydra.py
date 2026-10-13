@@ -327,6 +327,10 @@ def test_acquire_fetch_lock_waits(monkeypatch, tmp_path, fetch_lock_config):
         def __init__(self, lockfile, **kwargs):
             self.lockfile = lockfile
 
+        @property
+        def state(self):
+            return hooks_hydra.LockState.unknown
+
         def lock(self):
             attempts.append(1)
             if len(attempts) <= 2:
@@ -348,6 +352,10 @@ def test_acquire_fetch_lock_timeout(monkeypatch, tmp_path, fetch_lock_config):
         def __init__(self, lockfile, **kwargs):
             self.lockfile = lockfile
 
+        @property
+        def state(self):
+            return hooks_hydra.LockState.unknown
+
         def lock(self):
             raise hooks_hydra.TimeOutError('held')
 
@@ -356,3 +364,60 @@ def test_acquire_fetch_lock_timeout(monkeypatch, tmp_path, fetch_lock_config):
 
     with pytest.raises(EasyBuildError, match='Maximum wait time'):
         hooks_hydra.acquire_fetch_lock(tool)
+
+
+class FakeStaleLock:
+    """Lock stand-in that simulates a lock left behind by a killed build"""
+
+    def __init__(self, lockfile, **kwargs):
+        self.lockfile = lockfile
+
+    @property
+    def state(self):
+        return hooks_hydra.LockState.stale if os.path.exists(self.lockfile) else hooks_hydra.LockState.unlocked
+
+    def lock(self):
+        if os.path.exists(self.lockfile):
+            raise hooks_hydra.TimeOutError('held')
+
+    def unlock(self):
+        pass
+
+
+def test_acquire_fetch_lock_stale(tmp_path, monkeypatch, fetch_lock_config, caplog):
+    # leave a lock behind, as a killed build would
+    lockfile = tmp_path / '.locks' / (f'{tmp_path}/z/zlib'.replace('/', '_') + '.lock')
+    lockfile.parent.mkdir(parents=True, exist_ok=True)
+    lockfile.write_text(f'{lockfile}|localhost|1234|random')
+    monkeypatch.setattr(hooks_hydra, 'Lock', FakeStaleLock)
+    tool = FakeModuleContext('zlib', '1.2.11')
+
+    with caplog.at_level(logging.INFO):
+        hooks_hydra.acquire_fetch_lock(tool)
+
+    assert not lockfile.is_file()
+    assert 'is stale' in caplog.text
+
+
+def test_acquire_fetch_lock_stale_already_broken(tmp_path, monkeypatch, fetch_lock_config):
+    # another build breaks the stale lock between the state check and the removal
+    lockfile = tmp_path / '.locks' / (f'{tmp_path}/z/zlib'.replace('/', '_') + '.lock')
+    lockfile.parent.mkdir(parents=True, exist_ok=True)
+    lockfile.write_text(f'{lockfile}|localhost|1234|random')
+    monkeypatch.setattr(hooks_hydra, 'Lock', FakeStaleLock)
+    removed = []
+    real_remove = os.remove
+
+    def fake_remove(path):
+        if not removed:
+            removed.append(path)
+            raise FileNotFoundError(path)
+        real_remove(path)
+
+    monkeypatch.setattr(hooks_hydra.os, 'remove', fake_remove)
+    tool = FakeModuleContext('zlib', '1.2.11')
+
+    hooks_hydra.acquire_fetch_lock(tool)
+
+    assert len(removed) == 1
+    assert not lockfile.is_file()
