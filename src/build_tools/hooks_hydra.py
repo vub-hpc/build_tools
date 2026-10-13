@@ -26,9 +26,10 @@ import subprocess
 import sys
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
+from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
-from easybuild.tools.config import build_option, ConfigurationVariables, update_build_option
+from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS, MACHINE
@@ -393,7 +394,10 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
 def pre_fetch_hook(self):
     """Hook at pre-fetch level"""
-    self.fetch_hook_lock = acquire_fetch_lock(self.name, self.log)
+    source_path = source_paths()[0]
+    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
+    lockfile = os.path.join(source_path, '.locks', full_source_path.replace('/', '_') + '.lock')
+    self.fetch_hook_lock = acquire_fetch_lock(lockfile, self.log)
 
 
 def post_fetch_hook(self):

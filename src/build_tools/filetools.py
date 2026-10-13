@@ -23,11 +23,6 @@ import time
 
 from flufl.lock import Lock, LockState, TimeOutError, NotLockedError
 
-from easybuild.framework.easyconfig.easyconfig import letter_dir_for
-from easybuild.tools.build_log import EasyBuildError
-from easybuild.tools.config import source_paths
-from easybuild.tools.filetools import mkdir
-
 from build_tools import stdlib_logger
 
 logger = stdlib_logger(__name__)
@@ -47,21 +42,14 @@ def write_tempfile(contents):
     return handle.name
 
 
-def acquire_fetch_lock(name, log):
+def acquire_fetch_lock(lockfile, log):
     """
-    Acquire the fetch lock for the software with the given name
+    Acquire the fetch lock with the given lockfile
 
-    The lock (a flufl file lock in <sourcepath>/.locks) guards the source
-    directory of the software against concurrent fetches. It is released
-    by release_fetch_lock.
+    The lock (a flufl file lock) guards a resource against concurrent
+    access (e.g. a software source directory against concurrent
+    fetches). It is released by release_fetch_lock.
     """
-    source_path = source_paths()[0]
-    full_source_path = os.path.join(source_path, letter_dir_for(name), name)
-    lock_name = full_source_path.replace('/', '_') + '.lock'
-
-    lock_dir = os.path.join(source_path, '.locks')
-    mkdir(lock_dir, parents=True)
-
     wait_time = 0
     wait_interval = 60
     wait_limit = 1800
@@ -70,7 +58,11 @@ def acquire_fetch_lock(name, log):
     # cannot expire while other builds are still waiting for it
     lock_lifetime = 10800
 
-    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=lock_lifetime, default_timeout=1)
+    lock_dir = os.path.dirname(lockfile)
+    if lock_dir:
+        os.makedirs(lock_dir, exist_ok=True)
+
+    lock = Lock(lockfile, lifetime=lock_lifetime, default_timeout=1)
     log.debug("[pre-fetch hook] Acquiring lock %s", lock.lockfile)
 
     while True:
@@ -98,8 +90,9 @@ def acquire_fetch_lock(name, log):
                 continue
 
             if wait_time >= wait_limit:
-                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
-                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
+                error_msg = (f"[pre-fetch hook] Maximum wait time for lock {lock.lockfile} "
+                             f"to be released reached: {wait_time} sec >= {wait_limit} sec")
+                raise RuntimeError(error_msg) from err
 
             msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
             log.debug(msg, lock.lockfile, wait_interval)
