@@ -351,8 +351,10 @@ def main():
             if gpu_partition:
                 job_partition = gpu_partition
 
-        # --gpu with *-nodevice options never request a GPU device)
-        job_gpu_device = opts.gpu not in ('detect-nodevice', 'force-nodevice')
+        # --gpu with *-nodevice options never request a GPU device;
+        # in detect mode, only jobs that are sent to a GPU partition (i.e. GPU software)
+        # request a GPU device, so that jobs on CPU partitions do not reserve a GPU
+        job_gpu_device = opts.gpu == 'force' or (opts.gpu == 'detect' and gpu_software)
 
         # set Slurm directives in job file
         job_options.update(
