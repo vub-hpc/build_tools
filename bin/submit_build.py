@@ -296,6 +296,43 @@ def main():
         job['lmod_cache'] = '0'
         logger.info("Not running Lmod cache after installation")
 
+    # Common EB command line options (same for all build jobs)
+    eb_options = [
+        '--logtostdout',
+        '--module-extensions',
+        '--zip-logs=bzip2',
+        '--module-depends-on',
+        f'--suffix-modules-path={SUFFIX_MODULES_PATH}',
+        f'--moduleclasses={",".join(os.path.join(x, SUFFIX_MODULES_SYMLINK) for x in VALID_MODULES_SUBDIRS)}',
+    ]
+    if opts.debug:
+        eb_options.append('--debug')
+
+    if bwrap:
+        eb_options.extend([
+            '--rebuild',
+            f'--subdir-modules={SUBDIR_MODULES_BWRAP}',
+        ])
+    else:
+        # robot is not supported with bwrap
+        eb_options.append('--robot')
+
+    # extra settings from user
+    if opts.extra_eb_flags:
+        eb_options.append(opts.extra_eb_flags)
+
+    # GPU software, or forced with --gpu force*, use the GPU partition on archs
+    # that support it (unless the user explicitly gave a partition)
+    use_gpu_partition = not opts.partition and (gpu_software or opts.gpu in ('force', 'force-nodevice'))
+
+    # --gpu with *-nodevice options never request a GPU device;
+    # in detect mode, only jobs that are sent to a GPU partition (i.e. GPU software)
+    # request a GPU device, so that jobs on CPU partitions do not reserve a GPU
+    job_gpu_device = opts.gpu == 'force' or (opts.gpu == 'detect' and gpu_software)
+
+    # extra module footer, if requested
+    mod_footer = f'--modules-footer={job["extra_mod_footer"]}' if job['extra_mod_footer'] else None
+
     # ---> main build + lmod cache loop <--- #
     # submit build jobs for each micro-architecture
     for (host_arch, host_partition) in build_hosts:
@@ -303,58 +340,25 @@ def main():
         job_options['host_arch'] = host_arch
         job_options['lmod_json_spider_cache'] = ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0')
 
-        # Set tmp dir and update build path accordingly
+        # set tmp dir and update build and install paths accordingly
         if opts.tmp == 'tmp':
             job_options['tmp'] = '/tmp'
         elif opts.tmp == 'scratch':
             job_options['tmp'] = os.path.join('$VSC_SCRATCH_VO_USER', host_arch)
         ebconf['buildpath'] = os.path.join(job_options['tmp'], 'eb-submit-build')
+        ebconf['installpath'] = os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', host_arch)
 
-        # common EB command line options
-        eb_options = [
-            '--logtostdout',
-            '--module-extensions',
-            '--zip-logs=bzip2',
-            '--module-depends-on',
-            f'--suffix-modules-path={SUFFIX_MODULES_PATH}',
-            f'--moduleclasses={",".join(os.path.join(x, SUFFIX_MODULES_SYMLINK) for x in VALID_MODULES_SUBDIRS)}',
-        ]
-        if opts.debug:
-            eb_options.append('--debug')
-
-        if bwrap:
-            eb_options.extend([
-                '--rebuild',
-                f'--subdir-modules={SUBDIR_MODULES_BWRAP}',
-            ])
-        else:
-            # robot is not supported with bwrap
-            eb_options.append('--robot')
-
-        # extra settings from user
-        if opts.extra_eb_flags:
-            eb_options.append(opts.extra_eb_flags)
-
-        # update build and install paths of the EB job
-        install_dir = host_arch
-        ebconf['installpath'] = os.path.join(APPS, MACHINE, '${VSC_OS_LOCAL:?}', install_dir)
-        for opt, path in ebconf.items():
-            eb_options.append(f'--{opt}={path}')
+        # per-job EB options (paths depend on the architecture)
+        job_eb_options = eb_options + [f'--{opt}={path}' for opt, path in ebconf.items()]
+        if mod_footer:
+            job_eb_options.append(mod_footer)
 
         # set this job's partition and cluster
         job_partition = host_partition
-        # GPU software, or forced with --gpu force* use the GPU partition on archs that support it
-        use_gpu_partition = gpu_software or opts.gpu in ('force', 'force-nodevice')
-        # user specified partitions have priority
-        if not opts.partition and use_gpu_partition:
+        if use_gpu_partition:
             gpu_partition = ARCHS[MACHINE][host_arch]['partition']['gpu']
             if gpu_partition:
                 job_partition = gpu_partition
-
-        # --gpu with *-nodevice options never request a GPU device;
-        # in detect mode, only jobs that are sent to a GPU partition (i.e. GPU software)
-        # request a GPU device, so that jobs on CPU partitions do not reserve a GPU
-        job_gpu_device = opts.gpu == 'force' or (opts.gpu == 'detect' and gpu_software)
 
         # set Slurm directives in job file
         job_options.update(
@@ -366,15 +370,11 @@ def main():
                 'nodes': PARTITIONS[job_partition]['nodes'],
                 'tasks': PARTITIONS[job_partition]['tasks'] if not opts.job_small else SMALL_JOB['tasks'],
                 'gpus': PARTITIONS[job_partition]['gpus'] if job_gpu_device else '',
-                'eb_options': " ".join(eb_options),
+                'eb_options': " ".join(job_eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
             }
         )
-
-        # add extra footer if requested
-        if opts.append_mod_footer:
-            job_options['eb_options'] += f' --modules-footer={job_options["extra_mod_footer"]}'
 
         # submit build job
         logger.debug('job_options: %s', job_options)
