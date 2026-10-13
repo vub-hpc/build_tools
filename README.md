@@ -104,6 +104,40 @@ with the `--gpu` option:
 
 An explicitly given `--partition` always overrides this behaviour.
 
+## Source file fetching
+
+Several build jobs may want to fetch the same source file, for example
+when a whole set of easyconfigs is submitted at once. To prevent
+duplicate downloads, the EasyBuild hooks that run inside every build job
+use a lockfile per source file: a source file is only fetched by a job
+while it holds its lock.
+
+Each source file has its own lockfile in the `.locks` subdirectory of the
+first EasyBuild source path, named after the flattened source file path.
+The locks are implemented with [flufl.lock](https://pypi.org/project/flufl.lock/),
+which is hardlink-based and therefore also works on shared filesystems.
+
+A job that cannot acquire the lock of a source file waits for it,
+rechecking every 60 seconds for up to 30 minutes. If the lock is still
+held after that time, the build is aborted.
+
+The owner of a lockfile is recorded in the lockfile itself. A lock is
+considered stale when the owner is a process on the same host that no
+longer exists, for example because the build was killed. Stale locks are
+removed automatically, which allows the waiting job to acquire the lock.
+Locks owned by processes on other hosts are never removed, because their
+owner cannot be checked reliably.
+
+When the build is killed, a lock is not always released by the post-fetch
+hook. In that case, the lock expires after its lifetime of 3 hours and
+can be acquired again.
+
+In addition, when `submit_build.py` is run with the `-n` (`--pre-fetch`)
+option, all missing source files of the easyconfigs and their dependencies
+are fetched in a separate step before the build jobs are submitted, so
+that the jobs usually find the sources already fetched. This step ignores
+the fetch locks.
+
 ## Testing
 
 Tests can be carried out with `pytest`:
