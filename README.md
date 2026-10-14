@@ -12,7 +12,8 @@ in editable mode, we can make any changes to the code later on.
 
 ### Newer versions of setuptools
 Newer versions of `setuptools` have changed the behaviour of editable
-installations and that breaks EasyBuild. In such cases, make sure to enable `compat` mode for the editable installation:
+installations and that breaks EasyBuild. In such cases, make sure to enable
+`compat` mode for the editable installation:
 
 ```
 pip install -e . --config-settings editable_mode=compat
@@ -78,6 +79,14 @@ ln -sr ~/EB5/easybuild-easyconfigs/easybuild/easyconfigs/ ~/EB5/vsc-software-sta
 git -C ~/EB5/vsc-software-stack/site-vub pull
 python -m pip install ~/EB5/build_tools --no-deps --upgrade
 ```
+### Testing
+
+Tests can be carried out with `pytest`:
+
+```bash
+cd build_tools
+python -m pytest
+```
 
 ## GPU job submission
 
@@ -93,16 +102,108 @@ with the `--gpu` option:
   `gpus` job option; other software and architectures without a GPU
   partition use the regular CPU partitions.
 * `--gpu detect-nodevice`: same detection, but the `gpus` job option is
-  never added to the job file: the jobs run either on CPU partitions or on
-  GPU partitions, in both cases without a GPU device.
+  not added to the job file (exception: partitions with
+  `gpu_required: true`): the jobs run either on CPU partitions or on
+  GPU partitions.
 * `--gpu force`: the detection of GPU software is disabled and all jobs
   are submitted to the GPU partitions of the architectures that have them,
   with the partition's `gpus` job option; architectures without a GPU
   partition use their regular CPU partition.
-* `--gpu force-nodevice`: same as `--gpu force`, but the `gpus` job option
-  is never added to the job file.
+* `--gpu force-nodevice`: same as `--gpu force`, but the `gpus` job
+  option is not added to the job file (exception: partitions with
+  `gpu_required: true`).
 
 An explicitly given `--partition` always overrides this behaviour.
+
+Without an explicit `--partition`, `detect*` submits GPU software to the
+GPU partition of the architecture and all other software to its CPU
+partition, while `force*` submits all software to the GPU partition (or
+to the CPU partition when the architecture has no GPU partition).
+
+Architectures come in three flavours, which give different results for
+the same combination of options:
+
+* CPU-only architectures: the `gpu` partition is `None`, for example
+  `zen3`, `zen3-ib` and `zen4` on brussel.
+* GPU-only architectures: the `cpu` and `gpu` partitions are the same
+  partition, for example `broadwell` and `zen2-ib` on brussel and
+  `zen5-ib` and `zen4-ib` on sofia.
+* CPU/GPU architectures: the `cpu` and `gpu` partitions are different,
+  for example `zen5-ib` on brussel.
+
+The tables below show, for every combination of easyconfig type, `--gpu`
+option and GPU required state, the partition type the job is submitted
+to and whether it gets the partition's `gpus` option (i.e. a GPU
+device). The GPU required state shown is that of the partition the job
+is submitted to. CPU partitions do not define a `gpus` option, so jobs
+on them never request a GPU device.
+
+### CPU-only architectures
+
+Architectures with a CPU partition but no GPU partition.
+
+| easyconfig       | `--gpu` option    | GPU required | Partition result | GPU device |
+|------------------|-------------------|--------------|------------------|------------|
+| non-GPU software | `detect`          | false        | cpu              | no         |
+| non-GPU software | `detect`          | true         | cpu              | no         |
+| non-GPU software | `detect-nodevice` | false        | cpu              | no         |
+| non-GPU software | `detect-nodevice` | true         | cpu              | no         |
+| non-GPU software | `force`           | false        | cpu              | no         |
+| non-GPU software | `force`           | true         | cpu              | no         |
+| non-GPU software | `force-nodevice`  | false        | cpu              | no         |
+| non-GPU software | `force-nodevice`  | true         | cpu              | no         |
+| GPU software     | `detect`          | false        | cpu              | no         |
+| GPU software     | `detect`          | true         | cpu              | no         |
+| GPU software     | `detect-nodevice` | false        | cpu              | no         |
+| GPU software     | `detect-nodevice` | true         | cpu              | no         |
+| GPU software     | `force`           | false        | cpu              | no         |
+| GPU software     | `force`           | true         | cpu              | no         |
+| GPU software     | `force-nodevice`  | false        | cpu              | no         |
+| GPU software     | `force-nodevice`  | true         | cpu              | no         |
+
+### GPU-only architectures
+
+Architectures with a GPU partition as CPU partition.
+
+| easyconfig       | `--gpu` option    | GPU required | Partition result | GPU device |
+|------------------|-------------------|--------------|------------------|------------|
+| non-GPU software | `detect`          | false        | cpu (same as gpu)| no         |
+| non-GPU software | `detect`          | true         | cpu (same as gpu)| yes        |
+| non-GPU software | `detect-nodevice` | false        | cpu (same as gpu)| no         |
+| non-GPU software | `detect-nodevice` | true         | cpu (same as gpu)| yes        |
+| non-GPU software | `force`           | false        | gpu              | yes        |
+| non-GPU software | `force`           | true         | gpu              | yes        |
+| non-GPU software | `force-nodevice`  | false        | gpu              | no         |
+| non-GPU software | `force-nodevice`  | true         | gpu              | yes        |
+| GPU software     | `detect`          | false        | gpu              | yes        |
+| GPU software     | `detect`          | true         | gpu              | yes        |
+| GPU software     | `detect-nodevice` | false        | gpu              | no         |
+| GPU software     | `detect-nodevice` | true         | gpu              | yes        |
+| GPU software     | `force`           | false        | gpu              | yes        |
+| GPU software     | `force`           | true         | gpu              | yes        |
+| GPU software     | `force-nodevice`  | false        | gpu              | no         |
+| GPU software     | `force-nodevice`  | true         | gpu              | yes        |
+
+### CPU/GPU architectures
+
+| easyconfig       | `--gpu` option    | GPU required | Partition result | GPU device |
+|------------------|-------------------|--------------|------------------|------------|
+| non-GPU software | `detect`          | false        | cpu              | no         |
+| non-GPU software | `detect`          | true         | cpu              | no         |
+| non-GPU software | `detect-nodevice` | false        | cpu              | no         |
+| non-GPU software | `detect-nodevice` | true         | cpu              | no         |
+| non-GPU software | `force`           | false        | gpu              | yes        |
+| non-GPU software | `force`           | true         | gpu              | yes        |
+| non-GPU software | `force-nodevice`  | false        | gpu              | no         |
+| non-GPU software | `force-nodevice`  | true         | gpu              | yes        |
+| GPU software     | `detect`          | false        | gpu              | yes        |
+| GPU software     | `detect`          | true         | gpu              | yes        |
+| GPU software     | `detect-nodevice` | false        | gpu              | no         |
+| GPU software     | `detect-nodevice` | true         | gpu              | yes        |
+| GPU software     | `force`           | false        | gpu              | yes        |
+| GPU software     | `force`           | true         | gpu              | yes        |
+| GPU software     | `force-nodevice`  | false        | gpu              | no         |
+| GPU software     | `force-nodevice`  | true         | gpu              | yes        |
 
 ## Source file fetching
 
@@ -138,11 +239,3 @@ are fetched in a separate step before the build jobs are submitted, so
 that the jobs usually find the sources already fetched. This step ignores
 the fetch locks.
 
-## Testing
-
-Tests can be carried out with `pytest`:
-
-```bash
-cd build_tools
-python -m pytest
-```
