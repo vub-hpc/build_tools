@@ -60,7 +60,7 @@ def test_machine_sofia(rootdir):
 
 def test_partitions_configuration():
     # every partition must define the keys used by submit_build.py and lmodtools.py
-    required_keys = {'cluster', 'arch', 'walltime', 'nodes', 'tasks', 'gpus'}
+    required_keys = {'cluster', 'arch', 'walltime', 'nodes', 'tasks', 'gpus', 'gpu_required'}
     for partition, props in clusters.PARTITIONS.items():
         assert required_keys <= props.keys(), f"partition {partition} is missing keys"
         assert props['cluster'] in (clusters.ANANSI, clusters.HYDRA, clusters.MANTICORE, clusters.SOFIA)
@@ -69,6 +69,7 @@ def test_partitions_configuration():
         assert isinstance(props['nodes'], int) and props['nodes'] >= 1
         assert isinstance(props['tasks'], int) and props['tasks'] >= 1
         assert isinstance(props['gpus'], str)
+        assert isinstance(props['gpu_required'], bool)
 
 
 def test_archs_configuration():

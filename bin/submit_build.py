@@ -328,7 +328,7 @@ def main():
     # --gpu with *-nodevice options never request a GPU device;
     # in detect mode, only jobs that are sent to a GPU partition (i.e. GPU software)
     # request a GPU device, so that jobs on CPU partitions do not reserve a GPU
-    job_gpu_device = opts.gpu == 'force' or (opts.gpu == 'detect' and gpu_software)
+    gpu_device_requested = opts.gpu == 'force' or (opts.gpu == 'detect' and gpu_software)
 
     # extra module footer, if requested
     mod_footer = f'--modules-footer={job["extra_mod_footer"]}' if job['extra_mod_footer'] else None
@@ -359,6 +359,9 @@ def main():
             gpu_partition = ARCHS[MACHINE][host_arch]['partition']['gpu']
             if gpu_partition:
                 job_partition = gpu_partition
+
+        # partitions that require a GPU device get one, overriding the --gpu option
+        job_gpu_device = PARTITIONS[job_partition]['gpu_required'] or gpu_device_requested
 
         # set Slurm directives in job file
         job_options.update(

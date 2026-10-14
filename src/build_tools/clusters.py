@@ -133,7 +133,7 @@ ARCHS = {
 # nodes: default number of nodes for build jobs on this partition
 # tasks: default number of tasks for build jobs on this partition
 # gpus: Slurm GPU options for build jobs on this partition (empty for CPU partitions)
-
+# gpu_required: the partition requires a GPU device for all jobs on it
 PARTITIONS = {
     'ada_gpu': {
         'cluster': ANANSI,
@@ -142,6 +142,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gres=shard:1',
+        'gpu_required': False,
     },
     'ampere_gpu': {
         'cluster': HYDRA,
@@ -150,6 +151,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gpus-per-node=1',
+        'gpu_required': False,
     },
     'hopper_gpu': {
         'cluster': HYDRA,
@@ -158,6 +160,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gpus-per-node=1',
+        'gpu_required': False,
     },
     'pascal_gpu': {
         'cluster': HYDRA,
@@ -166,6 +169,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '--gpus-per-node=1',
+        'gpu_required': False,
     },
     'zen3': {
         'cluster': MANTICORE,
@@ -174,6 +178,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
+        'gpu_required': False,
     },
     'zen3_mpi': {
         'cluster': MANTICORE,
@@ -182,6 +187,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
+        'gpu_required': False,
     },
     'zen4': {
         'cluster': HYDRA,
@@ -190,6 +196,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
+        'gpu_required': False,
     },
     'zen5_mpi': {
         'cluster': HYDRA,
@@ -198,6 +205,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 4,
         'gpus': '',
+        'gpu_required': False,
     },
     # zen4_h200 requires at least 1 GPU and 24 cores per GPU
     'zen4_h200': {
@@ -207,6 +215,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 24,
         'gpus': '--gpus-per-node=1',
+        'gpu_required': True,
     },
     'zen5_dense': {
         'cluster': SOFIA,
@@ -215,6 +224,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 8,
         'gpus': '',
+        'gpu_required': False,
     },
     'zen5_himem': {
         'cluster': SOFIA,
@@ -223,6 +233,7 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 8,
         'gpus': '',
+        'gpu_required': False,
     },
     'zen5_vis': {
         'cluster': SOFIA,
@@ -231,5 +242,6 @@ PARTITIONS = {
         'nodes': SINGLENODE,
         'tasks': 8,
         'gpus': '',
+        'gpu_required': False,
     },
 }
