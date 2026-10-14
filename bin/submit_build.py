@@ -81,6 +81,7 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description='Submit easyconfig as jobs to all different architectures.')
+    parser.add_argument('-v', '--version', action='version', version=f"%(prog)s {VERSION}")
     parser.add_argument('-a', '--arch', type=strlist, default=None,
                         help='CPU architecture of the host system and the build')
     parser.add_argument('-b', '--bwrap', action='store_true',
@@ -122,25 +123,23 @@ def main():
     parser.add_argument('-t', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
                         help='Temporary disk for the build: shm (/dev/shm, default), '
                              'tmp (/tmp) or scratch ($VSC_SCRATCH_VO_USER)')
-    parser.add_argument('-v', '--version', action='store_true',
-                        help='Show the version')
     parser.add_argument('easyconfigs', nargs='*',
                         help='easyconfig file(s) to install')
     opts = parser.parse_args()
-
-    if opts.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    if opts.version:
-        print(VERSION)
-        sys.exit(0)
 
     venv = os.getenv('VIRTUAL_ENV')
     if not venv:
         logger.error("VIRTUAL_ENV environment variable is undefined, "
                      "please activate the build_tools virtual environment")
         sys.exit(1)
+
     vscsoftstack_root = os.path.join(os.path.dirname(venv), 'vsc-software-stack')
+    if not os.path.isdir(vscsoftstack_root):
+        logger.error(
+            f"Cannot locate 'vsc-software-stack' repo in: {vscsoftstack_root} - "
+            "Please clone that repo in the parent folder of your virtual environment directory"
+        )
+        sys.exit(1)
 
     # Default job options
     job = {
@@ -167,12 +166,31 @@ def main():
         'sourcepath': SOURCEPATH[MACHINE],
     }
 
+    # EB command line options (same for all build jobs)
+    eb_options = [
+        '--logtostdout',
+        '--module-extensions',
+        '--zip-logs=bzip2',
+        '--module-depends-on',
+        f'--suffix-modules-path={SUFFIX_MODULES_PATH}',
+        f'--moduleclasses={",".join(os.path.join(x, SUFFIX_MODULES_SYMLINK) for x in VALID_MODULES_SUBDIRS)}',
+    ]
+
+    if opts.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        eb_options.append('--debug')
+
     dry_run = opts.dry_run
     if dry_run:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.info('Doing a dry-run, no fetch/install/lmod-cache')
 
-    if opts.lmod_cache == 'only':
+    # Handle Lmod cache options
+    # (early due to potential skip)
+    if opts.lmod_cache == 'skip':
+        job['lmod_cache'] = '0'
+        logger.info("Not running Lmod cache after installation")
+    elif opts.lmod_cache == 'only':
         for arch in DEFAULT_ARCHS:
             submit_lmod_cache_job(ARCHS[MACHINE][arch]['partition']['cpu'], dry_run=dry_run)
         sys.exit(0)
@@ -181,28 +199,12 @@ def main():
         logger.error("No easyconfig is given...")
         sys.exit(1)
 
-    if not os.path.isdir(vscsoftstack_root):
-        logger.error(
-            f"Cannot locate 'vsc-software-stack' repo in: {vscsoftstack_root} - "
-            "Please clone that repo in the parent folder of your virtual environment directory"
-        )
-        sys.exit(1)
-
+    # Easyconfig list
     easyconfig = ' '.join(opts.easyconfigs)
     job['easyconfig'] = easyconfig
     logger.info("Preparing to install %s", easyconfig)
 
-    # determine if the installation is GPU software
-    # (GPU component or toolchain name in the easyconfig filename)
-    gpu_software = False
-    if opts.gpu in ('detect', 'detect-nodevice'):
-        for path in opts.easyconfigs:
-            filename = os.path.basename(path)
-            if any(x in filename for x in hooks_hydra.GPU_COMPONENTS + hooks_hydra.GPU_TOOLCHAINS):
-                logger.info("GPU software detected in %s", filename)
-                gpu_software = True
-
-    # Set host archs: define arch_stack
+    # Host archs: define arch_stack
     local_exec = opts.local
     if local_exec:
         if LOCAL_ARCH not in ARCHS[MACHINE]:
@@ -221,7 +223,7 @@ def main():
 
     logger.debug("List of architectures: %s", arch_stack)
 
-    # Set Slurm partitions: define build_hosts
+    # Slurm partitions: define build_hosts
     if opts.partition:
         # given list of partitions overwrites all other options
         unknown_parts = [part for part in opts.partition if part not in PARTITIONS]
@@ -254,13 +256,15 @@ def main():
 
     # Add extra footer
     if opts.append_mod_footer:
-        # if explicitly requested
         if os.path.exists(opts.append_mod_footer):
             job['extra_mod_footer'] = opts.append_mod_footer
         else:
             logger.error("Could not find extra footer: %s", opts.append_mod_footer)
             sys.exit(1)
 
+        eb_options.append(f'--modules-footer={job["extra_mod_footer"]}')
+
+    # Execute pre-fetch
     if opts.pre_fetch:
         # fetch sources before submitting build jobs
         fetch_opts = ['--stop=fetch', '--robot', '--ignore-locks']
@@ -288,27 +292,9 @@ def main():
             logger.error("Failed to fetch sources for %s: %s", easyconfig, out)
             sys.exit(1)
 
-    bwrap = opts.bwrap
-    if bwrap:
+    # Handle bwrap
+    if opts.bwrap:
         job['bwrap'] = 1
-
-    if opts.lmod_cache == 'skip':
-        job['lmod_cache'] = '0'
-        logger.info("Not running Lmod cache after installation")
-
-    # Common EB command line options (same for all build jobs)
-    eb_options = [
-        '--logtostdout',
-        '--module-extensions',
-        '--zip-logs=bzip2',
-        '--module-depends-on',
-        f'--suffix-modules-path={SUFFIX_MODULES_PATH}',
-        f'--moduleclasses={",".join(os.path.join(x, SUFFIX_MODULES_SYMLINK) for x in VALID_MODULES_SUBDIRS)}',
-    ]
-    if opts.debug:
-        eb_options.append('--debug')
-
-    if bwrap:
         eb_options.extend([
             '--rebuild',
             f'--subdir-modules={SUBDIR_MODULES_BWRAP}',
@@ -317,28 +303,34 @@ def main():
         # robot is not supported with bwrap
         eb_options.append('--robot')
 
-    # extra settings from user
-    if opts.extra_eb_flags:
-        eb_options.append(opts.extra_eb_flags)
+    # GPU installations
+    # determine if the installation is GPU software
+    # (GPU component or toolchain name in the easyconfig filename)
+    gpu_software = False
+    for path in opts.easyconfigs:
+        filename = os.path.basename(path)
+        if any(x in filename for x in hooks_hydra.GPU_COMPONENTS + hooks_hydra.GPU_TOOLCHAINS):
+            logger.info("GPU software detected in %s", filename)
+            gpu_software = True
 
     # GPU software, or forced with --gpu force*, use the GPU partition on archs
     # that support it (unless the user explicitly gave a partition)
     use_gpu_partition = not opts.partition and (gpu_software or opts.gpu in ('force', 'force-nodevice'))
 
-    # --gpu with *-nodevice options never request a GPU device;
-    # in detect mode, only jobs that are sent to a GPU partition (i.e. GPU software)
-    # request a GPU device, so that jobs on CPU partitions do not reserve a GPU
+    # option --gpu with *-nodevice options do not request a GPU device;
+    # * detect mode, only for jobs that are sent to a GPU partition (i.e. GPU software)
+    # * force mode, all jobs
+    # (exception: partition with gpu_required override this setting)
     gpu_device_requested = opts.gpu == 'force' or (opts.gpu == 'detect' and gpu_software)
 
-    # extra module footer, if requested
-    mod_footer = f'--modules-footer={job["extra_mod_footer"]}' if job['extra_mod_footer'] else None
+    # Extra EB settings from user
+    if opts.extra_eb_flags:
+        eb_options.append(opts.extra_eb_flags)
 
     # ---> main build + lmod cache loop <--- #
     # submit build jobs for each micro-architecture
     for (host_arch, host_partition) in build_hosts:
         job_options = dict(job)
-        job_options['host_arch'] = host_arch
-        job_options['lmod_json_spider_cache'] = ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0')
 
         # set tmp dir and update build and install paths accordingly
         if opts.tmp == 'tmp':
@@ -350,8 +342,6 @@ def main():
 
         # per-job EB options (paths depend on the architecture)
         job_eb_options = eb_options + [f'--{opt}={path}' for opt, path in ebconf.items()]
-        if mod_footer:
-            job_eb_options.append(mod_footer)
 
         # set this job's partition and cluster
         job_partition = host_partition
@@ -367,6 +357,7 @@ def main():
         job_options.update(
             {
                 'job_name': mk_job_name(easyconfig, host_arch),
+                'host_arch': host_arch,
                 'partition': job_partition,
                 'cluster': PARTITIONS[job_partition]['cluster'],
                 'walltime': PARTITIONS[job_partition]['walltime'] if not opts.job_small else SMALL_JOB['walltime'],
@@ -376,6 +367,7 @@ def main():
                 'eb_options': " ".join(job_eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
+                'lmod_json_spider_cache': ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0'),
             }
         )
 
