@@ -18,7 +18,7 @@ Functions related to running the Lmod cache
 import sys
 
 from build_tools import stdlib_logger
-from build_tools.clusters import APPS, ARCHS, MACHINE, PARTITIONS, SOFIA
+from build_tools.clusters import APPS, ARCHS, MACHINE, PARTITIONS
 from build_tools.filetools import write_tempfile
 from build_tools.softinstall import submit_job_script
 
@@ -30,26 +30,26 @@ LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 #SBATCH --job-name=lmod_cache_{archdir}
 #SBATCH --dependency=singleton{jobids_depend}
 #SBATCH --partition={partition}
+#SBATCH --nodes=1
+#SBATCH --ntasks={tasks}
 {gpus}{cache_cmd}
 """
 
 
-def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs):
+def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
     """
     Run Lmod cache in a Slurm job
     :param partition: the partition to submit the job to
     :param jobids_depend: list of strings: jobids on which to set job dependency
-    :param cluster: the Slurm cluster to submit the job to.
 
     if cluster is None, load the cluster module corresponding to the current partition
     if cluster is False, don't purge/load a cluster module (use the currently active cluster)
     """
 
+    cluster = PARTITIONS[partition]['cluster']
     archdir = PARTITIONS[partition]['arch']
-    if cluster is None:
-        cluster = PARTITIONS[partition]['cluster']
-
     arch = ARCHS[MACHINE][archdir]
+
     run_lmod_cache = '/usr/libexec/lmod/run_lmod_cache.py'
     common_opts = [
         f'--architecture {archdir}',
@@ -74,12 +74,16 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
             spider_opts = ['--create-spider-cache', f'--cluster-name {index_cluster}']
             cache_calls.append(' '.join([run_lmod_cache] + common_opts + spider_opts))
 
-    # sofia zen4_h200 requires at least 1 GPU per job
-    gpus_sbatch = '#SBATCH --gpus-per-node=1\n' if cluster == SOFIA and partition == 'zen4_h200' else ''
+    # partitions with gpu_required need a GPU device and the partition's
+    # number of tasks for all their jobs
+    gpu_required = PARTITIONS[partition]['gpu_required']
+    gpus_sbatch = f"#SBATCH {PARTITIONS[partition]['gpus']}\n" if gpu_required else ''
+    tasks = PARTITIONS[partition]['tasks'] if gpu_required else 1
 
     cache_job = LMOD_CACHE_JOB_TEMPLATE.format(
         jobids_depend=f',afterok:{":".join(jobids_depend)}' if jobids_depend else '',
         partition=partition,
+        tasks=tasks,
         gpus=gpus_sbatch,
         # chain the calls so each module index is only created when the
         # previous call succeeded
