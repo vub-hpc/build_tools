@@ -205,6 +205,24 @@ Architectures with a GPU partition as CPU partition.
 | GPU software     | `force-nodevice`  | false        | gpu              | no         |
 | GPU software     | `force-nodevice`  | true         | gpu              | yes        |
 
+## Open OnDemand module index
+
+The Open OnDemand module browser lists the installed modules from a JSON
+index of the Lmod module database, instead of running `module` commands.
+For the architectures with the `ondemand_mod_index` option set to `1` in
+`ARCHS` (currently `zen5-ib` on brussel and on sofia), the Lmod cache
+job that runs after a successful build, and the cache jobs submitted
+with `submit_build.py -m only`, additionally run
+`run_lmod_cache.py --create-spider-cache`. That uses Lmod's standalone
+`spider` tool with the JSON reporter to dump the module database as a
+JSON file in the `cacheDir` of the architecture.
+
+The Open OnDemand servers point their `module_file_dir` configuration
+option at that `cacheDir` and read the index file from there. The file
+is only consumed by Open OnDemand: it has no effect on the Lmod cache
+that the `module` command uses, which is the compiled system cache
+created by the regular `--create-cache` step of the same job.
+
 ## Source file fetching
 
 Several build jobs may want to fetch the same source file, for example

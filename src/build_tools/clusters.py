@@ -57,7 +57,7 @@ if VSC_INSTITUTE_CLUSTER == SOFIA:
 # default: software will be installed by default using this partition
 # partition: dict with default CPU and GPU partitions for this arch
 # cuda_cc: all CUDA compute capabilities that must be supported on this arch
-# lmod_json_spider_cache: also create the Lmod spider cache for this arch (default: 0)
+# ondemand_mod_index: also create the Open OnDemand module index for this arch (default: 0)
 ARCHS = {
     BRUSSEL: {
         'broadwell': {
@@ -104,7 +104,7 @@ ARCHS = {
                 'gpu': 'ada_gpu',
             },
             'cuda_cc': ['8.9', '9.0'],  # L40S, H200
-            'lmod_json_spider_cache': "1",
+            'ondemand_mod_index': "1",
         },
     }, SOFIA: {
         'zen5-ib': {
@@ -114,6 +114,7 @@ ARCHS = {
                 'gpu': 'zen5_vis',
             },
             'cuda_cc': ['8.9'],
+            'ondemand_mod_index': "1",
         },
         'zen4-ib': {
             'default': True,

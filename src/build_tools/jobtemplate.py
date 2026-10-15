@@ -143,7 +143,7 @@ if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
         --architecture ${host_arch}
         --module-basedir /apps/${machine}/$$VSC_OS_LOCAL
     )
-    if [[ "${lmod_json_spider_cache}" == "1" ]]; then
+    if [[ "${ondemand_mod_index}" == "1" ]]; then
         cmd+=(--create-spider-cache)
     fi
     echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${host_arch}"

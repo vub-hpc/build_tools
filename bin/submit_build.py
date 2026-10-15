@@ -367,7 +367,7 @@ def main():
                 'eb_options': " ".join(job_eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
-                'lmod_json_spider_cache': ARCHS[MACHINE][host_arch].get('lmod_json_spider_cache', '0'),
+                'ondemand_mod_index': ARCHS[MACHINE][host_arch].get('ondemand_mod_index', '0'),
             }
         )
 

@@ -95,5 +95,5 @@ def test_archs_configuration():
                 cuda_cc = props['cuda_cc']
                 assert isinstance(cuda_cc, list) and cuda_cc
                 assert all(re.fullmatch(r'\d+\.\d+', cc) for cc in cuda_cc)
-            if 'lmod_json_spider_cache' in props:
-                assert props['lmod_json_spider_cache'] in ('0', '1')
+            if 'ondemand_mod_index' in props:
+                assert props['ondemand_mod_index'] in ('0', '1')

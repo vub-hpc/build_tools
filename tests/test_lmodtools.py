@@ -22,6 +22,7 @@ import os
 import pytest
 
 from build_tools import lmodtools
+from build_tools.clusters import SOFIA
 from build_tools.lmodtools import submit_lmod_cache_job
 
 
@@ -58,11 +59,30 @@ def test_submit_lmod_cache_job_gpu_required(inputdir):
     assert new_job_contents == ref_job_contents
 
 
-def test_submit_lmod_cache_job_spider_cache(inputdir):
-    # brussel zen5-ib has lmod_json_spider_cache enabled in the arch definitions
+def test_submit_lmod_cache_job_mod_index(inputdir):
+    # brussel zen5-ib has ondemand_mod_index enabled in the arch definitions
     job_script = 'lmod_cache_job_03.sh'
 
     _, out = submit_lmod_cache_job('zen5_mpi', dry_run=True)
+
+    new_job = out.split(' ')[-1]
+    with open(new_job) as nj:
+        new_job_contents = nj.read().rstrip()
+
+    ref_job = os.path.join(inputdir, job_script)
+    with open(ref_job) as rj:
+        ref_job_contents = rj.read().rstrip()
+
+    assert new_job_contents == ref_job_contents
+
+
+def test_submit_lmod_cache_job_sofia_mod_index(monkeypatch, inputdir):
+    # sofia zen5-ib (partition zen5_vis) has ondemand_mod_index enabled in the arch definitions
+    job_script = 'lmod_cache_job_04.sh'
+
+    monkeypatch.setattr(lmodtools, 'MACHINE', SOFIA)
+
+    _, out = submit_lmod_cache_job('zen5_vis', dry_run=True)
 
     new_job = out.split(' ')[-1]
     with open(new_job) as nj:
