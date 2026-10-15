@@ -57,7 +57,8 @@ if VSC_INSTITUTE_CLUSTER == SOFIA:
 # default: software will be installed by default using this partition
 # partition: dict with default CPU and GPU partitions for this arch
 # cuda_cc: all CUDA compute capabilities that must be supported on this arch
-# ondemand_mod_index: also create the Open OnDemand module index for this arch (default: 0)
+#          (empty for CPU-only archs)
+# ondemand_mod_index: also create the Open OnDemand module index for this arch
 ARCHS = {
     BRUSSEL: {
         'broadwell': {
@@ -84,7 +85,7 @@ ARCHS = {
                 'cpu': 'zen3',
                 'gpu': None,
             },
-            'cuda_cc': None,
+            'cuda_cc': [],
             'ondemand_mod_index': "0",
         },
         'zen3-ib': {
@@ -93,7 +94,7 @@ ARCHS = {
                 'cpu': 'zen3_mpi',
                 'gpu': None,
             },
-            'cuda_cc': None,
+            'cuda_cc': [],
             'ondemand_mod_index': "0",
         },
         'zen4': {
@@ -102,7 +103,7 @@ ARCHS = {
                 'cpu': 'zen4',
                 'gpu': None,
             },
-            'cuda_cc': None,
+            'cuda_cc': [],
             'ondemand_mod_index': "0",
         },
         'zen5-ib': {
@@ -114,7 +115,8 @@ ARCHS = {
             'cuda_cc': ['8.9', '9.0'],  # L40S, H200
             'ondemand_mod_index': "1",
         },
-    }, SOFIA: {
+    },
+    SOFIA: {
         'zen5-ib': {
             'default': True,
             'partition': {
@@ -217,7 +219,6 @@ PARTITIONS = {
         'gpus': '',
         'gpu_required': False,
     },
-    # zen4_h200 requires at least 1 GPU and 24 cores per GPU
     'zen4_h200': {
         'cluster': SOFIA,
         'arch': 'zen4-ib',

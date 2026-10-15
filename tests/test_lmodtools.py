@@ -22,7 +22,7 @@ import os
 import pytest
 
 from build_tools import lmodtools
-from build_tools.clusters import SOFIA
+from build_tools.clusters import BRUSSEL, SOFIA
 from build_tools.lmodtools import submit_lmod_cache_job
 
 
@@ -42,9 +42,11 @@ def test_submit_lmod_cache_job(inputdir):
     assert new_job_contents == ref_job_contents
 
 
-def test_submit_lmod_cache_job_gpu_required(inputdir):
+def test_submit_lmod_cache_job_gpu_required(monkeypatch, inputdir):
     # sofia zen4_h200 requires at least 1 GPU, otherwise the job gets blocked
     job_script = 'lmod_cache_job_02.sh'
+
+    monkeypatch.setattr(lmodtools, 'MACHINE', SOFIA)
 
     _, out = submit_lmod_cache_job('zen4_h200', dry_run=True)
 
@@ -59,9 +61,11 @@ def test_submit_lmod_cache_job_gpu_required(inputdir):
     assert new_job_contents == ref_job_contents
 
 
-def test_submit_lmod_cache_job_mod_index(inputdir):
+def test_submit_lmod_cache_job_mod_index(monkeypatch, inputdir):
     # brussel zen5-ib has ondemand_mod_index enabled in the arch definitions
     job_script = 'lmod_cache_job_03.sh'
+
+    monkeypatch.setattr(lmodtools, 'MACHINE', BRUSSEL)
 
     _, out = submit_lmod_cache_job('zen5_mpi', dry_run=True)
 

@@ -56,7 +56,7 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
         f'--module-basedir {APPS}/{MACHINE}/${{VSC_OS_LOCAL:?}}',
     ]
 
-    if ARCHS[MACHINE].get(archdir, {}).get('ondemand_mod_index', '0') == '1':
+    if ARCHS[MACHINE][archdir]['ondemand_mod_index'] == '1':
         cache_cmd.append('--create-spider-cache')
 
     # sofia zen4_h200 requires at least 1 GPU per job

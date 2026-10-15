@@ -74,10 +74,11 @@ def test_partitions_configuration():
 
 def test_archs_configuration():
     # every arch must define the keys used by submit_build.py, hooks_hydra.py and lmodtools.py
+    required_keys = {'default', 'partition', 'cuda_cc', 'ondemand_mod_index'}
     for machine in (clusters.BRUSSEL, clusters.SOFIA):
         assert machine in clusters.ARCHS, f"machine {machine} is missing from ARCHS"
         for arch, props in clusters.ARCHS[machine].items():
-            assert {'default', 'partition'} <= props.keys(), f"arch {arch} of {machine} is missing keys"
+            assert required_keys <= props.keys(), f"arch {arch} of {machine} is missing keys"
             assert isinstance(props['default'], bool)
             assert {'cpu', 'gpu'} <= props['partition'].keys()
             for kind in ('cpu', 'gpu'):
@@ -91,9 +92,10 @@ def test_archs_configuration():
             assert props['partition']['cpu'] is not None
             if props['partition']['gpu'] is not None:
                 # GPU archs must define the CUDA compute capabilities (used by hooks_hydra)
-                assert 'cuda_cc' in props, f"GPU arch {arch} of {machine} is missing cuda_cc"
                 cuda_cc = props['cuda_cc']
                 assert isinstance(cuda_cc, list) and cuda_cc
                 assert all(re.fullmatch(r'\d+\.\d+', cc) for cc in cuda_cc)
-            if 'ondemand_mod_index' in props:
-                assert props['ondemand_mod_index'] in ('0', '1')
+            else:
+                # CPU-only archs do not support any CUDA compute capability
+                assert props['cuda_cc'] == []
+            assert props['ondemand_mod_index'] in ('0', '1')
