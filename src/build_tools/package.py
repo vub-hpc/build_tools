@@ -16,16 +16,20 @@ Package information of build_tools
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
-VERSION = '4.5.12'
+VERSION = '5.0.0'
 
 AUTHOR = {
     'wp': 'Ward Poelmans',
     'sm': 'Samuel Moors',
     'ad': 'Alex Domingo',
+    'cw': 'Cintia Willemyns',
+    'jr': 'Jarne Renders',
 }
 
 AUTHOR_EMAIL = {
     'wp': 'ward.poelmans@vub.be',
     'sm': 'samuel.moors@vub.be',
     'ad': 'alex.domingo.toro@vub.be',
+    'cw': 'cintia.willemyns@vub.be',
+    'jr': 'jarne.renders@vub.be',
 }

@@ -11,22 +11,21 @@
 #
 ##
 """
-Helper functions to handle temp files
+Helper functions to handle temp files and fetch locks
 
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
 import os
-import re
 import sys
 import tempfile
+import time
 
-from vsc.utils import fancylogger
+from flufl.lock import Lock, LockState, TimeOutError, NotLockedError
 
+from build_tools import stdlib_logger
 
-logger = fancylogger.getLogger()
-
-APPS_BRUSSEL = os.path.join(os.path.sep, 'apps', 'brussel')
+logger = stdlib_logger(__name__)
 
 
 def write_tempfile(contents):
@@ -43,53 +42,71 @@ def write_tempfile(contents):
     return handle.name
 
 
-def clean_append(filepath, new_content):
+def acquire_fetch_lock(lockfile, log):
     """
-    Use first and last line of content to match block of text from existing file
-    Remove any existing content and append new content to clean file
-    - filepath: (string) path to new or existing file
-    - new_content: (string) content to be added to the file
+    Acquire the fetch lock with the given lockfile
+
+    The lock (a flufl file lock) guards a resource against concurrent
+    access (e.g. a software source directory against concurrent
+    fetches). It is released by release_fetch_lock.
+    """
+    wait_time = 0
+    wait_interval = 60
+    wait_limit = 1800
+
+    # the lock lifetime must be larger than wait_limit, so that a held lock
+    # cannot expire while other builds are still waiting for it
+    lock_lifetime = 10800
+
+    lock_dir = os.path.dirname(lockfile)
+    if lock_dir:
+        os.makedirs(lock_dir, exist_ok=True)
+
+    lock = Lock(lockfile, lifetime=lock_lifetime, default_timeout=1)
+    log.debug("[pre-fetch hook] Acquiring lock %s", lock.lockfile)
+
+    while True:
+        try:
+            # try to acquire the lock
+            lock.lock()
+            log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
+            return lock
+
+        except TimeOutError as err:
+            if lock.state == LockState.stale:
+                # flufl only reports stale when the lock was taken on this
+                # host and the holder process is no longer running there
+                # (e.g. its job was killed). Locks taken on other hosts
+                # report unknown and are never broken here; they expire
+                # after the lock lifetime instead
+                # break the stale lock and try again
+                log.info("[pre-fetch hook] Lock %s is stale (holder no longer running), breaking it",
+                         lock.lockfile)
+                try:
+                    os.remove(lock.lockfile)
+                except FileNotFoundError:
+                    # another build already broke the stale lock
+                    pass
+                continue
+
+            if wait_time >= wait_limit:
+                error_msg = (f"[pre-fetch hook] Maximum wait time for lock {lock.lockfile} "
+                             f"to be released reached: {wait_time} sec >= {wait_limit} sec")
+                raise RuntimeError(error_msg) from err
+
+            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
+            log.debug(msg, lock.lockfile, wait_interval)
+            time.sleep(wait_interval)
+            wait_time += wait_interval
+
+
+def release_fetch_lock(lock, log):
+    """
+    Release the fetch lock acquired by acquire_fetch_lock
     """
     try:
-        with open(filepath, 'r', encoding='utf-8') as handle:
-            existing_content = handle.read()
-    except IOError:
-        existing_content = ''
-        logger.debug("File does not exits, creating it: %s", filepath)
+        lock.unlock()
+        log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
 
-    if existing_content:
-        # clean up the existing file content of any previous text matching new content
-        # use first and last line in new content to match any block text
-        boundaries = new_content.split('\n')
-        boundaries = (re.escape(boundaries[0]), re.escape(boundaries[-1]))
-        block_pattern = re.compile('^%s.*%s$' % boundaries, re.MULTILINE | re.DOTALL)
-        existing_content = block_pattern.sub('', existing_content)
-
-    # update/create file with new content
-    file_content = existing_content + new_content
-    try:
-        with open(filepath, 'w+', encoding='utf-8') as handle:
-            handle.write(file_content)
-    except IOError as err:
-        logger.error("Error writing file '%s': %s", filepath, err)
-        sys.exit(1)
-    else:
-        logger.debug("Successfully appended data to: %s", filepath)
-
-
-def poke(filename):
-    """
-    Update timestamp of existing file to current time
-    """
-    try:
-        os.utime(filename, None)
-    except OSError as err:
-        if err.errno == 2:
-            logger.error("Could not update timestamp of '%s', file does not exist", filename)
-        elif err.errno == 13:
-            logger.error("Could not update timestamp of '%s', permission denied", filename)
-        else:
-            logger.error("Could not update timestamp of '%s', unknown error", filename)
-        sys.exit(1)
-    else:
-        return True
+    except NotLockedError:
+        log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)

@@ -2,9 +2,6 @@ name: Test Build Tools
 
 on: [push, pull_request, workflow_dispatch]
 
-env:
-  LMOD_VERSION: 8.7.32
-
 jobs:
   TestBuildTools:
     name: Test build-tools
@@ -20,20 +17,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up environment
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lua5.3 lua-bit32 lua-posix lua-posix-dev liblua5.3-0 liblua5.3-dev tcl tcl-dev tcl8.6 tcl8.6-dev libtcl8.6
-
-      - name: Download and install Lmod
-        run: |
-          wget https://github.com/TACC/Lmod/archive/refs/tags/${{ env.LMOD_VERSION }}.tar.gz
-          tar -xf ${{ env.LMOD_VERSION }}.tar.gz
-          cd Lmod-${{ env.LMOD_VERSION }}
-          ./configure --prefix=/opt/apps
-          make install
-          cd $GITHUB_WORKSPACE
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -48,34 +31,15 @@ jobs:
       - name: Install pytest
         run: python -m pip install pytest
 
-      - name: Install old setuptools
-        run: |
-          python -m pip install setuptools==53.0.0
-          python -c "import setuptools; print(setuptools.__version__)"
-
-      - name: Install vsc-install
-        run: |
-          python -c "import setuptools; print(setuptools.__version__)"
-          python -m pip install vsc-install --no-build-isolation
-
-      - name: Install vsc-base vsc-utils
-        run: |
-          python -c "import setuptools; print(setuptools.__version__)"
-          python -m pip install vsc-base vsc-utils --no-build-isolation
-
       - name: Install build-tools
         run: python -m pip install .
 
       - name: Run tests
-        run: |
-          source /opt/apps/lmod/lmod/init/profile
-          pytest
+        run: pytest
       - name: Sanity check submit_build.py script
         run: |
-          source /opt/apps/lmod/lmod/init/profile
-          export VSC_ARCH_LOCAL=skylake
+          export VSC_ARCH_LOCAL=zen5
           export VSC_ARCH_SUFFIX=-ib
           export VSC_OS_LOCAL=RL8
           export VSC_INSTITUTE_CLUSTER=hydra
-          export VSC_DEFAULT_CLUSTER_MODULE=hydra
           submit_build.py --help

@@ -17,13 +17,12 @@ Functions related to running the Lmod cache
 """
 import sys
 
-from vsc.utils import fancylogger
-
-from build_tools.clusters import ARCH, APPS, CLUSTER, MACHINE, PARTITIONS, SOFIA
+from build_tools import stdlib_logger
+from build_tools.clusters import APPS, ARCHS, MACHINE, PARTITIONS
 from build_tools.filetools import write_tempfile
 from build_tools.softinstall import submit_job_script
 
-logger = fancylogger.getLogger()
+logger = stdlib_logger(__name__)
 
 LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 #SBATCH --time=1:0:0
@@ -31,51 +30,78 @@ LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 #SBATCH --job-name=lmod_cache_{archdir}
 #SBATCH --dependency=singleton{jobids_depend}
 #SBATCH --partition={partition}
+#SBATCH --nodes=1
+#SBATCH --ntasks={tasks}
 {gpus}{cache_cmd}
 """
 
 
-def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs):
+def make_cmd_lmod_cache(archdir):
     """
-    Run Lmod cache in a Slurm job
-    :param partition: the partition to submit the job to
-    :param jobids_depend: list of strings: jobids on with to set job dependency
-    :param cluster: the Slurm cluster to submit the job to.
+    Generate the command to refresh the Lmod cache of an architecture
 
-    if cluster is None, load the cluster module corresponding to the current partition
-    if cluster is False, don’t purge/load a cluster module (use the currently active cluster)
+    :param archdir: the architecture to create the cache for
     """
+    arch = ARCHS[MACHINE][archdir]
 
-    archdir = PARTITIONS[partition][ARCH]
-    if cluster is None:
-        cluster = PARTITIONS[partition][CLUSTER]
-
-    cache_cmd = [
-        '/usr/libexec/lmod/run_lmod_cache.py',
-        '--create-cache',
+    run_lmod_cache = '/usr/libexec/lmod/run_lmod_cache.py'
+    common_opts = [
         f'--architecture {archdir}',
         f'--module-basedir {APPS}/{MACHINE}/${{VSC_OS_LOCAL:?}}',
     ]
 
-    # TODO: also create spider cache on sofia when the updated run_lmod_cache.py script is installed there
-    if PARTITIONS[partition][ARCH] == 'zen5-ib' and PARTITIONS[partition][CLUSTER] != SOFIA:
-        cache_cmd.append('--create-spider-cache')
+    # always create the Lmod cache, then create the Open OnDemand module indexes
+    cache_calls = [' '.join([run_lmod_cache, '--create-cache'] + common_opts)]
 
-    # sofia zen4_h200 requires at least 1 GPU per job
-    gpus_sbatch = '#SBATCH --gpus-per-node=1\n' if cluster == SOFIA and partition == 'zen4_h200' else ''
+    if arch['ondemand_mod_index'] == '1':
+        # the module index is named after the Open OnDemand cluster, so create
+        # an index for the cluster of the CPU partition and, when different,
+        # also for the cluster of the GPU partition of the arch
+        index_clusters = [PARTITIONS[arch['partition']['cpu']]['cluster']]
+        gpu_partition = arch['partition']['gpu']
+        if gpu_partition:
+            gpu_cluster = PARTITIONS[gpu_partition]['cluster']
+            if gpu_cluster not in index_clusters:
+                index_clusters.append(gpu_cluster)
+
+        for index_cluster in index_clusters:
+            spider_opts = ['--create-spider-cache', f'--cluster-name {index_cluster}']
+            cache_calls.append(' '.join([run_lmod_cache] + common_opts + spider_opts))
+
+    # chain the calls so each module index is only created when the
+    # previous call succeeded
+    return ' && '.join(cache_calls)
+
+
+def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
+    """
+    Run Lmod cache in a Slurm job
+    :param partition: the partition to submit the job to
+    :param jobids_depend: list of strings: jobids on which to set job dependency
+    """
+
+    cluster = PARTITIONS[partition]['cluster']
+    archdir = PARTITIONS[partition]['arch']
+
+    # partitions with gpu_required need a GPU device and the partition's
+    # number of tasks for all their jobs
+    gpu_required = PARTITIONS[partition]['gpu_required']
+    gpus_sbatch = f"#SBATCH {PARTITIONS[partition]['gpus']}\n" if gpu_required else ''
+    tasks = PARTITIONS[partition]['tasks'] if gpu_required else 1
 
     cache_job = LMOD_CACHE_JOB_TEMPLATE.format(
         jobids_depend=f',afterok:{":".join(jobids_depend)}' if jobids_depend else '',
         partition=partition,
+        tasks=tasks,
         gpus=gpus_sbatch,
-        cache_cmd=' '.join(cache_cmd),
+        cache_cmd=make_cmd_lmod_cache(archdir),
         archdir=archdir,
     )
 
     job_file = write_tempfile(cache_job)
 
     logger.info(
-        "Refreshing Lmod cache on partition %s for architecture %s", partition or 'default', archdir or 'default')
+        "Refreshing Lmod cache on partition %s for architecture %s", partition, archdir)
     ec, out = submit_job_script(job_file, cluster=cluster, **kwargs)
 
     if ec != 0:

@@ -44,7 +44,23 @@ IB_MODULE_SOFTWARE = {
     }
 }
 
-IB_OPT_MARK = ['verbs', 'VERBS', 'rdma']
+# names of InfiniBand-related option tokens (without the value part after '=')
+IB_OPT_NAMES = {
+    '--with-verbs',
+    '--without-verbs',
+    '--with-rdmacm',
+    '--without-rdmacm',
+    '--enable-verbs',
+    'USE_IBVERBS',
+}
+
+
+def is_ib_option(opt):
+    """
+    Return True if the given option token is an InfiniBand-related option
+    """
+    return opt.split('=')[0].strip() in IB_OPT_NAMES
+
 
 # version suffix of IB archs and modules
 IB_MODULE_SUFFIX = '-ib'
