@@ -67,6 +67,7 @@ ARCHS = {
                 'gpu': 'pascal_gpu',
             },
             'cuda_cc': ['6.0', '6.1'],  # Tesla P100, GeForce 1080Ti
+            'ondemand_mod_index': "0",
         },
         'zen2-ib': {
             'default': True,
@@ -75,6 +76,7 @@ ARCHS = {
                 'gpu': 'ampere_gpu',
             },
             'cuda_cc': ['8.0'],  # A100
+            'ondemand_mod_index': "0",
         },
         'zen3': {
             'default': False,
@@ -82,6 +84,8 @@ ARCHS = {
                 'cpu': 'zen3',
                 'gpu': None,
             },
+            'cuda_cc': None,
+            'ondemand_mod_index': "0",
         },
         'zen3-ib': {
             'default': False,
@@ -89,6 +93,8 @@ ARCHS = {
                 'cpu': 'zen3_mpi',
                 'gpu': None,
             },
+            'cuda_cc': None,
+            'ondemand_mod_index': "0",
         },
         'zen4': {
             'default': True,
@@ -96,6 +102,8 @@ ARCHS = {
                 'cpu': 'zen4',
                 'gpu': None,
             },
+            'cuda_cc': None,
+            'ondemand_mod_index': "0",
         },
         'zen5-ib': {
             'default': True,
@@ -123,6 +131,7 @@ ARCHS = {
                 'gpu': 'zen4_h200',
             },
             'cuda_cc': ['9.0'],
+            'ondemand_mod_index': "0",
         },
     },
 }
