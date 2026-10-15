@@ -36,18 +36,12 @@ LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 """
 
 
-def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
+def make_cmd_lmod_cache(archdir):
     """
-    Run Lmod cache in a Slurm job
-    :param partition: the partition to submit the job to
-    :param jobids_depend: list of strings: jobids on which to set job dependency
+    Generate the command to refresh the Lmod cache of an architecture
 
-    if cluster is None, load the cluster module corresponding to the current partition
-    if cluster is False, don't purge/load a cluster module (use the currently active cluster)
+    :param archdir: the architecture to create the cache for
     """
-
-    cluster = PARTITIONS[partition]['cluster']
-    archdir = PARTITIONS[partition]['arch']
     arch = ARCHS[MACHINE][archdir]
 
     run_lmod_cache = '/usr/libexec/lmod/run_lmod_cache.py'
@@ -74,6 +68,21 @@ def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
             spider_opts = ['--create-spider-cache', f'--cluster-name {index_cluster}']
             cache_calls.append(' '.join([run_lmod_cache] + common_opts + spider_opts))
 
+    # chain the calls so each module index is only created when the
+    # previous call succeeded
+    return ' && '.join(cache_calls)
+
+
+def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
+    """
+    Run Lmod cache in a Slurm job
+    :param partition: the partition to submit the job to
+    :param jobids_depend: list of strings: jobids on which to set job dependency
+    """
+
+    cluster = PARTITIONS[partition]['cluster']
+    archdir = PARTITIONS[partition]['arch']
+
     # partitions with gpu_required need a GPU device and the partition's
     # number of tasks for all their jobs
     gpu_required = PARTITIONS[partition]['gpu_required']
@@ -85,9 +94,7 @@ def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
         partition=partition,
         tasks=tasks,
         gpus=gpus_sbatch,
-        # chain the calls so each module index is only created when the
-        # previous call succeeded
-        cache_cmd=' && '.join(cache_calls),
+        cache_cmd=make_cmd_lmod_cache(archdir),
         archdir=archdir,
     )
 

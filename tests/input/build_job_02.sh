@@ -102,34 +102,8 @@ fi
 
 builds_succeeded=$(grep "^BUILD_TOOLS: builds_succeeded" "$eb_stderr")
 if [[ "0" == "1" && -n "${builds_succeeded}" ]];then
-    job_options=(
-        --wait
-        --time=1:0:0
-        --output=%x_%j.log
-        --job-name=lmod_cache_zen2-ib
-        --dependency=singleton
-        --partition=ampere_gpu
-    )
-    if [[ "ampere_gpu" == "zen4_h200" ]]; then
-        # sofia zen4_h200 requires at least 1 GPU
-        job_options+=(--gpus-per-node=1)
-    fi
-    cmd=(
-        /usr/libexec/lmod/run_lmod_cache.py
-        --create-cache
-        --architecture zen2-ib
-        --module-basedir /apps/brussel/$VSC_OS_LOCAL
-    )
-    if [[ "0" == "1" ]]; then
-        cmd+=(--create-spider-cache)
-    fi
-    echo "BUILD_TOOLS: submitting Lmod cache update job on partition ampere_gpu for architecture zen2-ib"
-    # quote each argument so options containing spaces survive --wrap
-    wrap_cmd=""
-    for arg in "${cmd[@]}"; do
-        wrap_cmd+=" "$(printf '%q' "$arg")
-    done
-    sbatch "${job_options[@]}" --wrap "$wrap_cmd"
+    echo "BUILD_TOOLS: updating Lmod cache for architecture zen2-ib"
+    /usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen2-ib --module-basedir /apps/brussel/${VSC_OS_LOCAL:?}
 fi
 
 if [[ -n "${builds_succeeded}" ]]; then

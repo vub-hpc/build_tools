@@ -125,34 +125,8 @@ fi
 
 builds_succeeded=$$(grep "^BUILD_TOOLS: builds_succeeded" "$$eb_stderr")
 if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
-    job_options=(
-        --wait
-        --time=1:0:0
-        --output=%x_%j.log
-        --job-name=lmod_cache_${host_arch}
-        --dependency=singleton
-        --partition=${partition}
-    )
-    if [[ "${partition}" == "zen4_h200" ]]; then
-        # sofia zen4_h200 requires at least 1 GPU
-        job_options+=(--gpus-per-node=1)
-    fi
-    cmd=(
-        /usr/libexec/lmod/run_lmod_cache.py
-        --create-cache
-        --architecture ${host_arch}
-        --module-basedir /apps/${machine}/$$VSC_OS_LOCAL
-    )
-    if [[ "${ondemand_mod_index}" == "1" ]]; then
-        cmd+=(--create-spider-cache)
-    fi
-    echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${host_arch}"
-    # quote each argument so options containing spaces survive --wrap
-    wrap_cmd=""
-    for arg in "$${cmd[@]}"; do
-        wrap_cmd+=" "$$(printf '%q' "$$arg")
-    done
-    sbatch "$${job_options[@]}" --wrap "$$wrap_cmd"
+    echo "BUILD_TOOLS: updating Lmod cache for architecture ${host_arch}"
+    ${lmod_cache_cmd}
 fi
 
 if [[ -n "$${builds_succeeded}" ]]; then

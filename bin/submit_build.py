@@ -33,7 +33,7 @@ from build_tools.hooks_hydra import (
     SUFFIX_MODULES_SYMLINK,
     VALID_MODULES_SUBDIRS,
 )
-from build_tools.lmodtools import submit_lmod_cache_job
+from build_tools.lmodtools import make_cmd_lmod_cache, submit_lmod_cache_job
 from build_tools.package import VERSION
 from build_tools.softinstall import mk_job_name, run_no_shell, submit_build_job
 
@@ -367,7 +367,7 @@ def main():
                 'eb_options': " ".join(job_eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
-                'ondemand_mod_index': ARCHS[MACHINE][host_arch]['ondemand_mod_index'],
+                'lmod_cache_cmd': make_cmd_lmod_cache(host_arch),
             }
         )
 

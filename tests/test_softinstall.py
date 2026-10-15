@@ -69,7 +69,14 @@ def test_mk_job_name(test_name):
             'job_name': 'test-job',
             'langcode': 'C',
             'lmod_cache': '1',
-            'ondemand_mod_index': '1',
+            'lmod_cache_cmd': (
+                '/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen5-ib '
+                '--module-basedir /apps/brussel/${VSC_OS_LOCAL:?} && '
+                '/usr/libexec/lmod/run_lmod_cache.py --architecture zen5-ib '
+                '--module-basedir /apps/brussel/${VSC_OS_LOCAL:?} --create-spider-cache --cluster-name hydra && '
+                '/usr/libexec/lmod/run_lmod_cache.py --architecture zen5-ib '
+                '--module-basedir /apps/brussel/${VSC_OS_LOCAL:?} --create-spider-cache --cluster-name anansi'
+            ),
             'machine': 'brussel',
             'nodes': 1,
             'partition': 'zen5_mpi',
@@ -90,7 +97,10 @@ def test_mk_job_name(test_name):
             'job_name': 'test-job-gpu',
             'langcode': 'C',
             'lmod_cache': '0',
-            'ondemand_mod_index': '0',
+            'lmod_cache_cmd': (
+                '/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen2-ib '
+                '--module-basedir /apps/brussel/${VSC_OS_LOCAL:?}'
+            ),
             'machine': 'brussel',
             'nodes': 1,
             'partition': 'ampere_gpu',
@@ -209,7 +219,14 @@ def test_submit_build_job_removes_job_file(monkeypatch, caplog):
         'job_name': 'test-job',
         'langcode': 'C',
         'lmod_cache': '1',
-        'ondemand_mod_index': '1',
+        'lmod_cache_cmd': (
+            '/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen5-ib '
+            '--module-basedir /apps/brussel/${VSC_OS_LOCAL:?} && '
+            '/usr/libexec/lmod/run_lmod_cache.py --architecture zen5-ib '
+            '--module-basedir /apps/brussel/${VSC_OS_LOCAL:?} --create-spider-cache --cluster-name hydra && '
+            '/usr/libexec/lmod/run_lmod_cache.py --architecture zen5-ib '
+            '--module-basedir /apps/brussel/${VSC_OS_LOCAL:?} --create-spider-cache --cluster-name anansi'
+        ),
         'machine': 'brussel',
         'nodes': 1,
         'partition': 'zen5_mpi',
