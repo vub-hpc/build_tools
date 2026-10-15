@@ -4,4 +4,4 @@
 #SBATCH --job-name=lmod_cache_zen5-ib
 #SBATCH --dependency=singleton
 #SBATCH --partition=zen5_vis
-/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen5-ib --module-basedir /apps/sofia/${VSC_OS_LOCAL:?} --create-spider-cache
+/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen5-ib --module-basedir /apps/sofia/${VSC_OS_LOCAL:?} && /usr/libexec/lmod/run_lmod_cache.py --architecture zen5-ib --module-basedir /apps/sofia/${VSC_OS_LOCAL:?} --create-spider-cache --cluster-name sofia

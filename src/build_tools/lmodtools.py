@@ -49,15 +49,30 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
     if cluster is None:
         cluster = PARTITIONS[partition]['cluster']
 
-    cache_cmd = [
-        '/usr/libexec/lmod/run_lmod_cache.py',
-        '--create-cache',
+    arch = ARCHS[MACHINE][archdir]
+    run_lmod_cache = '/usr/libexec/lmod/run_lmod_cache.py'
+    common_opts = [
         f'--architecture {archdir}',
         f'--module-basedir {APPS}/{MACHINE}/${{VSC_OS_LOCAL:?}}',
     ]
 
-    if ARCHS[MACHINE][archdir]['ondemand_mod_index'] == '1':
-        cache_cmd.append('--create-spider-cache')
+    # always create the Lmod cache, then create the Open OnDemand module indexes
+    cache_calls = [' '.join([run_lmod_cache, '--create-cache'] + common_opts)]
+
+    if arch['ondemand_mod_index'] == '1':
+        # the module index is named after the Open OnDemand cluster, so create
+        # an index for the cluster of the CPU partition and, when different,
+        # also for the cluster of the GPU partition of the arch
+        index_clusters = [PARTITIONS[arch['partition']['cpu']]['cluster']]
+        gpu_partition = arch['partition']['gpu']
+        if gpu_partition:
+            gpu_cluster = PARTITIONS[gpu_partition]['cluster']
+            if gpu_cluster not in index_clusters:
+                index_clusters.append(gpu_cluster)
+
+        for index_cluster in index_clusters:
+            spider_opts = ['--create-spider-cache', f'--cluster-name {index_cluster}']
+            cache_calls.append(' '.join([run_lmod_cache] + common_opts + spider_opts))
 
     # sofia zen4_h200 requires at least 1 GPU per job
     gpus_sbatch = '#SBATCH --gpus-per-node=1\n' if cluster == SOFIA and partition == 'zen4_h200' else ''
@@ -66,7 +81,9 @@ def submit_lmod_cache_job(partition, jobids_depend=None, cluster=None, **kwargs)
         jobids_depend=f',afterok:{":".join(jobids_depend)}' if jobids_depend else '',
         partition=partition,
         gpus=gpus_sbatch,
-        cache_cmd=' '.join(cache_cmd),
+        # chain the calls so each module index is only created when the
+        # previous call succeeded
+        cache_cmd=' && '.join(cache_calls),
         archdir=archdir,
     )
 
