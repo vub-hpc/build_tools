@@ -19,71 +19,58 @@ Functions related to the software installation
 """
 
 import os
-import re
+import shlex
+import subprocess
+import sys
 
-from vsc.utils import fancylogger
-from vsc.utils.run import RunNoShell, RunLoopStdout
-
+from build_tools import stdlib_logger
 from build_tools.filetools import write_tempfile
 from build_tools.jobtemplate import BuildJob
 
-logger = fancylogger.getLogger()
-
-TOOLCHAIN_FORMAT = r"20[1-2][0-9][ab]"
-
-SUBTOOLCHAINS = {
-    '2024a': ['GCCcore-13.3.0', 'GCC-13.3.0', 'intel-compilers-2024.2.0'],
-    '2025a': ['GCCcore-14.2.0', 'GCC-14.2.0', 'intel-compilers-2025.1.1'],
-}
+logger = stdlib_logger(__name__)
 
 
-def set_toolchain_generation(easyconfig, user_toolchain=False):
+def run_no_shell(cmd):
     """
-    Determine toolchain generation from easyconfig
-    Use user_toolchain if it is a valid toolchain_generation
-    :param easyconfig: filename of the target easyconfig
-    :param easycinfig: string with toolchain specification
+    Run a command without using a shell, return (exit_code, output)
     """
-    toolchain_generation = None
-
-    if user_toolchain:
-        if re.match('^' + TOOLCHAIN_FORMAT + '$', user_toolchain):
-            toolchain_generation = user_toolchain
-        else:
-            logger.error("Specified toolchain generation is not valid: %s", user_toolchain)
-            return False
-    else:
-        found_tc = re.findall(TOOLCHAIN_FORMAT, easyconfig)
-        found_tc = set(found_tc)  # remove duplicates (multiple toolchain labels might present in long paths)
-        if len(found_tc) == 1:
-            toolchain_generation = found_tc.pop()
-        else:
-            # Try to determine toolchain generation based on sub-toolchain
-            for main_tc, sub_tc in SUBTOOLCHAINS.items():
-                if any([re.search(tc, easyconfig) for tc in sub_tc]):
-                    toolchain_generation = main_tc
-                    break
-
-    logger.debug("Toolchain generation: %s", toolchain_generation)
-
-    return toolchain_generation
+    proc = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+    return proc.returncode, proc.stdout + proc.stderr
 
 
-def mk_job_name(easyconfig, host_arch, target_arch=None):
+def run_loop_stdout(cmd):
     """
-    Return name for job script as {easyconfig name}-{host_arch}-{target_arch}
-    :param easyconfig: path to easyconfig
+    Run a command using a shell, writing its output to stdout as it is produced,
+    return (exit_code, output)
+    """
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    out_lines = []
+    for line in proc.stdout:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        out_lines.append(line)
+    ec = proc.wait()
+    return ec, ''.join(out_lines)
+
+
+def mk_job_name(easyconfigs, host_arch):
+    """
+    Return name for job script as {easyconfig names}-{host_arch},
+    where {easyconfig names} is a concatenation of the names of all given easyconfigs
+    :param easyconfigs: space-separated string with path(s) to easyconfig(s)
     :param host_arch: name of host architecture
-    :param host_arch: name of target architecture
     """
+    names = []
+    for easyconfig in easyconfigs.split():
+        name = os.path.basename(easyconfig)
+        if name.endswith('.eb'):
+            name = name[:-3]
+        names.append(name)
 
-    job_name = re.sub('.eb$', '', os.path.basename(easyconfig))
+    job_name = '-'.join(names)
 
     if host_arch:
         job_name += '-%s' % host_arch
-
-    if target_arch and target_arch != host_arch:
-        job_name += '-%s' % target_arch
 
     return job_name
 
@@ -98,14 +85,15 @@ def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, 
     :param dry_run: print submit command
     """
 
-    submit_cmd = []
-    # switch to corresponding cluster and submit
+    sbatch_args = ['sbatch']
+    # switch to corresponding cluster via the Slurm -M option
     if cluster:
-        submit_cmd.append("module --force purge")
-        submit_cmd.append(f"module load cluster/{cluster}")
-
-    submit_cmd.append(f"sbatch --parsable {sub_options} {job_file}")
-    submit_cmd = " && ".join(submit_cmd)
+        sbatch_args.extend(['-M', cluster])
+    sbatch_args.append('--parsable')
+    if sub_options:
+        sbatch_args.extend(shlex.split(sub_options))
+    sbatch_args.append(job_file)
+    submit_cmd = " ".join(shlex.quote(arg) for arg in sbatch_args)
 
     if dry_run:
         log_msg = f"(DRY RUN) Job submission command: {submit_cmd}"
@@ -113,10 +101,11 @@ def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, 
         ec, out = 0, log_msg
     elif local_exec:
         logger.debug("Local execution of job script: %s", job_file)
-        ec, out = RunLoopStdout.run(f"bash {job_file}")
+        ec, out = run_loop_stdout(f"bash {job_file}")
     else:
         logger.debug("Job submission command: %s", submit_cmd)
-        ec, out = RunNoShell.run(f'bash -c "{submit_cmd}"')
+        proc = subprocess.run(sbatch_args, capture_output=True, text=True)
+        ec, out = proc.returncode, proc.stdout + proc.stderr
 
     return ec, out
 

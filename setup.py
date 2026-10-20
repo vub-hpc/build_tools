@@ -34,7 +34,7 @@ setuptools.setup(
     description="Tools to build and install software",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://vub-hpc/build_tools",
+    url="https://github.com/vub-hpc/build_tools",
 
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
@@ -47,17 +47,16 @@ setuptools.setup(
 
     python_requires='~=3.9',
     install_requires=[
-        'vsc-base',
-        'vsc-utils',
-        'easybuild',
+        'easybuild-framework',
+        'easybuild-easyblocks',
+        'easybuild-easyconfigs',
         'flufl.lock',
         'pyyaml',
     ],
-    tests_require=[
-        'pytest',
-    ],
-    package_data={
-        "build_tools": ["footers/*.footer"],
+    extras_require={
+        'test': [
+            'pytest',
+        ],
     },
     zip_safe=False,
 )

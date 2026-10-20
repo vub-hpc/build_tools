@@ -18,25 +18,14 @@ Unit tests configuration file
 """
 
 import os
-import pytest
+import sys
 
-from easybuild.tools.options import set_up_configuration
+import pytest
 
 os.environ["VSC_INSTITUTE_CLUSTER"] = "hydra"
 
-
-def pytest_addoption(parser):
-    parser.addoption(
-        '--fromsource', action='store_true', help='run the tests on the source tree without installing first')
-
-
-@pytest.fixture
-def get_module_cmd(request):
-    fromsource = request.config.getoption('fromsource')
-    if fromsource:
-        return '../bin/ec2ml.py'
-    else:
-        return 'ec2ml.py'
+# test the source tree of this repository, even if a different build_tools is installed
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
 
 @pytest.fixture
@@ -47,18 +36,3 @@ def rootdir():
 @pytest.fixture
 def inputdir(rootdir):
     return os.path.join(rootdir, 'input')
-
-
-def realpath_apps_brussel(path):
-    return path.replace('/apps/brussel', '/vscmnt/brussel_pixiu_apps/_apps_brussel')
-
-
-@pytest.fixture
-def mock_realpath_apps_brussel(monkeypatch):
-    monkeypatch.setattr('os.path.realpath', realpath_apps_brussel)
-
-
-@pytest.fixture
-def set_up_config():
-    set_up_configuration(silent=True)
-    yield

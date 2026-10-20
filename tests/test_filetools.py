@@ -14,58 +14,168 @@
 Unit tests for build_tools.filetools
 
 @author: Alex Domingo (Vrije Universiteit Brussel)
-author: Samuel Moors (Vrije Universiteit Brussel)
+@author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
-import shutil
+
+import pytest
 
 from build_tools import filetools
-
-MODULERC = """-- VERSION SWAPS FOR IB MODULES
-local arch_suffix=os.getenv("VSC_ARCH_SUFFIX") or ""
-if ( arch_suffix == "-ib") then
-    module_version("OpenMPI/4.1.1-GCC-10.3.0-ib", "4.1.1-GCC-10.3.0")
-    module_version("OpenMPI/4.0.5-GCC-10.2.0-ib", "4.0.5-GCC-10.2.0")
-end
--- END OF VERSION SWAPS FOR IB MODULES"""
 
 
 def test_write_tempfile():
     contents = "Hello world!"
     tmp_file = filetools.write_tempfile(contents)
 
-    with open(tmp_file) as tf:
-        tmp_file_contents = tf.read()
+    try:
+        with open(tmp_file) as tf:
+            tmp_file_contents = tf.read()
 
-    assert tmp_file_contents == contents
-
-
-def test_clean_append_new(tmpdir):
-    modrc_path = os.path.join(tmpdir.strpath, '.modulerc.lua')
-    filetools.clean_append(modrc_path, MODULERC)
-
-    with open(modrc_path, 'r') as mf:
-        modrc_text = mf.read()
-
-    assert modrc_text == MODULERC
+        assert tmp_file_contents == contents
+    finally:
+        os.unlink(tmp_file)
 
 
-def test_clean_append_old(inputdir, tmpdir):
-    old_modulerc = os.path.join(inputdir, 'modulerc_01.lua')
-    modrc_path = os.path.join(tmpdir.strpath, '.modulerc.lua')
+def test_acquire_fetch_lock(tmp_path):
+    lockfile = tmp_path / '.locks' / 'z_zlib.lock'
+    log = logging.getLogger('test_filetools')
 
-    shutil.copyfile(old_modulerc, modrc_path)
-    filetools.clean_append(modrc_path, MODULERC)
+    lock = filetools.acquire_fetch_lock(str(lockfile), log)
 
-    with open(modrc_path, 'r') as mf:
-        modrc_text = mf.read()
+    assert lockfile.is_file()
+    assert lock.lockfile == str(lockfile)
 
-    ref_modrc_text = """-- default version of Java 1.8
-module_version("Java/1.8.0_281", "1.8")
 
--- hide all GCC v4.x
-hide_version("GCCcore/4")
-%s""" % MODULERC
+def test_release_fetch_lock(tmp_path, caplog):
+    lockfile = tmp_path / '.locks' / 'z_zlib.lock'
+    log = logging.getLogger('test_filetools')
 
-    assert modrc_text == ref_modrc_text
+    lock = filetools.acquire_fetch_lock(str(lockfile), log)
+    filetools.release_fetch_lock(lock, log)
+
+    assert not lockfile.is_file()
+
+    # releasing an already released lock only logs a warning
+    with caplog.at_level(logging.WARNING):
+        filetools.release_fetch_lock(lock, log)
+    assert 'was already released' in caplog.text
+
+
+def test_acquire_fetch_lock_waits(monkeypatch, tmp_path):
+    sleeps = []
+    monkeypatch.setattr(filetools.time, 'sleep', sleeps.append)
+    attempts = []
+
+    class FakeLock:
+        def __init__(self, lockfile, **kwargs):
+            self.lockfile = lockfile
+
+        @property
+        def state(self):
+            return filetools.LockState.unknown
+
+        def lock(self):
+            attempts.append(1)
+            if len(attempts) <= 2:
+                raise filetools.TimeOutError('held')
+
+    monkeypatch.setattr(filetools, 'Lock', FakeLock)
+
+    filetools.acquire_fetch_lock(str(tmp_path / '.locks' / 'z_zlib.lock'),
+                                 logging.getLogger('test_filetools'))
+
+    assert len(attempts) == 3
+    assert sleeps == [60, 60]
+
+
+def test_acquire_fetch_lock_timeout(monkeypatch, tmp_path):
+    monkeypatch.setattr(filetools.time, 'sleep', lambda s: None)
+
+    class FakeLock:
+        def __init__(self, lockfile, **kwargs):
+            self.lockfile = lockfile
+
+        @property
+        def state(self):
+            return filetools.LockState.unknown
+
+        def lock(self):
+            raise filetools.TimeOutError('held')
+
+    monkeypatch.setattr(filetools, 'Lock', FakeLock)
+
+    with pytest.raises(RuntimeError, match='Maximum wait time'):
+        filetools.acquire_fetch_lock(str(tmp_path / '.locks' / 'z_zlib.lock'),
+                                     logging.getLogger('test_filetools'))
+
+
+class FakeStaleLock:
+    """Lock stand-in that simulates a lock left behind by a killed build"""
+
+    def __init__(self, lockfile, **kwargs):
+        self.lockfile = lockfile
+
+    @property
+    def state(self):
+        return filetools.LockState.stale if os.path.exists(self.lockfile) else filetools.LockState.unlocked
+
+    def lock(self):
+        if os.path.exists(self.lockfile):
+            raise filetools.TimeOutError('held')
+
+    def unlock(self):
+        pass
+
+
+def test_acquire_fetch_lock_stale(tmp_path, monkeypatch, caplog):
+    # leave a lock behind, as a killed build would
+    lockfile = tmp_path / '.locks' / 'z_zlib.lock'
+    lockfile.parent.mkdir(parents=True, exist_ok=True)
+    lockfile.write_text(f'{lockfile}|localhost|1234|random')
+    monkeypatch.setattr(filetools, 'Lock', FakeStaleLock)
+    log = logging.getLogger('test_filetools')
+
+    with caplog.at_level(logging.INFO):
+        filetools.acquire_fetch_lock(str(lockfile), log)
+
+    assert not lockfile.is_file()
+    assert 'is stale' in caplog.text
+
+
+def test_acquire_fetch_lock_stale_already_broken(tmp_path, monkeypatch):
+    # another build breaks the stale lock between the state check and the removal
+    lockfile = tmp_path / '.locks' / 'z_zlib.lock'
+    lockfile.parent.mkdir(parents=True, exist_ok=True)
+    lockfile.write_text(f'{lockfile}|localhost|1234|random')
+    monkeypatch.setattr(filetools, 'Lock', FakeStaleLock)
+    removed = []
+    real_remove = os.remove
+
+    def fake_remove(path):
+        if not removed:
+            removed.append(path)
+            raise FileNotFoundError(path)
+        real_remove(path)
+
+    monkeypatch.setattr(filetools.os, 'remove', fake_remove)
+
+    filetools.acquire_fetch_lock(str(lockfile), logging.getLogger('test_filetools'))
+
+    assert len(removed) == 1
+    assert not lockfile.is_file()
+
+
+def test_write_tempfile_ioerror(monkeypatch, caplog):
+    def fake_named_tempfile(*args, **kwargs):
+        raise IOError("fake IO error")
+
+    monkeypatch.setattr(filetools.tempfile, 'NamedTemporaryFile', fake_named_tempfile)
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(SystemExit) as exc:
+            filetools.write_tempfile("Hello world!")
+
+    assert exc.value.code == 1
+    assert "Error writing tmp file" in caplog.text

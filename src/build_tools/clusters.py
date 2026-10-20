@@ -18,184 +18,241 @@ Cluster parameters for build submission script
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 import os
+import sys
 
+from build_tools import stdlib_logger
+
+logger = stdlib_logger(__name__)
 
 ANANSI = 'anansi'
 APPS = '/apps'
-ARCH = 'arch'
 BRUSSEL = 'brussel'
-CLUSTER = 'cluster'
-CPU = 'cpu'
-DEFAULT = 'default'
 GENT = 'gent'
-GPU = 'gpu'
 HYDRA = 'hydra'
 MANTICORE = 'manticore'
-PARTITION = 'partition'
 SOFIA = 'sofia'
 SOURCES = 'sources'
 
+# job options
+SINGLENODE = 1
+THREEHOURS = '03:00:00'
+HALFDAY = '11:59:59'
+
+SMALL_JOB = {
+    'tasks': 2,
+    'walltime': THREEHOURS,
+}
+
+# determine running machine
 VSC_INSTITUTE_CLUSTER = os.getenv('VSC_INSTITUTE_CLUSTER')
 if not VSC_INSTITUTE_CLUSTER:
-    raise ValueError("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+    logger.error("VSC_INSTITUTE_CLUSTER environment variable is undefined")
+    sys.exit(1)
 
+MACHINE = BRUSSEL
 if VSC_INSTITUTE_CLUSTER == SOFIA:
     MACHINE = SOFIA
-else:
-    MACHINE = BRUSSEL
 
 # CPU architecture name including suffix with network fabric
-# default: software will be installed by default using this partitions
-# eb: extra options for EasyBuild in this architecture
+# default: software will be installed by default using this partition
 # partition: dict with default CPU and GPU partitions for this arch
-# cuda_cc: suported CUDA compute capabilities in the GPU partition
+# cuda_cc: all CUDA compute capabilities that must be supported on this arch
+#          (empty for CPU-only archs)
+# ondemand_mod_index: also create the Open OnDemand module index for this arch
 ARCHS = {
     BRUSSEL: {
         'broadwell': {
-            DEFAULT: True,
-            PARTITION: {
-                CPU: 'pascal_gpu',
-                GPU: 'pascal_gpu',
+            'default': True,
+            'partition': {
+                'cpu': 'pascal_gpu',
+                'gpu': 'pascal_gpu',
             },
             'cuda_cc': ['6.0', '6.1'],  # Tesla P100, GeForce 1080Ti
-        },
-        'haswell-ib': {
-            DEFAULT: False,
-            PARTITION: {
-                CPU: 'haswell_mpi',
-                GPU: None,
-            },
-        },
-        'skylake': {
-            DEFAULT: False,
-            PARTITION: {
-                CPU: 'skylake',
-                GPU: None,
-            },
-        },
-        'skylake-ib': {
-            DEFAULT: False,
-            PARTITION: {
-                CPU: 'skylake_mpi',
-                GPU: None,
-            },
+            'ondemand_mod_index': "0",
         },
         'zen2-ib': {
-            DEFAULT: True,
-            PARTITION: {
-                CPU: 'ampere_gpu',  # no non-gpu partition available yet
-                GPU: 'ampere_gpu',
+            'default': True,
+            'partition': {
+                'cpu': 'ampere_gpu',  # no non-gpu partition available yet
+                'gpu': 'ampere_gpu',
             },
             'cuda_cc': ['8.0'],  # A100
+            'ondemand_mod_index': "0",
         },
         'zen3': {
-            DEFAULT: False,
-            PARTITION: {
-                CPU: 'zen3',
-                GPU: None,
+            'default': False,
+            'partition': {
+                'cpu': 'zen3',
+                'gpu': None,
             },
+            'cuda_cc': [],
+            'ondemand_mod_index': "0",
         },
         'zen3-ib': {
-            DEFAULT: False,
-            PARTITION: {
-                CPU: 'zen3_mpi',
-                GPU: None,
+            'default': False,
+            'partition': {
+                'cpu': 'zen3_mpi',
+                'gpu': None,
             },
+            'cuda_cc': [],
+            'ondemand_mod_index': "0",
         },
         'zen4': {
-            DEFAULT: True,
-            PARTITION: {
-                CPU: 'zen4',
-                GPU: None,
+            'default': True,
+            'partition': {
+                'cpu': 'zen4',
+                'gpu': None,
             },
+            'cuda_cc': [],
+            'ondemand_mod_index': "0",
         },
         'zen5-ib': {
-            DEFAULT: True,
-            PARTITION: {
-                CPU: 'zen5_mpi',
-                GPU: 'ada_gpu',
+            'default': True,
+            'partition': {
+                'cpu': 'zen5_mpi',
+                'gpu': 'ada_gpu',
             },
             'cuda_cc': ['8.9', '9.0'],  # L40S, H200
-            'lmod_json_spider_cache': "1",
+            'ondemand_mod_index': "1",
         },
-    }, SOFIA: {
+    },
+    SOFIA: {
         'zen5-ib': {
-            DEFAULT: True,
-            PARTITION: {
-                CPU: 'zen5_vis',
-                GPU: 'zen5_vis',
+            'default': True,
+            'partition': {
+                'cpu': 'zen5_vis',
+                'gpu': 'zen5_vis',
             },
             'cuda_cc': ['8.9'],
+            'ondemand_mod_index': "1",
         },
         'zen4-ib': {
-            DEFAULT: True,
-            PARTITION: {
-                CPU: 'zen4_h200',
-                GPU: 'zen4_h200',
+            'default': True,
+            'partition': {
+                'cpu': 'zen4_h200',
+                'gpu': 'zen4_h200',
             },
             'cuda_cc': ['9.0'],
+            'ondemand_mod_index': "0",
         },
     },
 }
 
 # The key name should match the partition name in Slurm
 # cluster: name of the cluster
-
+# arch: architecture of the partition
+# walltime: walltime for build jobs on this partition
+# nodes: default number of nodes for build jobs on this partition
+# tasks: default number of tasks for build jobs on this partition
+# gpus: Slurm GPU options for build jobs on this partition (empty for CPU partitions)
+# gpu_required: the partition requires a GPU device for all jobs on it
 PARTITIONS = {
     'ada_gpu': {
-        CLUSTER: ANANSI,
-        ARCH: 'zen5-ib',
+        'cluster': ANANSI,
+        'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '--gres=shard:1',
+        'gpu_required': False,
     },
     'ampere_gpu': {
-        CLUSTER: HYDRA,
-        ARCH: 'zen2-ib',
+        'cluster': HYDRA,
+        'arch': 'zen2-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '--gpus-per-node=1',
+        'gpu_required': False,
     },
     'hopper_gpu': {
-        CLUSTER: HYDRA,
-        ARCH: 'zen5-ib',
+        'cluster': HYDRA,
+        'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '--gpus-per-node=1',
+        'gpu_required': False,
     },
     'pascal_gpu': {
-        CLUSTER: HYDRA,
-        ARCH: 'broadwell',
-    },
-    'skylake': {
-        CLUSTER: HYDRA,
-        ARCH: 'skylake',
-    },
-    'skylake_mpi': {
-        CLUSTER: HYDRA,
-        ARCH: 'skylake-ib',
+        'cluster': HYDRA,
+        'arch': 'broadwell',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '--gpus-per-node=1',
+        'gpu_required': False,
     },
     'zen3': {
-        CLUSTER: MANTICORE,
-        ARCH: 'zen3',
+        'cluster': MANTICORE,
+        'arch': 'zen3',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '',
+        'gpu_required': False,
     },
     'zen3_mpi': {
-        CLUSTER: MANTICORE,
-        ARCH: 'zen3-ib',
+        'cluster': MANTICORE,
+        'arch': 'zen3-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '',
+        'gpu_required': False,
     },
     'zen4': {
-        CLUSTER: HYDRA,
-        ARCH: 'zen4',
+        'cluster': HYDRA,
+        'arch': 'zen4',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '',
+        'gpu_required': False,
     },
     'zen5_mpi': {
-        CLUSTER: HYDRA,
-        ARCH: 'zen5-ib',
+        'cluster': HYDRA,
+        'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 4,
+        'gpus': '',
+        'gpu_required': False,
     },
     'zen4_h200': {
-        CLUSTER: SOFIA,
-        ARCH: 'zen4-ib',
+        'cluster': SOFIA,
+        'arch': 'zen4-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 24,
+        'gpus': '--gpus-per-node=1',
+        'gpu_required': True,
     },
     'zen5_dense': {
-        CLUSTER: SOFIA,
-        ARCH: 'zen5-ib',
+        'cluster': SOFIA,
+        'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 8,
+        'gpus': '',
+        'gpu_required': False,
     },
     'zen5_himem': {
-        CLUSTER: SOFIA,
-        ARCH: 'zen5-ib',
+        'cluster': SOFIA,
+        'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 8,
+        'gpus': '',
+        'gpu_required': False,
     },
     'zen5_vis': {
-        CLUSTER: SOFIA,
-        ARCH: 'zen5-ib',
+        'cluster': SOFIA,
+        'arch': 'zen5-ib',
+        'walltime': HALFDAY,
+        'nodes': SINGLENODE,
+        'tasks': 8,
+        'gpus': '',
+        'gpu_required': False,
     },
 }

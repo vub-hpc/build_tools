@@ -16,15 +16,20 @@ Unit tests for build_tools.lmodtools
 @author: Samuel Moors (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
 
+import pytest
+
+from build_tools import lmodtools
+from build_tools.clusters import BRUSSEL, SOFIA
 from build_tools.lmodtools import submit_lmod_cache_job
 
 
 def test_submit_lmod_cache_job(inputdir):
     job_script = 'lmod_cache_job_01.sh'
 
-    _, out = submit_lmod_cache_job('skylake_mpi', jobids_depend=['123', '456'], dry_run=True)
+    _, out = submit_lmod_cache_job('zen5_mpi', jobid='123', dry_run=True)
 
     new_job = out.split(' ')[-1]
     with open(new_job) as nj:
@@ -37,9 +42,11 @@ def test_submit_lmod_cache_job(inputdir):
     assert new_job_contents == ref_job_contents
 
 
-def test_submit_lmod_cache_job_gpu_required(inputdir):
+def test_submit_lmod_cache_job_gpu_required(monkeypatch, inputdir):
     # sofia zen4_h200 requires at least 1 GPU, otherwise the job gets blocked
     job_script = 'lmod_cache_job_02.sh'
+
+    monkeypatch.setattr(lmodtools, 'MACHINE', SOFIA)
 
     _, out = submit_lmod_cache_job('zen4_h200', dry_run=True)
 
@@ -52,3 +59,53 @@ def test_submit_lmod_cache_job_gpu_required(inputdir):
         ref_job_contents = rj.read().rstrip()
 
     assert new_job_contents == ref_job_contents
+
+
+def test_submit_lmod_cache_job_mod_index(monkeypatch, inputdir):
+    # brussel zen5-ib has ondemand_mod_index enabled in the arch definitions
+    job_script = 'lmod_cache_job_03.sh'
+
+    monkeypatch.setattr(lmodtools, 'MACHINE', BRUSSEL)
+
+    _, out = submit_lmod_cache_job('zen5_mpi', dry_run=True)
+
+    new_job = out.split(' ')[-1]
+    with open(new_job) as nj:
+        new_job_contents = nj.read().rstrip()
+
+    ref_job = os.path.join(inputdir, job_script)
+    with open(ref_job) as rj:
+        ref_job_contents = rj.read().rstrip()
+
+    assert new_job_contents == ref_job_contents
+
+
+def test_submit_lmod_cache_job_sofia_mod_index(monkeypatch, inputdir):
+    # sofia zen5-ib (partition zen5_vis) has ondemand_mod_index enabled in the arch definitions
+    job_script = 'lmod_cache_job_04.sh'
+
+    monkeypatch.setattr(lmodtools, 'MACHINE', SOFIA)
+
+    _, out = submit_lmod_cache_job('zen5_vis', dry_run=True)
+
+    new_job = out.split(' ')[-1]
+    with open(new_job) as nj:
+        new_job_contents = nj.read().rstrip()
+
+    ref_job = os.path.join(inputdir, job_script)
+    with open(ref_job) as rj:
+        ref_job_contents = rj.read().rstrip()
+
+    assert new_job_contents == ref_job_contents
+
+
+def test_submit_lmod_cache_job_failure(monkeypatch, caplog):
+    monkeypatch.setattr(lmodtools, 'write_tempfile', lambda script: '/tmp/fake_cache_job.sh')
+    monkeypatch.setattr(lmodtools, 'submit_job_script', lambda *args, **kwargs: (1, 'fake submission error'))
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(SystemExit) as exc:
+            submit_lmod_cache_job('zen5_mpi')
+
+    assert exc.value.code == 1
+    assert "Failed to submit Lmod cache job: fake submission error" in caplog.text

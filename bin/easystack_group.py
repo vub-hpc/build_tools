@@ -56,7 +56,11 @@ def main():
 
     if len(groups) != 1:
         raise ValueError(f'more than 1 user group found: {groups}')
-    print(groups.pop())
+    group = groups.pop()
+    if group is None:
+        # none of the easyconfigs define a user group, print nothing
+        return
+    print(group)
 
 
 if __name__ == "__main__":

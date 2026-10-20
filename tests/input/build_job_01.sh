@@ -60,6 +60,7 @@ if [ "0" == 1 ]; then
 fi
 
 eb_stderr=$(mktemp).eb_stderr
+trap 'rm -f "$eb_stderr"' EXIT
 $EB zlib-1.2.11.eb  2>"$eb_stderr"
 
 ec=$?
@@ -100,32 +101,6 @@ if [ "0" == 1 ]; then
 fi
 
 builds_succeeded=$(grep "^BUILD_TOOLS: builds_succeeded" "$eb_stderr")
-if [[ "1" == "1" && -n "${builds_succeeded}" ]];then
-    job_options=(
-        --wait
-        --time=1:0:0
-        --output=%x_%j.log
-        --job-name=lmod_cache_zen5-ib
-        --dependency=singleton
-        --partition=zen5_mpi
-    )
-    if [[ "zen5_mpi" == "zen4_h200" ]]; then
-        # sofia zen4_h200 requires at least 1 GPU
-        job_options+=(--gpus-per-node=1)
-    fi
-    cmd=(
-        /usr/libexec/lmod/run_lmod_cache.py
-        --create-cache
-        --architecture zen5-ib
-        --module-basedir /apps/brussel/$VSC_OS_LOCAL
-    )
-    if [[ "1" == "1" ]]; then
-        cmd+=(--create-spider-cache)
-    fi
-    echo "BUILD_TOOLS: submitting Lmod cache update job on partition zen5_mpi for architecture zen5-ib"
-    sbatch "${job_options[@]}" --wrap "${cmd[*]}"
-fi
-
 if [[ -n "${builds_succeeded}" ]]; then
     logger -t build_tools -p user.notice -- "partition=zen5_mpi architecture=zen5-ib easyconfig=zlib-1.2.11.eb"
 fi
