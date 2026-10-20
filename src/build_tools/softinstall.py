@@ -104,7 +104,8 @@ def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, 
         ec, out = run_loop_stdout(f"bash {job_file}")
     else:
         logger.debug("Job submission command: %s", submit_cmd)
-        ec, out = run_no_shell(f'bash -c "{submit_cmd}"')
+        proc = subprocess.run(sbatch_args, capture_output=True, text=True)
+        ec, out = proc.returncode, proc.stdout + proc.stderr
 
     return ec, out
 

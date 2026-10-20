@@ -18,6 +18,7 @@ Unit tests for build_tools.softinstall
 
 import logging
 import os
+import subprocess
 
 import pytest
 
@@ -180,18 +181,18 @@ def test_submit_job_script_local_exec(tmp_path):
 def test_submit_job_script_sbatch(monkeypatch):
     submitted = []
 
-    def fake_run_no_shell(cmd):
-        submitted.append(cmd)
-        return 0, '12345'
+    def fake_run(args, **kwargs):
+        submitted.append(args)
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout='12345', stderr='')
 
-    monkeypatch.setattr(softinstall, 'run_no_shell', fake_run_no_shell)
+    monkeypatch.setattr(softinstall.subprocess, 'run', fake_run)
 
     ec, out = softinstall.submit_job_script('test.job', sub_options='--mem=32G', cluster='chimera')
 
     assert ec == 0
     assert out == '12345'
     assert len(submitted) == 1
-    assert submitted[0] == 'bash -c "sbatch -M chimera --parsable --mem=32G test.job"'
+    assert submitted[0] == ['sbatch', '-M', 'chimera', '--parsable', '--mem=32G', 'test.job']
 
 
 def test_submit_build_job_removes_job_file(monkeypatch, caplog):
