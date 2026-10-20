@@ -101,11 +101,6 @@ if [ "1" == 1 ]; then
 fi
 
 builds_succeeded=$(grep "^BUILD_TOOLS: builds_succeeded" "$eb_stderr")
-if [[ "0" == "1" && -n "${builds_succeeded}" ]];then
-    echo "BUILD_TOOLS: updating Lmod cache for architecture zen2-ib"
-    /usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen2-ib --module-basedir /apps/brussel/${VSC_OS_LOCAL:?}
-fi
-
 if [[ -n "${builds_succeeded}" ]]; then
     logger -t build_tools -p user.notice -- "partition=ampere_gpu architecture=zen2-ib easyconfig=zlib-1.2.11.eb"
 fi

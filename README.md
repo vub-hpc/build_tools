@@ -211,9 +211,9 @@ The Open OnDemand module browser lists the installed modules from a JSON
 index of the Lmod module database, instead of running `module` commands.
 For the architectures with the `ondemand_mod_index` option set to `1` in
 `ARCHS` (currently `zen5-ib` on brussel and on sofia), the Lmod cache
-job that runs after a successful build, and the cache jobs submitted
-with `submit_build.py -m only`, additionally run
-`run_lmod_cache.py --create-spider-cache`. That uses Lmod's standalone
+job submitted after a build (which waits for the build job to complete
+successfully), and the cache jobs submitted with `submit_build.py -m
+only`, additionally run `run_lmod_cache.py --create-spider-cache`. That uses Lmod's standalone
 `spider` tool with the JSON reporter to dump the module database as a
 JSON file in the `cacheDir` of the architecture.
 

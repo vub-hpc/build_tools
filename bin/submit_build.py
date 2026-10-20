@@ -33,7 +33,7 @@ from build_tools.hooks_hydra import (
     SUFFIX_MODULES_SYMLINK,
     VALID_MODULES_SUBDIRS,
 )
-from build_tools.lmodtools import make_cmd_lmod_cache, submit_lmod_cache_job
+from build_tools.lmodtools import submit_lmod_cache_job
 from build_tools.package import VERSION
 from build_tools.softinstall import mk_job_name, run_no_shell, submit_build_job
 
@@ -147,7 +147,6 @@ def main():
         'bwrap': '0',
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
-        'lmod_cache': '1',
         'machine': MACHINE,
         'tmp': '/dev/shm',
         'venv_activate': os.getenv('VSC_VENV_ACTIVATE', '$HOME/EB5/eb5env/bin/activate'),
@@ -188,7 +187,6 @@ def main():
     # Handle Lmod cache options
     # (early due to potential skip)
     if opts.lmod_cache == 'skip':
-        job['lmod_cache'] = '0'
         logger.info("Not running Lmod cache after installation")
     elif opts.lmod_cache == 'only':
         for arch in DEFAULT_ARCHS:
@@ -367,7 +365,6 @@ def main():
                 'eb_options': " ".join(job_eb_options),
                 'eb_buildpath': ebconf['buildpath'],
                 'eb_installpath': ebconf['installpath'],
-                'lmod_cache_cmd': make_cmd_lmod_cache(host_arch),
             }
         )
 
@@ -393,6 +390,13 @@ def main():
         if ec != 0:
             logger.error("Failed to submit or run build job for '%s': %s", easyconfig, buildjob_out)
             sys.exit(1)
+
+        # submit a secondary job to create the module cache,
+        # waiting for the build job to complete successfully
+        # (no jobid in case of a dry run or a local build)
+        if opts.lmod_cache != 'skip':
+            build_jobid = buildjob_out.strip() if not dry_run and not local_exec else None
+            submit_lmod_cache_job(job_partition, jobid=build_jobid, dry_run=dry_run)
 
 
 if __name__ == '__main__':

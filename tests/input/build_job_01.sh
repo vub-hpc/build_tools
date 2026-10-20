@@ -101,11 +101,6 @@ if [ "0" == 1 ]; then
 fi
 
 builds_succeeded=$(grep "^BUILD_TOOLS: builds_succeeded" "$eb_stderr")
-if [[ "1" == "1" && -n "${builds_succeeded}" ]];then
-    echo "BUILD_TOOLS: updating Lmod cache for architecture zen5-ib"
-    /usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen5-ib --module-basedir /apps/brussel/${VSC_OS_LOCAL:?} && /usr/libexec/lmod/run_lmod_cache.py --architecture zen5-ib --module-basedir /apps/brussel/${VSC_OS_LOCAL:?} --create-spider-cache --cluster-name hydra && /usr/libexec/lmod/run_lmod_cache.py --architecture zen5-ib --module-basedir /apps/brussel/${VSC_OS_LOCAL:?} --create-spider-cache --cluster-name anansi
-fi
-
 if [[ -n "${builds_succeeded}" ]]; then
     logger -t build_tools -p user.notice -- "partition=zen5_mpi architecture=zen5-ib easyconfig=zlib-1.2.11.eb"
 fi

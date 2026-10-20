@@ -124,11 +124,6 @@ if [ "${bwrap}" == 1 ]; then
 fi
 
 builds_succeeded=$$(grep "^BUILD_TOOLS: builds_succeeded" "$$eb_stderr")
-if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
-    echo "BUILD_TOOLS: updating Lmod cache for architecture ${host_arch}"
-    ${lmod_cache_cmd}
-fi
-
 if [[ -n "$${builds_succeeded}" ]]; then
     logger -t build_tools -p user.notice -- "partition=${partition} architecture=${host_arch} easyconfig=${easyconfig}"
 fi

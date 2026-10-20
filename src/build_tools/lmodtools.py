@@ -28,7 +28,7 @@ LMOD_CACHE_JOB_TEMPLATE = """#!/bin/bash
 #SBATCH --time=1:0:0
 #SBATCH --output=%x_%j.log
 #SBATCH --job-name=lmod_cache_{archdir}
-#SBATCH --dependency=singleton{jobids_depend}
+#SBATCH --dependency={dependency}
 #SBATCH --partition={partition}
 #SBATCH --nodes=1
 #SBATCH --ntasks={tasks}
@@ -73,11 +73,11 @@ def make_cmd_lmod_cache(archdir):
     return ' && '.join(cache_calls)
 
 
-def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
+def submit_lmod_cache_job(partition, jobid=None, **kwargs):
     """
     Run Lmod cache in a Slurm job
     :param partition: the partition to submit the job to
-    :param jobids_depend: list of strings: jobids on which to set job dependency
+    :param jobid: Slurm jobid the job waits for with an afterok dependency, or None
     """
 
     cluster = PARTITIONS[partition]['cluster']
@@ -89,8 +89,14 @@ def submit_lmod_cache_job(partition, jobids_depend=None, **kwargs):
     gpus_sbatch = f"#SBATCH {PARTITIONS[partition]['gpus']}\n" if gpu_required else ''
     tasks = PARTITIONS[partition]['tasks'] if gpu_required else 1
 
+    # singleton avoids concurrent cache creations;
+    # when a jobid is given, also wait for it to complete successfully
+    dependency = 'singleton'
+    if jobid is not None:
+        dependency += f',afterok:{jobid}'
+
     cache_job = LMOD_CACHE_JOB_TEMPLATE.format(
-        jobids_depend=f',afterok:{":".join(jobids_depend)}' if jobids_depend else '',
+        dependency=dependency,
         partition=partition,
         tasks=tasks,
         gpus=gpus_sbatch,
