@@ -54,19 +54,11 @@ def make_cmd_lmod_cache(archdir):
     cache_calls = [' '.join([run_lmod_cache, '--create-cache'] + common_opts)]
 
     if arch['ondemand_mod_index'] == '1':
-        # the module index is named after the Open OnDemand cluster, so create
-        # an index for the cluster of the CPU partition and, when different,
-        # also for the cluster of the GPU partition of the arch
-        index_clusters = [PARTITIONS[arch['partition']['cpu']]['cluster']]
-        gpu_partition = arch['partition']['gpu']
-        if gpu_partition:
-            gpu_cluster = PARTITIONS[gpu_partition]['cluster']
-            if gpu_cluster not in index_clusters:
-                index_clusters.append(gpu_cluster)
+        # generate extra module index for ondemand on selected archs
+        # the module index is named after the machine running the selected arch
+        spider_opts = ['--create-spider-cache', f'--site-name {MACHINE}']
 
-        for index_cluster in index_clusters:
-            spider_opts = ['--create-spider-cache', f'--cluster-name {index_cluster}']
-            cache_calls.append(' '.join([run_lmod_cache] + common_opts + spider_opts))
+        cache_calls.append(' '.join([run_lmod_cache] + common_opts + spider_opts))
 
     # chain the calls so each module index is only created when the
     # previous call succeeded

@@ -63,7 +63,7 @@ def test_submit_lmod_cache_job_gpu_required(monkeypatch, inputdir):
 
 def test_submit_lmod_cache_job_mod_index(monkeypatch, inputdir):
     # brussel zen5-ib has ondemand_mod_index enabled in the arch definitions
-    job_script = 'lmod_cache_job_03.sh'
+    job_script = 'lmod_cache_job_10.sh'
 
     monkeypatch.setattr(lmodtools, 'MACHINE', BRUSSEL)
 
@@ -80,9 +80,28 @@ def test_submit_lmod_cache_job_mod_index(monkeypatch, inputdir):
     assert new_job_contents == ref_job_contents
 
 
+def test_submit_lmod_cache_job_mod_index_gpu(monkeypatch, inputdir):
+    # brussel zen5-ib has ondemand_mod_index enabled in the arch definitions
+    job_script = 'lmod_cache_job_11.sh'
+
+    monkeypatch.setattr(lmodtools, 'MACHINE', BRUSSEL)
+
+    _, out = submit_lmod_cache_job('ada_gpu', dry_run=True)
+
+    new_job = out.split(' ')[-1]
+    with open(new_job) as nj:
+        new_job_contents = nj.read().rstrip()
+
+    ref_job = os.path.join(inputdir, job_script)
+    with open(ref_job) as rj:
+        ref_job_contents = rj.read().rstrip()
+
+    assert new_job_contents == ref_job_contents
+
+
 def test_submit_lmod_cache_job_sofia_mod_index(monkeypatch, inputdir):
     # sofia zen5-ib (partition zen5_vis) has ondemand_mod_index enabled in the arch definitions
-    job_script = 'lmod_cache_job_04.sh'
+    job_script = 'lmod_cache_job_12.sh'
 
     monkeypatch.setattr(lmodtools, 'MACHINE', SOFIA)
 
