@@ -101,109 +101,109 @@ with the `--gpu` option:
   GPU partitions of the architectures that have them, with the partition's
   `gpus` job option; other software and architectures without a GPU
   partition use the regular CPU partitions.
-* `--gpu detect-nodevice`: same detection, but the `gpus` job option is
-  not added to the job file (exception: partitions with
-  `gpu_required: true`): the jobs run either on CPU partitions or on
-  GPU partitions.
+* `--gpu detect-nodevice`: same behaviour as `--gpu detect`, but the `gpus`
+  job option is not added to the job file (exception: partitions with
+  `gpu_required: true`).
 * `--gpu force`: the detection of GPU software is disabled and all jobs
   are submitted to the GPU partitions of the architectures that have them,
-  with the partition's `gpus` job option; architectures without a GPU
+  including the partition's `gpus` job option; architectures without a GPU
   partition use their regular CPU partition.
 * `--gpu force-nodevice`: same as `--gpu force`, but the `gpus` job
   option is not added to the job file (exception: partitions with
   `gpu_required: true`).
 
-An explicitly given `--partition` always overrides this behaviour.
+**Note**: an explicitly given `--partition` always overrides this behaviour.
 
-Without an explicit `--partition`, `detect*` submits GPU software to the
-GPU partition of the architecture and all other software to its CPU
-partition, while `force*` submits all software to the GPU partition (or
-to the CPU partition when the architecture has no GPU partition).
+The tables below show the explicit outcome of each option for every combination
+of easyconfig type, `--gpu` option and GPU required state, the partition type
+the job is submitted to and whether it gets the partition's `gpus` option (i.e.
+a GPU device). CPU partitions do not define a `gpus` option, so jobs
+on them never request a GPU device.
 
 Architectures come in three flavours, which give different results for
 the same combination of options:
 
-* CPU-only architectures: the `gpu` partition is `None`, for example
+* _CPU-only architectures_: the `gpu` partition is `None`, for example
   `zen3`, `zen3-ib` and `zen4` on brussel.
-* GPU-only architectures: the `cpu` and `gpu` partitions are the same
+* _GPU-only architectures_: the `cpu` and `gpu` partitions are the same
   partition, for example `broadwell` and `zen2-ib` on brussel and
-  `zen5-ib` and `zen4-ib` on sofia.
-* CPU/GPU architectures: the `cpu` and `gpu` partitions are different,
+  and `zen4-ib` on sofia.
+* _CPU/GPU architectures_: the `cpu` and `gpu` partitions are different,
   for example `zen5-ib` on brussel.
 
-The tables below show, for every combination of easyconfig type, `--gpu`
-option and GPU required state, the partition type the job is submitted
-to and whether it gets the partition's `gpus` option (i.e. a GPU
-device). The GPU required state shown is that of the partition the job
-is submitted to. CPU partitions do not define a `gpus` option, so jobs
-on them never request a GPU device.
+### GPU detect
 
-### CPU-only architectures
+Jobs launched with option `--gpu detect`
 
-Architectures with a CPU partition but no GPU partition.
+| easyconfig       | Architecture type    | Partition result | GPU device |
+|------------------|----------------------|------------------|------------|
+| non-GPU software | CPU-only             | cpu              | no         |
+| non-GPU software | GPU-only             | cpu (i.e. gpu)   | no         |
+| non-GPU software | GPU-only /w GPU req. | cpu (i.e. gpu)   | yes        |
+| non-GPU software | CPU/GPU              | cpu              | no         |
+| non-GPU software | CPU/GPU /w GPU req.  | cpu              | no         |
+| GPU software     | CPU-only             | cpu              | no         |
+| GPU software     | GPU-only             | gpu              | yes        |
+| GPU software     | GPU-only /w GPU req. | gpu              | yes        |
+| GPU software     | CPU/GPU              | gpu              | yes        |
+| GPU software     | CPU/GPU /w GPU req.  | gpu              | yes        |
 
-| easyconfig       | `--gpu` option    | GPU required | Partition result | GPU device |
-|------------------|-------------------|--------------|------------------|------------|
-| non-GPU software | `detect`          | false        | cpu              | no         |
-| non-GPU software | `detect`          | true         | cpu              | no         |
-| non-GPU software | `detect-nodevice` | false        | cpu              | no         |
-| non-GPU software | `detect-nodevice` | true         | cpu              | no         |
-| non-GPU software | `force`           | false        | cpu              | no         |
-| non-GPU software | `force`           | true         | cpu              | no         |
-| non-GPU software | `force-nodevice`  | false        | cpu              | no         |
-| non-GPU software | `force-nodevice`  | true         | cpu              | no         |
-| GPU software     | `detect`          | false        | cpu              | no         |
-| GPU software     | `detect`          | true         | cpu              | no         |
-| GPU software     | `detect-nodevice` | false        | cpu              | no         |
-| GPU software     | `detect-nodevice` | true         | cpu              | no         |
-| GPU software     | `force`           | false        | cpu              | no         |
-| GPU software     | `force`           | true         | cpu              | no         |
-| GPU software     | `force-nodevice`  | false        | cpu              | no         |
-| GPU software     | `force-nodevice`  | true         | cpu              | no         |
+### GPU detect without a device
 
-### GPU-only architectures
+Jobs launched with option `--gpu detect-nodevice`
 
-Architectures with a GPU partition as CPU partition.
+| easyconfig       | Architecture type    | Partition result | GPU device |
+|------------------|----------------------|------------------|------------|
+| non-GPU software | CPU-only             | cpu              | no         |
+| non-GPU software | GPU-only             | cpu (i.e. gpu)   | no         |
+| non-GPU software | GPU-only /w GPU req. | cpu (i.e. gpu)   | yes        |
+| non-GPU software | CPU/GPU              | cpu              | no         |
+| non-GPU software | CPU/GPU /w GPU req.  | cpu              | no         |
+| GPU software     | CPU-only             | cpu              | no         |
+| GPU software     | GPU-only             | gpu              | **no**     |
+| GPU software     | GPU-only /w GPU req. | gpu              | yes        |
+| GPU software     | CPU/GPU              | gpu              | **no**     |
+| GPU software     | CPU/GPU /w GPU req.  | gpu              | yes        |
 
-| easyconfig       | `--gpu` option    | GPU required | Partition result | GPU device |
-|------------------|-------------------|--------------|------------------|------------|
-| non-GPU software | `detect`          | false        | cpu (same as gpu)| no         |
-| non-GPU software | `detect`          | true         | cpu (same as gpu)| yes        |
-| non-GPU software | `detect-nodevice` | false        | cpu (same as gpu)| no         |
-| non-GPU software | `detect-nodevice` | true         | cpu (same as gpu)| yes        |
-| non-GPU software | `force`           | false        | gpu              | yes        |
-| non-GPU software | `force`           | true         | gpu              | yes        |
-| non-GPU software | `force-nodevice`  | false        | gpu              | no         |
-| non-GPU software | `force-nodevice`  | true         | gpu              | yes        |
-| GPU software     | `detect`          | false        | gpu              | yes        |
-| GPU software     | `detect`          | true         | gpu              | yes        |
-| GPU software     | `detect-nodevice` | false        | gpu              | no         |
-| GPU software     | `detect-nodevice` | true         | gpu              | yes        |
-| GPU software     | `force`           | false        | gpu              | yes        |
-| GPU software     | `force`           | true         | gpu              | yes        |
-| GPU software     | `force-nodevice`  | false        | gpu              | no         |
-| GPU software     | `force-nodevice`  | true         | gpu              | yes        |
+Entries in **bold** highlight changes with respect to `--gpu detect`.
 
-### CPU/GPU architectures
+### GPU force
 
-| easyconfig       | `--gpu` option    | GPU required | Partition result | GPU device |
-|------------------|-------------------|--------------|------------------|------------|
-| non-GPU software | `detect`          | false        | cpu              | no         |
-| non-GPU software | `detect`          | true         | cpu              | no         |
-| non-GPU software | `detect-nodevice` | false        | cpu              | no         |
-| non-GPU software | `detect-nodevice` | true         | cpu              | no         |
-| non-GPU software | `force`           | false        | gpu              | yes        |
-| non-GPU software | `force`           | true         | gpu              | yes        |
-| non-GPU software | `force-nodevice`  | false        | gpu              | no         |
-| non-GPU software | `force-nodevice`  | true         | gpu              | yes        |
-| GPU software     | `detect`          | false        | gpu              | yes        |
-| GPU software     | `detect`          | true         | gpu              | yes        |
-| GPU software     | `detect-nodevice` | false        | gpu              | no         |
-| GPU software     | `detect-nodevice` | true         | gpu              | yes        |
-| GPU software     | `force`           | false        | gpu              | yes        |
-| GPU software     | `force`           | true         | gpu              | yes        |
-| GPU software     | `force-nodevice`  | false        | gpu              | no         |
-| GPU software     | `force-nodevice`  | true         | gpu              | yes        |
+Jobs launched with option `--gpu force`
+
+| easyconfig       | Architecture type    | Partition result | GPU device |
+|------------------|----------------------|------------------|------------|
+| non-GPU software | CPU-only             | cpu              | no         |
+| non-GPU software | GPU-only             | **gpu**          | **yes**    |
+| non-GPU software | GPU-only /w GPU req. | **gpu**          | yes        |
+| non-GPU software | CPU/GPU              | **gpu**          | **yes**    |
+| non-GPU software | CPU/GPU /w GPU req.  | **gpu**          | **yes**    |
+| GPU software     | CPU-only             | cpu              | no         |
+| GPU software     | GPU-only             | gpu              | yes        |
+| GPU software     | GPU-only /w GPU req. | gpu              | yes        |
+| GPU software     | CPU/GPU              | gpu              | yes        |
+| GPU software     | CPU/GPU /w GPU req.  | gpu              | yes        |
+
+Entries in **bold** highlight changes with respect to `--gpu detect`.
+
+### GPU force without a device
+
+Jobs launched with option `--gpu force-nodevice`
+
+| easyconfig       | Architecture type    | Partition result | GPU device |
+|------------------|----------------------|------------------|------------|
+| non-GPU software | CPU-only             | cpu              | no         |
+| non-GPU software | GPU-only             | **gpu**          | no         |
+| non-GPU software | GPU-only /w GPU req. | **gpu**          | yes        |
+| non-GPU software | CPU/GPU              | **gpu**          | no         |
+| non-GPU software | CPU/GPU /w GPU req.  | **gpu**          | **yes**    |
+| GPU software     | CPU-only             | cpu              | no         |
+| GPU software     | GPU-only             | gpu              | **no**     |
+| GPU software     | GPU-only /w GPU req. | gpu              | yes        |
+| GPU software     | CPU/GPU              | gpu              | **no**     |
+| GPU software     | CPU/GPU /w GPU req.  | gpu              | yes        |
+
+Entries in **bold** highlight changes with respect to `--gpu detect`.
 
 ## Open OnDemand module index
 
@@ -213,9 +213,9 @@ For the architectures with the `ondemand_mod_index` option set to `1` in
 `ARCHS` (currently `zen5-ib` on brussel and on sofia), the Lmod cache
 job submitted after a build (which waits for the build job to complete
 successfully), and the cache jobs submitted with `submit_build.py -m
-only`, additionally run `run_lmod_cache.py --create-spider-cache`. That uses Lmod's standalone
-`spider` tool with the JSON reporter to dump the module database as a
-JSON file in the `cacheDir` of the architecture.
+only`, additionally run `run_lmod_cache.py --create-spider-cache`. That uses
+Lmod's standalone `spider` tool with the JSON reporter to dump the module
+database as a JSON file in the `cacheDir` of the architecture.
 
 The Open OnDemand servers point their `module_file_dir` configuration
 option at that `cacheDir` and read the index file from there. The file
