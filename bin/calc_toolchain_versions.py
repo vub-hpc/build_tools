@@ -42,9 +42,9 @@ def calc_tc_versions(valid_toolchains):
         for tc_name in tcgen_spec['toolchains']:
             try:
                 tcgen_versions.extend(get_toolchain_hierarchy({'name': tc_name, 'version': tcgen}))
-            except EasyBuildError:
+            except EasyBuildError as err:
                 # skip if no easyconfig found for toolchain-version
-                pass
+                print(f"WARNING: {tc_name}/{tcgen}: {err}", file=sys.stderr)
         tc_versions[tcgen] = {
             'toolchains': tcgen_versions,
             'subdir': tcgen_spec['subdir'],

@@ -16,7 +16,10 @@ Unit tests for build_tools.softinstall
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
 
+import logging
 import os
+import subprocess
+
 import pytest
 
 from build_tools import softinstall
@@ -30,20 +33,20 @@ from build_tools import softinstall
             ['zlib-1.2.11.eb', None]
         ),
         (
-            'zlib-1.2.11-skylake',
-            ['zlib-1.2.11.eb', 'skylake']
+            'zlib-1.2.11-zen5-ib',
+            ['zlib-1.2.11.eb', 'zen5-ib']
         ),
         (
-            'zlib-1.2.11-skylake-ivybridge',
-            ['zlib-1.2.11.eb', 'skylake', 'ivybridge'],
+            'zlib-1.2.11-zen5-ib',
+            ['test/subdir/zlib-1.2.11.eb', 'zen5-ib'],
         ),
         (
-            'zlib-1.2.11-skylake',
-            ['test/subdir/zlib-1.2.11.eb', 'skylake'],
+            'zlib-1.2.11-ngzip-2.3.3',
+            ['zlib-1.2.11.eb ngzip-2.3.3.eb', None]
         ),
         (
-            'zlib-1.2.11-skylake',
-            ['test/subdir/zlib-1.2.11.eb', 'skylake', 'skylake'],
+            'zlib-1.2.11-ngzip-2.3.3-zen5-ib',
+            ['zlib-1.2.11.eb test/subdir/ngzip-2.3.3.eb', 'zen5-ib'],
         ),
     ]
 )
@@ -58,58 +61,51 @@ def test_mk_job_name(test_name):
     'test_job',
     [
         ('build_job_01.sh', {
+            'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
             'bwrap': '0',
             'easyconfig': 'zlib-1.2.11.eb',
             'eb_buildpath': '/tmp/eb-test-build',
-            'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/zen5-ib',
             'eb_options': '',
             'gpus': '',
             'job_name': 'test-job',
             'langcode': 'C',
-            'lmod_cache': '1',
-            'lmod_json_spider_cache': '1',
             'machine': 'brussel',
             'nodes': 1,
             'partition': 'zen5_mpi',
-            'postinstall': '',
-            'pre_eb_options': '',
             'robot_paths': '/some/path',
-            'subdir_modules_bwrap': '.modules_bwrap',
-            'target_arch': 'zen5-ib',
+            'host_arch': 'zen5-ib',
             'tasks': 4,
             'tmp': '/tmp/eb-test-build',
+            'venv_activate': '$HOME/EB5/eb5env/bin/activate',
             'walltime': '23:59:59',
         }),
         ('build_job_02.sh', {
+            'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
             'bwrap': 1,
             'easyconfig': 'zlib-1.2.11.eb',
             'eb_buildpath': '/tmp/eb-test-build',
-            'eb_installpath': '/apps/brussel/${VSC_OS_LOCAL}/zen2-ib',
             'eb_options': '--cuda-compute-capabilities=8.0',
             'gpus': '--gpus-per-node=1',
             'job_name': 'test-job-gpu',
             'langcode': 'C',
-            'lmod_cache': '0',
-            'lmod_json_spider_cache': '0',
             'machine': 'brussel',
             'nodes': 1,
             'partition': 'ampere_gpu',
-            'postinstall': 'rsync src dest',
             'robot_paths': '/some/path',
-            'subdir_modules_bwrap': '.modules_bwrap',
-            'target_arch': 'zen2-ib',
+            'host_arch': 'zen2-ib',
             'tasks': 4,
             'tmp': '/tmp/eb-test-build',
+            'venv_activate': '$HOME/EB5/eb5env/bin/activate',
             'walltime': '23:59:59',
         }),
     ]
 )
-def test_submit_build_job(inputdir, test_job):
+def test_run_build_job(inputdir, test_job):
     (job_script, job_options) = test_job
     sub_options = ''
     cluster = 'hydra'
 
-    ec, out = softinstall.submit_build_job(
+    ec, jobid, out = softinstall.run_build_job(
         job_options, keep_job=True, sub_options=sub_options, cluster=cluster, local_exec=False, dry_run=True
     )
 
@@ -122,6 +118,15 @@ def test_submit_build_job(inputdir, test_job):
         ref_job_contents = rj.read().rstrip()
 
     assert new_job_contents == ref_job_contents
+    assert jobid is None
+
+    ec, jobid, out = softinstall.run_build_job(
+        job_options, keep_job=True, sub_options=sub_options, cluster=cluster, local_exec=True, dry_run=True
+    )
+
+    assert ec == 0
+    assert jobid is None
+    assert "Local" in out
 
 
 def test_submit_job_script():
@@ -129,10 +134,111 @@ def test_submit_job_script():
     sub_options = '--mem=32G'
     cluster = 'chimera'
 
-    ec, out = softinstall.submit_job_script(
-        job_file, sub_options, cluster=cluster, local_exec=False, dry_run=True
+    ec, jobid, out = softinstall.submit_job_script(
+        job_file, sub_options, cluster=cluster, dry_run=True
     )
 
-    assert out == ("(DRY RUN) Job submission command: module --force purge && "
-                   "module load cluster/chimera && "
-                   "sbatch --parsable --mem=32G test.job")
+    assert jobid is None
+    assert out == ("(DRY RUN) Job submission command: "
+                   "sbatch -M chimera --parsable --mem=32G test.job")
+
+
+def test_submit_job_script_quoted_options():
+    job_file = 'test.job'
+    sub_options = '--mem=32G --comment="my job"'
+
+    ec, jobid, out = softinstall.submit_job_script(
+        job_file, sub_options, cluster=None, dry_run=True
+    )
+
+    assert jobid is None
+    assert out == ("(DRY RUN) Job submission command: "
+                   "sbatch --parsable --mem=32G '--comment=my job' test.job")
+
+
+def test_run_no_shell():
+    ec, out = softinstall.run_no_shell("echo hello")
+
+    assert ec == 0
+    assert out == "hello\n"
+
+    ec, out = softinstall.run_no_shell("false")
+
+    assert ec != 0
+
+
+def test_run_loop_stdout(capsys):
+    ec, out = softinstall.run_loop_stdout("bash -c 'echo line1; echo line2'")
+
+    assert ec == 0
+    assert out == "line1\nline2\n"
+
+    # the output must also be written to stdout as it is produced
+    captured = capsys.readouterr()
+    assert "line1" in captured.out
+    assert "line2" in captured.out
+
+
+def test_submit_job_script_sbatch(monkeypatch):
+    submitted = []
+
+    def fake_run(args, **kwargs):
+        submitted.append(args)
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout='12345;chimera', stderr='')
+
+    monkeypatch.setattr(softinstall.subprocess, 'run', fake_run)
+
+    ec, jobid, out = softinstall.submit_job_script('test.job', sub_options='--mem=32G', cluster='chimera')
+
+    assert ec == 0
+    assert jobid == 12345
+    assert out == '12345;chimera'
+    assert len(submitted) == 1
+    assert submitted[0] == ['sbatch', '-M', 'chimera', '--parsable', '--mem=32G', 'test.job']
+
+
+def test_run_build_job_removes_job_file(monkeypatch, caplog):
+    job_options = {
+        'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
+        'bwrap': '0',
+        'easyconfig': 'zlib-1.2.11.eb',
+        'eb_buildpath': '/tmp/eb-test-build',
+        'eb_options': '',
+        'gpus': '',
+        'job_name': 'test-job',
+        'langcode': 'C',
+        'machine': 'brussel',
+        'nodes': 1,
+        'partition': 'zen5_mpi',
+        'robot_paths': '/some/path',
+        'host_arch': 'zen5-ib',
+        'tasks': 4,
+        'tmp': '/tmp/eb-test-build',
+        'venv_activate': '$HOME/EB5/eb5env/bin/activate',
+        'walltime': '23:59:59',
+    }
+
+    # with keep_job=False the job script file is removed after submission
+    ec, jobid, out = softinstall.run_build_job(
+        job_options, keep_job=False, sub_options='', cluster='hydra', local_exec=False, dry_run=True
+    )
+
+    assert ec == 0
+    assert jobid is None
+    job_file = out.split(' ')[-1]
+    assert not os.path.exists(job_file)
+
+    # an error removing the job file is logged, not raised
+    def fake_remove(path):
+        raise OSError("fake remove error")
+
+    monkeypatch.setattr(softinstall.os, 'remove', fake_remove)
+
+    with caplog.at_level(logging.ERROR):
+        ec, jobid, out = softinstall.run_build_job(
+            job_options, keep_job=False, sub_options='', cluster='hydra', local_exec=False, dry_run=True
+        )
+
+    assert ec == 0
+    assert jobid is None
+    assert "Failed to remove job file" in caplog.text

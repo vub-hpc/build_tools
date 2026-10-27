@@ -32,7 +32,7 @@ BUILD_JOB = """\
 #SBATCH ${gpus}
 
 # activate build_tools virtual environment
-source "$$HOME/EB5/eb5env/bin/activate"
+source "${venv_activate}"
 
 # set environment
 export BUILD_TOOLS_LOAD_DUMMY_MODULES=1
@@ -67,9 +67,9 @@ if [ "${bwrap}" == 1 ]; then
     done <<< "$$output"
     echo "BUILD_TOOLS: modname $$modname modversion $$modversion"
     [[ -n $$modname && -n $$modversion ]] || { echo "ERROR: failed to get modname and/or modversion"; exit 1; }
-    appsmnt="/vscmnt/brussel_pixiu_apps/_apps_brussel"
-    softbwrap="/apps/brussel/bwrap/$$VSC_OS_LOCAL/${target_arch}/software/$$modname"
-    softreal="$$appsmnt/$$VSC_OS_LOCAL/${target_arch}/software/$$modname"
+    appsmnt="${appsmnt}"
+    softbwrap="/apps/${machine}/bwrap/$$VSC_OS_LOCAL/${host_arch}/software/$$modname"
+    softreal="$$appsmnt/$$VSC_OS_LOCAL/${host_arch}/software/$$modname"
     mkdir -p "$$softbwrap"
     bwrap_cmd=(
         bwrap
@@ -83,6 +83,7 @@ if [ "${bwrap}" == 1 ]; then
 fi
 
 eb_stderr=$$(mktemp).eb_stderr
+trap 'rm -f "$$eb_stderr"' EXIT
 $$EB ${easyconfig} ${eb_options} 2>"$$eb_stderr"
 
 ec=$$?
@@ -99,11 +100,11 @@ fi
 if [ "${bwrap}" == 1 ]; then
     source_installdir="$$softbwrap/$$modversion/"
     dest_installdir="$$softreal/$$modversion/"
-    installbase="/apps/brussel/$$VSC_OS_LOCAL/${target_arch}"
+    installbase="/apps/${machine}/$$VSC_OS_LOCAL/${host_arch}"
     source_modfile="$$installbase/$$SUBDIR_MODULES_BWRAP/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
     source_modsymlink=$$(echo $$installbase/$$SUBDIR_MODULES_BWRAP/*/$$SUFFIX_MODULES_SYMLINK/$$modname/$$modversion.lua)
     dest_modfile="$$installbase/$$SUBDIR_MODULES/$$SUFFIX_MODULES_PATH/$$modname/$$modversion.lua"
-    dest_modsymlink=$${source_modsymlink/$$installbase\/$$SUBDIR_MODULES_BWRAP\//$$installbase\/$$SUBDIR_MODULES\/}
+    dest_modsymlink=$${source_modsymlink/$$installbase\\/$$SUBDIR_MODULES_BWRAP\\//$$installbase\\/$$SUBDIR_MODULES\\/}
     echo "BUILD_TOOLS: source/dest install dir: $$source_installdir $$dest_installdir"
     echo "BUILD_TOOLS: source/dest module file: $$source_modfile $$dest_modfile"
     echo "BUILD_TOOLS: source/dest module symlink: $$source_modsymlink $$dest_modsymlink"
@@ -123,34 +124,8 @@ if [ "${bwrap}" == 1 ]; then
 fi
 
 builds_succeeded=$$(grep "^BUILD_TOOLS: builds_succeeded" "$$eb_stderr")
-if [[ "${lmod_cache}" == "1" && -n "$${builds_succeeded}" ]];then
-    job_options=(
-        --wait
-        --time=1:0:0
-        --output=%x_%j.log
-        --job-name=lmod_cache_${target_arch}
-        --dependency=singleton
-        --partition=${partition}
-    )
-    if [[ "${partition}" == "zen4_h200" ]]; then
-        # sofia zen4_h200 requires at least 1 GPU
-        job_options+=(--gpus-per-node=1)
-    fi
-    cmd=(
-        /usr/libexec/lmod/run_lmod_cache.py
-        --create-cache
-        --architecture ${target_arch}
-        --module-basedir /apps/${machine}/$$VSC_OS_LOCAL
-    )
-    if [[ "${lmod_json_spider_cache}" == "1" ]]; then
-        cmd+=(--create-spider-cache)
-    fi
-    echo "BUILD_TOOLS: submitting Lmod cache update job on partition ${partition} for architecture ${target_arch}"
-    sbatch "$${job_options[@]}" --wrap "$${cmd[*]}"
-fi
-
 if [[ -n "$${builds_succeeded}" ]]; then
-    logger -t build_tools -p user.notice -- "partition=${partition} architecture=${target_arch} easyconfig=${easyconfig}"
+    logger -t build_tools -p user.notice -- "partition=${partition} architecture=${host_arch} easyconfig=${easyconfig}"
 fi
 """  # noqa
 

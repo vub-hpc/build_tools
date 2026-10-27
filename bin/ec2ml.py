@@ -21,14 +21,29 @@ import sys
 from easybuild.framework.easyconfig.tools import det_easyconfig_paths, parse_easyconfigs
 from easybuild.tools.options import set_up_configuration
 
-set_up_configuration(silent=True)
 
-ecs = sys.argv[1:]
+def main():
+    """Extract the full module name from the given easyconfigs"""
+    if len(sys.argv) < 2:
+        sys.stderr.write("Usage: ec2ml.py <easyconfig> [<easyconfig>...]\n")
+        sys.exit(1)
 
-ec_paths = [det_easyconfig_paths([x])[0] for x in ecs]
+    set_up_configuration(silent=True)
 
-easyconfigs, generated_ecs = parse_easyconfigs(list(zip(ec_paths, [False] * len(ec_paths))))
+    ec_paths = []
+    for ec in sys.argv[1:]:
+        paths = det_easyconfig_paths([ec])
+        if not paths:
+            sys.stderr.write(f"ERROR: easyconfig not found: {ec}\n")
+            sys.exit(1)
+        ec_paths.append(paths[0])
 
-full_mod_names = [x['full_mod_name'] for x in easyconfigs]
+    easyconfigs, generated_ecs = parse_easyconfigs(list(zip(ec_paths, [False] * len(ec_paths))))
 
-print('\n'.join([f'full_mod_name {mod}' for mod in full_mod_names]))
+    full_mod_names = [x['full_mod_name'] for x in easyconfigs]
+
+    print('\n'.join([f'full_mod_name {mod}' for mod in full_mod_names]))
+
+
+if __name__ == "__main__":
+    main()

@@ -21,22 +21,20 @@ import grp
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
-import time
-
-from flufl.lock import Lock, TimeOutError, NotLockedError
 
 from easybuild.framework.easyconfig.constants import EASYCONFIG_CONSTANTS
 from easybuild.framework.easyconfig.easyconfig import letter_dir_for
 from easybuild.tools import LooseVersion
 from easybuild.tools.build_log import EasyBuildError
 from easybuild.tools.config import build_option, ConfigurationVariables, source_paths, update_build_option
-from easybuild.tools.filetools import mkdir
 from easybuild.tools.hooks import SANITYCHECK_STEP
 
 from build_tools.clusters import ARCHS, MACHINE
-from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, IB_OPT_MARK
+from build_tools.filetools import acquire_fetch_lock, release_fetch_lock
+from build_tools.ib_modules import IB_MODULE_SOFTWARE, IB_MODULE_SUFFIX, is_ib_option
 
 # user groups for licensed software
 SOFTWARE_GROUPS = {
@@ -68,14 +66,14 @@ SOFTWARE_GROUPS = {
 
 GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
 
-LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL')
-LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX')
+LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '')
+LOCAL_ARCH_SUFFIX = os.getenv('VSC_ARCH_SUFFIX', '')
 LOCAL_ARCH_FULL = f'{LOCAL_ARCH}{LOCAL_ARCH_SUFFIX}'
 
 # try to avoid uncommon toolchains
 INVALID_TC_NAMES = [
     'fosscuda',
-    'gmpflf', 'gmpich'
+    'gmpflf', 'gmpich',
     'iomkl', 'iompi',
     'lmpflf', 'lmpich',
     'nvofbf', 'nvompi',
@@ -95,6 +93,10 @@ VALID_TOOLCHAINS = {
         'toolchains': ['foss', 'intel'],
         'subdir': '2025a',
     },
+    '2026.1': {
+        'toolchains': ['foss', 'intel'],
+        'subdir': '2026.1',
+    },
     '25.1': {
         'toolchains': ['nvidia-compilers', 'NVHPC'],
         'subdir': '2024a',
@@ -104,11 +106,15 @@ VALID_TOOLCHAINS = {
         'subdir': '2025a',
     },
 }
-VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a']
+VALID_MODULES_SUBDIRS = ['system', '2024a', '2025a', '2026.1']
 
 SUBDIR_MODULES_BWRAP = '.modules_bwrap'
 SUFFIX_MODULES_PATH = 'collection'
 SUFFIX_MODULES_SYMLINK = 'all'
+
+# GPU components and toolchain names
+GPU_COMPONENTS = ['CUDA']
+GPU_TOOLCHAINS = ['nvidia-compilers', 'NVHPC']
 
 ##################
 # MODULE FOOTERS #
@@ -123,7 +129,8 @@ if ( os.getenv("SLURM_JOB_ID") ) then
 end
 """
 JAVA_MOD_FOOTER = """
-local mem_str = capture("cat /sys/fs/cgroup/$(</proc/self/cpuset)/../../../memory.max 2>/dev/null")
+local cpuset = capture("cat /proc/self/cpuset 2>/dev/null"):gsub("%s+$", "")
+local mem_str = capture("cat /sys/fs/cgroup/" .. cpuset .. "/../../../memory.max 2>/dev/null")
 local mem = tonumber(mem_str)
 if mem == 9223372036854771712 then
     mem = nil
@@ -148,7 +155,7 @@ TC_VERSIONS = {}
 
 
 def set_tc_versions():
-    " build dict of valid (sub)toolchain-version combinations per valid generation "
+    "build dict of valid (sub)toolchain-version combinations per valid generation"
 
     script = 'calc_toolchain_versions.py'
 
@@ -159,6 +166,9 @@ def set_tc_versions():
             input=json.dumps(VALID_TOOLCHAINS),
             capture_output=True,
             text=True)
+    except FileNotFoundError as e:
+        raise RuntimeError(f"{script} not found in PATH, "
+                           "is build_tools installed in the active virtual environment?") from e
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"{script} failed: {e.stderr}") from e
 
@@ -207,14 +217,12 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, versionsuffix=''):
     # if toolchain name is nvidia-compilers or NVHPC see if
     # version + versionsuffix of the easyconfig matches tc_version
     for tcgen_spec in TC_VERSIONS.values():
-        print(f"DEBUG: {tcgen_spec['toolchains']} --- {toolchain} : {name_version}")
         if (toolchain in tcgen_spec['toolchains']
                 or name_version in tcgen_spec['toolchains']
                 or (name == 'nvidia-compilers' and name_version_suffix in tcgen_spec['toolchains'])
                 or (name == 'NVHPC' and name_version_suffix in tcgen_spec['toolchains'])):
             tcgen_subdir = tcgen_spec['subdir']
             log_msg = f"Determined toolchain generation subdir '{tcgen_subdir}' for {software}"
-            print(f"DEBUG: return {tcgen_subdir}")
             return tcgen_subdir, log_msg
 
     # invalid toolchain version
@@ -235,12 +243,9 @@ def calc_tc_gen_subdir(name, version, tcname, tcversion, versionsuffix=''):
 
 def is_gpu_software(ec):
     "determine if it is a GPU-only installation"
-    gpu_components = ['CUDA']
-    gpu_toolchains = ['nvidia-compilers', 'NVHPC']
-
-    is_gpu_package = ec.name in gpu_components or ec.name in gpu_toolchains
-    needs_gpu_toolchain = ec.toolchain.name in gpu_toolchains
-    needs_gpu_component = any(x in ec['versionsuffix'] for x in gpu_components)
+    is_gpu_package = ec.name in GPU_COMPONENTS or ec.name in GPU_TOOLCHAINS
+    needs_gpu_toolchain = ec.toolchain.name in GPU_TOOLCHAINS
+    needs_gpu_component = any(x in ec['versionsuffix'] for x in GPU_COMPONENTS)
 
     return is_gpu_package or needs_gpu_toolchain or needs_gpu_component
 
@@ -258,51 +263,6 @@ def update_moduleclass(ec):
     ec['moduleclass'] = os.path.join(tc_gen, SUFFIX_MODULES_SYMLINK)
 
     ec.log.info("[parse hook] updated moduleclass to %s", ec['moduleclass'])
-
-
-def acquire_fetch_lock(self):
-    " acquire fetch lock "
-    source_path = source_paths()[0]
-    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
-    lock_name = full_source_path.replace('/', '_') + '.lock'
-
-    lock_dir = os.path.join(source_path, '.locks')
-    mkdir(lock_dir, parents=True)
-
-    wait_time = 0
-    wait_interval = 60
-    wait_limit = 3600
-
-    lock = Lock(os.path.join(lock_dir, lock_name), lifetime=wait_limit, default_timeout=1)
-    self.fetch_hook_lock = lock
-
-    while True:
-        try:
-            # try to acquire the lock
-            lock.lock()
-            self.log.info("[pre-fetch hook] Lock acquired: %s", lock.lockfile)
-            break
-
-        except TimeOutError as err:
-            if wait_time >= wait_limit:
-                error_msg = "[pre-fetch hook] Maximum wait time for lock %s to be released reached: %s sec >= %s sec"
-                raise EasyBuildError(error_msg, lock.lockfile, wait_time, wait_limit) from err
-
-            msg = "[pre-fetch hook] Lock %s held by another build, waiting %d seconds..."
-            self.log.debug(msg, lock.lockfile, wait_interval)
-            time.sleep(wait_interval)
-            wait_time += wait_interval
-
-
-def release_fetch_lock(self):
-    " release fetch lock "
-    lock = self.fetch_hook_lock
-    try:
-        lock.unlock()
-        self.log.info("[post-fetch hook] Lock released: %s", lock.lockfile)
-
-    except NotLockedError:
-        self.log.warning("[post-fetch hook] Could not release lock %s: was already released", lock.lockfile)
 
 
 def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
@@ -348,7 +308,11 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     if ec.name in IB_MODULE_SOFTWARE and ec.easyblock == IB_MODULE_SOFTWARE[ec.name]['easyblock-ec']:
         # remove any OS dependency on libverbs in non-IB nodes
         if LOCAL_ARCH_SUFFIX != IB_MODULE_SUFFIX:
-            pkg_ibverbs = EASYCONFIG_CONSTANTS['OS_PKG_IBVERBS_DEV'][0]
+            ibverbs_dev = EASYCONFIG_CONSTANTS.get('OS_PKG_IBVERBS_DEV')
+            if not ibverbs_dev:
+                raise EasyBuildError("[parse hook] OS package for ibverbs (OS_PKG_IBVERBS_DEV) "
+                                     "not found in EASYCONFIG_CONSTANTS")
+            pkg_ibverbs = ibverbs_dev[0]
             ec['osdependencies'] = [d for d in ec['osdependencies'] if d != pkg_ibverbs]
             ec.log.info("[parse hook] Removed IB from OS dependencies on non-IB system: %s", ec['osdependencies'])
 
@@ -399,44 +363,52 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
     # ------ GPU MODULES -------- #
     ###############################
 
-    # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
-    if is_gpu_software(ec) and LOCAL_ARCH_FULL not in GPU_ARCHS:
-        ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
-        # inject error message in module file
-        ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
-        # manually set some default CUDA version for dummy module (required by easyblock)
-        if ec.name in ('NVHPC', 'nvidia-compilers'):
-            ec['default_cuda_version'] = '0'
-            # remove external CUDA dep so prepare_step doesn't call nvcc on a non-GPU node
-            ec['dependencies'] = [d for d in ec['dependencies'] if 'CUDA' not in d]
-            ec.log.info("[parse hook] Removed CUDA from dependency list for dummy module")
-        # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
-        ec['module_only'] = True
-        ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
-        ec['skipsteps'] = [SANITYCHECK_STEP]
-        ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
+    if is_gpu_software(ec):
+        if LOCAL_ARCH_FULL not in ARCHS[MACHINE]:
+            known_archs = ', '.join(ARCHS[MACHINE])
+            raise EasyBuildError(
+                f"[parse hook] Unknown local architecture: '{LOCAL_ARCH_FULL}' (expected one of: {known_archs})",
+            )
 
-    # set cuda compute capabilities
-    elif is_gpu_software(ec):
-        # on GPU nodes set cuda compute capabilities
-        ec['cuda_compute_capabilities'] = ARCHS[MACHINE][LOCAL_ARCH_FULL]['cuda_cc']
-        ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
+        # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
+        if LOCAL_ARCH_FULL not in GPU_ARCHS:
+            ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
+            # inject error message in module file
+            ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
+            # manually set some default CUDA version for dummy module (required by easyblock)
+            if ec.name in ('NVHPC', 'nvidia-compilers'):
+                ec['default_cuda_version'] = '0'
+                # remove external CUDA dep so prepare_step doesn't call nvcc on a non-GPU node
+                ec['dependencies'] = [d for d in ec['dependencies'] if 'CUDA' not in d]
+                ec.log.info("[parse hook] Removed CUDA from dependency list for dummy module")
+            # module_only steps: [MODULE_STEP, PREPARE_STEP, READY_STEP, POSTITER_STEP, SANITYCHECK_STEP]
+            ec['module_only'] = True
+            ec.log.info(f"[parse hook] Set parameter module_only: {ec['module_only']}")
+            ec['skipsteps'] = [SANITYCHECK_STEP]
+            ec.log.info(f"[parse hook] Set parameter skipsteps: {ec['skipsteps']}")
+        else:
+            # on GPU nodes set cuda compute capabilities
+            ec['cuda_compute_capabilities'] = ARCHS[MACHINE][LOCAL_ARCH_FULL]['cuda_cc']
+            ec.log.info(f"[parse hook] Set parameter cuda_compute_capabilities: {ec['cuda_compute_capabilities']}")
 
 
 def pre_fetch_hook(self):
     """Hook at pre-fetch level"""
-    acquire_fetch_lock(self)
+    source_path = source_paths()[0]
+    full_source_path = os.path.join(source_path, letter_dir_for(self.name), self.name)
+    lockfile = os.path.join(source_path, '.locks', full_source_path.replace('/', '_') + '.lock')
+    self.fetch_hook_lock = acquire_fetch_lock(lockfile, self.log)
 
 
 def post_fetch_hook(self):
     """Hook at post-fetch level"""
-    release_fetch_lock(self)
+    release_fetch_lock(self.fetch_hook_lock, self.log)
 
 
 def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
     """Hook at pre-configure level to alter configopts"""
 
-    # don’t remove installdir when installing with Tarball easyblock for bwrap (only for the vsc bot)
+    # don't remove installdir when installing with Tarball easyblock for bwrap (only for the vsc bot)
     if os.getenv('BWRAP', '') == '1' and 'install_type' in self.cfg:
         self.cfg['install_type'] = 'merge'
         self.log.info("[pre-configure hook] Set install_type to %s for bwrap", self.cfg['install_type'])
@@ -462,12 +434,13 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
 
         # convert any non-list parameters to a list
         if ec_param == 'configopts':
-            ec_config = self.cfg['configopts'].split(' ')
+            ec_config_opt = self.cfg['configopts'] or ''
+            ec_config = shlex.split(ec_config_opt) if isinstance(ec_config_opt, str) else list(ec_config_opt)
         else:
-            ec_config = self.cfg[ec_param]
+            ec_config = self.cfg[ec_param] or []
 
         # clean any settings about IB
-        ib_free_config = [opt for opt in ec_config if not any(mark in opt for mark in IB_OPT_MARK)]
+        ib_free_config = [opt for opt in ec_config if not is_ib_option(opt)]
 
         # update IB settings
         if LOCAL_ARCH_SUFFIX == IB_MODULE_SUFFIX:
@@ -477,11 +450,11 @@ def pre_configure_hook(self, *args, **kwargs):  # pylint: disable=unused-argumen
             self.log.info("[pre-configure hook] Disabling verbs in %s", self.name)
             ib_opt = IB_MODULE_SOFTWARE[self.name]['options'][2]
 
-        ib_config = ib_free_config + [ib_opt]
+        ib_config = ib_free_config + shlex.split(ib_opt)
 
         # consolidate changes
         if ec_param == 'configopts':
-            self.cfg['configopts'] = ' '.join(ib_config)
+            self.cfg['configopts'] = ' '.join(shlex.quote(opt) for opt in ib_config)
         else:
             self.cfg[ec_param] = ib_config
 
@@ -504,7 +477,11 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
 
         group = get_group(self.name, self.version)
         if group:
-            group_id = grp.getgrnam(group).gr_gid
+            try:
+                group_id = grp.getgrnam(group).gr_gid
+            except KeyError as err:
+                error_msg = f"[pre-module hook] User group '{group}' for {self.name} not found on this system"
+                raise EasyBuildError(error_msg) from err
             self.group = (group, group_id)
             self.log.info(f"[pre-module hook] Set group to: {self.group}")
 
@@ -517,9 +494,8 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             # more info: https://dev.azure.com/VUB-ICT/Directie%20ICT/_workitems/edit/4706
             slurm_mpi_type = 'pmix'
 
-            if slurm_mpi_type:
-                self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
-                self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
         if self.name == 'impi':
             # - use PMI2 implementation from Slurm
@@ -537,9 +513,8 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
             self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**intel_mpi)
 
-            if slurm_mpi_type:
-                self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
-                self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
+            self.log.info("[pre-module hook] Set Slurm MPI type to: %s", slurm_mpi_type)
+            self.cfg['modextravars'].update({'SLURM_MPI_TYPE': slurm_mpi_type})
 
         if self.name in ['ANSYS', 'FLUENT']:
             # ANSYS versions 2022+ use Intel MPI v2021 by default
@@ -552,7 +527,7 @@ def pre_module_hook(self, *args, **kwargs):  # pylint: disable=unused-argument
             self.log.info("[pre-module hook] Set MPI bootstrap for Slurm")
             self.cfg['modluafooter'] = INTEL_MPI_MOD_FOOTER.format(**ansys_intel_mpi)
             # remove restrictions on UCX transport layer, IB 'dc' not supported at system level
-            self.log.info("[pre-module hook] Allow all trasnports in UCX for ANSYS")
+            self.log.info("[pre-module hook] Allow all transports in UCX for ANSYS")
             self.cfg['modextravars'].update({'UCX_TLS': "all"})
             # the following mimics what ANSYS FLUENT does when it uses its integrated slurm capabilities
             # with command: `fluent 2dpp -scheduler=slurm -t2 --mpi=openmpi -mpitest`
@@ -627,7 +602,7 @@ setenv("FS_LICENSE", licfile)
             self.cfg['modloadmsg'] = "%(name)s databases are located in /databases/bio/%(namelower)s-%(version)s"
 
         if self.name == 'BUSCO':
-            if LooseVersion(self.version) >= '5.0.0':
+            if LooseVersion(self.version) >= LooseVersion('5.0.0'):
                 self.cfg['modloadmsg'] += """
 Use local DBs with command: `busco --offline --download_path /databases/bio/BUSCO-5 ...`
 """

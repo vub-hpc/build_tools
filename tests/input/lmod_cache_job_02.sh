@@ -4,5 +4,7 @@
 #SBATCH --job-name=lmod_cache_zen4-ib
 #SBATCH --dependency=singleton
 #SBATCH --partition=zen4_h200
+#SBATCH --nodes=1
+#SBATCH --ntasks=24
 #SBATCH --gpus-per-node=1
-/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen4-ib --module-basedir /apps/brussel/${VSC_OS_LOCAL:?}
+/usr/libexec/lmod/run_lmod_cache.py --create-cache --architecture zen4-ib --module-basedir /apps/sofia/${VSC_OS_LOCAL:?}
