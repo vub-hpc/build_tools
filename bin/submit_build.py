@@ -115,14 +115,16 @@ def main():
                         help='Slurm partition for the build')
     parser.add_argument('-q', '--extra-job-flags', default='',
                         help='Extra flags to pass to Slurm')
-    parser.add_argument('-r', '--append-robot-cwd', action='store_true',
-                        help='Append current working dir to robot path')
+    parser.add_argument('-r', '--rebuild', action='store_true',
+                        help='Rebuild given easyconfigs and overwrite existing installations')
     parser.add_argument('-s', '--job-small', action='store_true',
                         help=f"Submit jobs with a shorter walltime ({SMALL_JOB['walltime']}) "
                              f"and less tasks ({SMALL_JOB['tasks']})")
     parser.add_argument('-t', '--tmp', choices=['shm', 'tmp', 'scratch'], default='shm',
                         help='Temporary disk for the build: shm (/dev/shm, default), '
                              'tmp (/tmp) or scratch ($VSC_SCRATCH_VO_USER)')
+    parser.add_argument('-w', '--append-robot-cwd', action='store_true',
+                        help='Append current working dir to robot path')
     parser.add_argument('easyconfigs', nargs='*',
                         help='easyconfig file(s) to install')
     opts = parser.parse_args()
@@ -322,6 +324,8 @@ def main():
     gpu_device_requested = opts.gpu == 'force' or (opts.gpu == 'detect' and gpu_software)
 
     # Extra EB settings from user
+    if opts.rebuild:
+        eb_options.append('--rebuild')
     if opts.extra_eb_flags:
         eb_options.append(opts.extra_eb_flags)
 
