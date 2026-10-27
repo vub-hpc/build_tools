@@ -35,7 +35,7 @@ from build_tools.hooks_hydra import (
 )
 from build_tools.lmodtools import submit_lmod_cache_job
 from build_tools.package import VERSION
-from build_tools.softinstall import mk_job_name, run_no_shell, submit_build_job
+from build_tools.softinstall import mk_job_name, run_build_job, run_no_shell
 
 logger = stdlib_logger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s',
@@ -382,7 +382,7 @@ def main():
             host_arch,
         )
 
-        ec, buildjob_out = submit_build_job(
+        ec, buildjob_id, buildjob_out = run_build_job(
             job_options,
             keep_job=opts.keep,
             sub_options=opts.extra_job_flags,
@@ -399,15 +399,7 @@ def main():
         # waiting for the build job to complete successfully
         # (no jobid in case of a dry run or a local build)
         if opts.lmod_cache != 'skip':
-            build_jobid = None
-            if not dry_run and not local_exec:
-                try:
-                    build_jobid = int(buildjob_out.strip().split(';')[0])
-                except (IndexError, ValueError):
-                    logger.error("Failed to retrieve job ID dependency for lmod cache job")
-                    sys.exit(1)
-
-            submit_lmod_cache_job(job_partition, jobid=build_jobid, dry_run=dry_run)
+            submit_lmod_cache_job(job_partition, jobid=buildjob_id, dry_run=dry_run)
 
 
 if __name__ == '__main__':

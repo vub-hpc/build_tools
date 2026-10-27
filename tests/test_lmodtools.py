@@ -120,7 +120,7 @@ def test_submit_lmod_cache_job_sofia_mod_index(monkeypatch, inputdir):
 
 def test_submit_lmod_cache_job_failure(monkeypatch, caplog):
     monkeypatch.setattr(lmodtools, 'write_tempfile', lambda script: '/tmp/fake_cache_job.sh')
-    monkeypatch.setattr(lmodtools, 'submit_job_script', lambda *args, **kwargs: (1, 'fake submission error'))
+    monkeypatch.setattr(lmodtools, 'submit_job_script', lambda *args, **kwargs: (1, None, 'fake submission error'))
 
     with caplog.at_level(logging.ERROR):
         with pytest.raises(SystemExit) as exc:

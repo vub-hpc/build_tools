@@ -100,12 +100,12 @@ def test_mk_job_name(test_name):
         }),
     ]
 )
-def test_submit_build_job(inputdir, test_job):
+def test_run_build_job(inputdir, test_job):
     (job_script, job_options) = test_job
     sub_options = ''
     cluster = 'hydra'
 
-    ec, out = softinstall.submit_build_job(
+    ec, jobid, out = softinstall.run_build_job(
         job_options, keep_job=True, sub_options=sub_options, cluster=cluster, local_exec=False, dry_run=True
     )
 
@@ -118,6 +118,15 @@ def test_submit_build_job(inputdir, test_job):
         ref_job_contents = rj.read().rstrip()
 
     assert new_job_contents == ref_job_contents
+    assert jobid is None
+
+    ec, jobid, out = softinstall.run_build_job(
+        job_options, keep_job=True, sub_options=sub_options, cluster=cluster, local_exec=True, dry_run=True
+    )
+
+    assert ec == 0
+    assert jobid is None
+    assert "Local" in out
 
 
 def test_submit_job_script():
@@ -125,10 +134,11 @@ def test_submit_job_script():
     sub_options = '--mem=32G'
     cluster = 'chimera'
 
-    ec, out = softinstall.submit_job_script(
-        job_file, sub_options, cluster=cluster, local_exec=False, dry_run=True
+    ec, jobid, out = softinstall.submit_job_script(
+        job_file, sub_options, cluster=cluster, dry_run=True
     )
 
+    assert jobid is None
     assert out == ("(DRY RUN) Job submission command: "
                    "sbatch -M chimera --parsable --mem=32G test.job")
 
@@ -137,10 +147,11 @@ def test_submit_job_script_quoted_options():
     job_file = 'test.job'
     sub_options = '--mem=32G --comment="my job"'
 
-    ec, out = softinstall.submit_job_script(
-        job_file, sub_options, cluster=None, local_exec=False, dry_run=True
+    ec, jobid, out = softinstall.submit_job_script(
+        job_file, sub_options, cluster=None, dry_run=True
     )
 
+    assert jobid is None
     assert out == ("(DRY RUN) Job submission command: "
                    "sbatch --parsable --mem=32G '--comment=my job' test.job")
 
@@ -168,34 +179,25 @@ def test_run_loop_stdout(capsys):
     assert "line2" in captured.out
 
 
-def test_submit_job_script_local_exec(tmp_path):
-    job_file = tmp_path / 'test.job'
-    job_file.write_text("#!/bin/bash\necho local-run\n")
-
-    ec, out = softinstall.submit_job_script(str(job_file), local_exec=True)
-
-    assert ec == 0
-    assert "local-run" in out
-
-
 def test_submit_job_script_sbatch(monkeypatch):
     submitted = []
 
     def fake_run(args, **kwargs):
         submitted.append(args)
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout='12345', stderr='')
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout='12345;chimera', stderr='')
 
     monkeypatch.setattr(softinstall.subprocess, 'run', fake_run)
 
-    ec, out = softinstall.submit_job_script('test.job', sub_options='--mem=32G', cluster='chimera')
+    ec, jobid, out = softinstall.submit_job_script('test.job', sub_options='--mem=32G', cluster='chimera')
 
     assert ec == 0
-    assert out == '12345'
+    assert jobid == 12345
+    assert out == '12345;chimera'
     assert len(submitted) == 1
     assert submitted[0] == ['sbatch', '-M', 'chimera', '--parsable', '--mem=32G', 'test.job']
 
 
-def test_submit_build_job_removes_job_file(monkeypatch, caplog):
+def test_run_build_job_removes_job_file(monkeypatch, caplog):
     job_options = {
         'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
         'bwrap': '0',
@@ -217,24 +219,26 @@ def test_submit_build_job_removes_job_file(monkeypatch, caplog):
     }
 
     # with keep_job=False the job script file is removed after submission
-    ec, out = softinstall.submit_build_job(
+    ec, jobid, out = softinstall.run_build_job(
         job_options, keep_job=False, sub_options='', cluster='hydra', local_exec=False, dry_run=True
     )
 
     assert ec == 0
+    assert jobid is None
     job_file = out.split(' ')[-1]
     assert not os.path.exists(job_file)
 
     # an error removing the job file is logged, not raised
     def fake_remove(path):
-        raise IOError("fake remove error")
+        raise OSError("fake remove error")
 
     monkeypatch.setattr(softinstall.os, 'remove', fake_remove)
 
     with caplog.at_level(logging.ERROR):
-        ec, out = softinstall.submit_build_job(
+        ec, jobid, out = softinstall.run_build_job(
             job_options, keep_job=False, sub_options='', cluster='hydra', local_exec=False, dry_run=True
         )
 
     assert ec == 0
+    assert jobid is None
     assert "Failed to remove job file" in caplog.text

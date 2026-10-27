@@ -75,13 +75,12 @@ def mk_job_name(easyconfigs, host_arch):
     return job_name
 
 
-def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, dry_run=False):
+def submit_job_script(job_file, sub_options='', cluster=None, dry_run=False):
     """
     Execute sbatch command to submit job script to target cluster
     :param job_file: file name of the job script
     :param sub_options: string with options to pass to Slurm
     :param cluster: name of cluster to run the job
-    :param local_exec: execute the job script locally
     :param dry_run: print submit command
     """
 
@@ -98,36 +97,51 @@ def submit_job_script(job_file, sub_options='', cluster=None, local_exec=False, 
     if dry_run:
         log_msg = f"(DRY RUN) Job submission command: {submit_cmd}"
         logger.info(log_msg)
-        ec, out = 0, log_msg
-    elif local_exec:
-        logger.debug("Local execution of job script: %s", job_file)
-        ec, out = run_loop_stdout(f"bash {job_file}")
-    else:
-        logger.debug("Job submission command: %s", submit_cmd)
-        proc = subprocess.run(sbatch_args, capture_output=True, text=True)
-        ec, out = proc.returncode, proc.stdout + proc.stderr
-        logger.debug("Job submission output: %s (%s)", out, ec)
+        return 0, None, log_msg
 
-    return ec, out
+    logger.debug("Job submission command: %s", submit_cmd)
+    proc = subprocess.run(sbatch_args, capture_output=True, text=True)
+    ec, out = proc.returncode, proc.stdout + proc.stderr
+    logger.debug("Job submission output: %s (%s)", out, ec)
+
+    try:
+        jobid = int(out.strip().split(';')[0])
+    except (IndexError, ValueError):
+        logger.error("Failed to retrieve job ID of submitted job")
+        sys.exit(1)
+
+    return ec, jobid, out
 
 
-def submit_build_job(job_options, keep_job=False, **kwargs):
+def run_build_job(job_options, keep_job=False, local_exec=False, dry_run=False, **kwargs):
     """
-    Generate job script from BUILD_JOB template and submit it with Slurm to target cluster
+    Generate job script from BUILD_JOB template and execute it
     :param job_options: dict with options to pass to job template
     :param keep_job: do not delete the job script file
+    :param local_exec: execute the job script locally
+    :param dry_run: print submit command
     """
 
     job_script = BuildJob.substitute(job_options)
     job_file = write_tempfile(job_script)
     logger.debug("Job script written to %s", job_file)
 
-    ec, out = submit_job_script(job_file, **kwargs)
+    if local_exec:
+        log_msg = f"Local execution of job script: {job_file}"
+        if dry_run:
+            logger.info(f"(DRY RUN) {log_msg}")
+            ec, jobid, out = 0, None, log_msg
+        else:
+            logger.debug(log_msg)
+            ec, out = run_loop_stdout(f"bash {job_file}")
+            jobid = None
+    else:
+        ec, jobid, out = submit_job_script(job_file, dry_run=dry_run, **kwargs)
 
     if not keep_job:
         try:
             os.remove(job_file)
-        except IOError as err:
+        except OSError as err:
             logger.error("Failed to remove job file '%s': %s", job_file, err)
 
-    return ec, out
+    return ec, jobid, out

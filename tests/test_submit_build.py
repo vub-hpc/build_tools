@@ -137,11 +137,11 @@ def _run_submit_build(submit_build, monkeypatch, tmp_path, arch, gpu_option, eas
 
     job_options_list = []
 
-    def fake_submit_build_job(job_options, **kwargs):
+    def fake_run_build_job(job_options, **kwargs):
         job_options_list.append(dict(job_options))
-        return 0, ''
+        return 0, None, ''
 
-    monkeypatch.setattr(submit_build, 'submit_build_job', fake_submit_build_job)
+    monkeypatch.setattr(submit_build, 'run_build_job', fake_run_build_job)
 
     submit_build.main()
 
