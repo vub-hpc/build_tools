@@ -399,7 +399,14 @@ def main():
         # waiting for the build job to complete successfully
         # (no jobid in case of a dry run or a local build)
         if opts.lmod_cache != 'skip':
-            build_jobid = buildjob_out.strip() if not dry_run and not local_exec else None
+            build_jobid = None
+            if not dry_run and not local_exec:
+                try:
+                    build_jobid = int(buildjob_out.strip().split(';')[0])
+                except (IndexError, ValueError):
+                    logger.error("Failed to retrieve job ID dependency for lmod cache job")
+                    sys.exit(1)
+
             submit_lmod_cache_job(job_partition, jobid=build_jobid, dry_run=dry_run)
 
 

@@ -62,7 +62,10 @@ def make_cmd_lmod_cache(archdir):
 
     # chain the calls so each module index is only created when the
     # previous call succeeded
-    return ' && '.join(cache_calls)
+    lmod_cache_cmd = ' && '.join(cache_calls)
+    logger.debug("Lmod cache command: %s", lmod_cache_cmd)
+
+    return lmod_cache_cmd
 
 
 def submit_lmod_cache_job(partition, jobid=None, **kwargs):
@@ -98,8 +101,7 @@ def submit_lmod_cache_job(partition, jobid=None, **kwargs):
 
     job_file = write_tempfile(cache_job)
 
-    logger.info(
-        "Refreshing Lmod cache on partition %s for architecture %s", partition, archdir)
+    logger.info("Refreshing Lmod cache on partition %s for architecture %s", partition, archdir)
     ec, out = submit_job_script(job_file, cluster=cluster, **kwargs)
 
     if ec != 0:
