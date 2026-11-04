@@ -412,7 +412,7 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
 
         # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
         if LOCAL_ARCH_FULL not in GPU_ARCHS or outdated_gpu_arch:
-            ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
+            ec.log.info("[parse hook] Generating dummy GPU module")
             # inject error message in module file
             ec['modluafooter'] = GPU_OUTDATED_DUMMY_MOD_FOOTER if outdated_gpu_arch else GPU_DUMMY_MOD_FOOTER
             # manually set some default CUDA version for dummy module (required by easyblock)
