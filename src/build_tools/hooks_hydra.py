@@ -151,6 +151,16 @@ https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
 end
 """
 
+GPU_OUTDATED_DUMMY_MOD_FOOTER = """
+if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
+    LmodError([[
+This module is only available on nodes with a more recent GPU.
+CUDA 13.x or greater no longer supports GPUs with the Pascal architecture:
+https://docs.nvidia.com/datacenter/tesla/drivers/latest/cuda-toolkit-driver-and-architecture-matrix.html
+    ]])
+end
+"""
+
 TC_VERSIONS = {}
 
 
@@ -248,6 +258,27 @@ def is_gpu_software(ec):
     needs_gpu_component = any(x in ec['versionsuffix'] for x in GPU_COMPONENTS)
 
     return is_gpu_package or needs_gpu_toolchain or needs_gpu_component
+
+
+def get_cuda_version(ec):
+    "determine the CUDA version required to build this easyconfig, if any"
+
+    # catch if easyconfig is CUDA itself
+    if ec.name in GPU_COMPONENTS:
+        return ec.version
+
+    # catch if easyconfig has CUDA in its versionsuffix
+    # or if it belongs to nvidia-compilers/NVHPC with CUDA in the toolchain version
+    cuda_version_re = re.compile(r'CUDA-(?P<version>[0-9]+(?:\.[0-9]+)*)')
+    for version_str in (ec.resolve_template(ec['versionsuffix']), ec.toolchain.version):
+        match = cuda_version_re.search(version_str)
+        if match:
+            return match.group('version')
+
+    # will miss ec's in nvidia-compilers/NVHPC with bundled CUDA
+    # we do not build this on Hydra or sofia though
+
+    return None
 
 
 def update_moduleclass(ec):
@@ -370,11 +401,20 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
                 f"[parse hook] Unknown local architecture: '{LOCAL_ARCH_FULL}' (expected one of: {known_archs})",
             )
 
+        # CUDA 13+ dropped support for Pascal (GPU arch on our broadwells)
+        min_cuda_version_no_pascal = '13'
+        cuda_version = get_cuda_version(ec)
+        outdated_gpu_arch = (
+            LOCAL_ARCH_FULL == 'broadwell'
+            and cuda_version is not None
+            and LooseVersion(cuda_version) >= LooseVersion(min_cuda_version_no_pascal)
+        )
+
         # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
-        if LOCAL_ARCH_FULL not in GPU_ARCHS:
+        if LOCAL_ARCH_FULL not in GPU_ARCHS or outdated_gpu_arch:
             ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
             # inject error message in module file
-            ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
+            ec['modluafooter'] = GPU_OUTDATED_DUMMY_MOD_FOOTER if outdated_gpu_arch else GPU_DUMMY_MOD_FOOTER
             # manually set some default CUDA version for dummy module (required by easyblock)
             if ec.name in ('NVHPC', 'nvidia-compilers'):
                 ec['default_cuda_version'] = '0'

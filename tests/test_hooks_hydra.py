@@ -139,6 +139,9 @@ class FakeEasyconfig(dict):
         self.toolchain = types.SimpleNamespace(name=toolchain_name, version='2024a')
         self.log = logging.getLogger('test_parse_hook')
 
+    def resolve_template(self, value):
+        return value
+
 
 @pytest.mark.parametrize(
     'gpu_software',
@@ -166,6 +169,46 @@ def test_is_gpu_software(gpu_software):
     ec['versionsuffix'] = versionsuffix
 
     assert hooks_hydra.is_gpu_software(ec) == expected
+
+
+@pytest.mark.parametrize(
+    'cuda_version',
+    [
+        # (name, toolchain_name, toolchain_version, versionsuffix, expected)
+        # CUDA itself: its own version is the CUDA version
+        ('CUDA', 'system', '2024a', '', '1.0'),
+        # CUDA version tagged in the versionsuffix
+        ('GROMACS', 'foss', '2024a', '-CUDA-12.1.1', '12.1.1'),
+        # bare '-CUDA' tag without a version cannot be resolved
+        ('zlib', 'foss', '2024a', '-CUDA', None),
+        # CUDA version tagged in the toolchain version of NVHPC/nvidia-compilers
+        ('zlib', 'NVHPC', '25.3-CUDA-12.8.0', '', '12.8.0'),
+        ('zlib', 'nvidia-compilers', '25.3-CUDA-12.8.0', '', '12.8.0'),
+        # NVHPC/nvidia-compilers with bundled, untagged CUDA cannot be resolved
+        ('NVHPC', 'system', '2024a', '', None),
+        ('nvidia-compilers', 'system', '2024a', '', None),
+        # regular, non-GPU software
+        ('zlib', 'foss', '2024a', '', None),
+    ],
+)
+def test_get_cuda_version(cuda_version):
+    name, toolchain_name, toolchain_version, versionsuffix, expected = cuda_version
+    ec = FakeEasyconfig(name, toolchain_name)
+    ec.toolchain.version = toolchain_version
+    ec['versionsuffix'] = versionsuffix
+
+    assert hooks_hydra.get_cuda_version(ec) == expected
+
+
+def test_get_cuda_version_templated_versionsuffix(monkeypatch):
+    # versionsuffix is often a template (e.g. '-CUDA-%(cudaver)s' resolved from a CUDA
+    # dependency) rather than a literal string; get_cuda_version must resolve it first
+    ec = FakeEasyconfig('ollama', 'GCCcore')
+    ec.toolchain.version = '15.2.0'
+    ec['versionsuffix'] = '-CUDA-%(cudaver)s'
+    monkeypatch.setattr(ec, 'resolve_template', lambda value: value % {'cudaver': '13.3.0'})
+
+    assert hooks_hydra.get_cuda_version(ec) == '13.3.0'
 
 
 @pytest.fixture
@@ -201,6 +244,62 @@ def test_parse_hook_gpu_arch(parse_hook_config, monkeypatch):
     hooks_hydra.parse_hook(ec)
 
     assert ec['cuda_compute_capabilities'] == hooks_hydra.ARCHS[hooks_hydra.MACHINE]['zen5-ib']['cuda_cc']
+
+
+@pytest.mark.parametrize(
+    'broadwell_cuda',
+    [
+        # (name, toolchain_name, toolchain_version, versionsuffix, cuda_version, outdated)
+        # CUDA itself, below/above the Pascal cutoff
+        ('CUDA', 'system', '2024a', '', '12.8.0', False),
+        ('CUDA', 'system', '2024a', '', '13.3.0', True),
+        # CUDA version tagged in the versionsuffix, below/above the cutoff
+        ('GROMACS', 'foss', '2024a', '-CUDA-12.1.1', None, False),
+        ('GROMACS', 'foss', '2024a', '-CUDA-13.3.0', None, True),
+        # CUDA version tagged in the toolchain version (software built with NVHPC/nvidia-compilers
+        # as toolchain), below/above the cutoff
+        ('zlib', 'NVHPC', '25.3-CUDA-12.8.0', '', None, False),
+        ('zlib', 'NVHPC', '26.9-CUDA-13.3.0', '', None, True),
+        ('zlib', 'nvidia-compilers', '26.9-CUDA-13.3.0', '', None, True),
+        # bundled, untagged CUDA version in a toolchain cannot be resolved, so it is treated the
+        # same as a supported CUDA version
+        ('zlib', 'NVHPC', '25.1', '', None, False),
+    ],
+)
+def test_parse_hook_gpu_broadwell_cuda(parse_hook_config, monkeypatch, broadwell_cuda):
+    name, toolchain_name, toolchain_version, versionsuffix, cuda_version, outdated = broadwell_cuda
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_FULL', 'broadwell')
+    ec = FakeEasyconfig(name, toolchain_name)
+    ec.toolchain.version = toolchain_version
+    ec['versionsuffix'] = versionsuffix
+    if cuda_version is not None:
+        ec.version = cuda_version
+
+    hooks_hydra.parse_hook(ec)
+
+    if outdated:
+        assert ec['modluafooter'] == hooks_hydra.GPU_OUTDATED_DUMMY_MOD_FOOTER
+        assert ec['module_only'] is True
+        assert ec['skipsteps'] == [SANITYCHECK_STEP]
+    else:
+        assert ec['cuda_compute_capabilities'] == hooks_hydra.ARCHS[hooks_hydra.MACHINE]['broadwell']['cuda_cc']
+        assert 'modluafooter' not in ec
+
+
+def test_parse_hook_gpu_broadwell_outdated_nvhpc(parse_hook_config, monkeypatch):
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_FULL', 'broadwell')
+    ec = FakeEasyconfig('NVHPC', 'system')
+    ec.version = '26.9'
+    ec['versionsuffix'] = '-CUDA-13.3.0'
+    ec['dependencies'] = [('nvidia-compilers', '26.9')]
+    # unrelated to CUDA detection: 'modextravars' is required by the existing NVHPC mpirun
+    # binding workaround elsewhere in the parse hook, which also fires for ec.name == 'NVHPC'
+    ec['modextravars'] = {}
+
+    hooks_hydra.parse_hook(ec)
+
+    assert ec['modluafooter'] == hooks_hydra.GPU_OUTDATED_DUMMY_MOD_FOOTER
+    assert ec['default_cuda_version'] == '0'
 
 
 class FakeCfg(dict):
