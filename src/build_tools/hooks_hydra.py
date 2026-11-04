@@ -260,27 +260,6 @@ def is_gpu_software(ec):
     return is_gpu_package or needs_gpu_toolchain or needs_gpu_component
 
 
-def get_cuda_version(ec):
-    "determine the CUDA version required to build this easyconfig, if any"
-
-    # catch if easyconfig is CUDA itself
-    if ec.name in GPU_COMPONENTS:
-        return ec.version
-
-    # catch if easyconfig has CUDA in its versionsuffix
-    # or if it belongs to nvidia-compilers/NVHPC with CUDA in the toolchain version
-    cuda_version_re = re.compile(r'CUDA-(?P<version>[0-9]+(?:\.[0-9]+)*)')
-    for version_str in (ec.resolve_template(ec['versionsuffix']), ec.toolchain.version):
-        match = cuda_version_re.search(version_str)
-        if match:
-            return match.group('version')
-
-    # will miss ec's in nvidia-compilers/NVHPC with bundled CUDA
-    # we do not build this on Hydra or sofia though
-
-    return None
-
-
 def update_moduleclass(ec):
     "update the moduleclass of an easyconfig to <tc_gen>/all"
     versionsuffix = ec.resolve_template(ec['versionsuffix'])
@@ -401,14 +380,9 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
                 f"[parse hook] Unknown local architecture: '{LOCAL_ARCH_FULL}' (expected one of: {known_archs})",
             )
 
-        # CUDA 13+ dropped support for Pascal (GPU arch on our broadwells)
-        min_cuda_version_no_pascal = '13'
-        cuda_version = get_cuda_version(ec)
-        outdated_gpu_arch = (
-            LOCAL_ARCH_FULL == 'broadwell'
-            and cuda_version is not None
-            and LooseVersion(cuda_version) >= LooseVersion(min_cuda_version_no_pascal)
-        )
+        # toolchain generation 2026.1 moved to CUDA 13+, which dropped support for Pascal
+        # (the GPU arch on our broadwells); moduleclass was already set to '<tc_gen>/all' above
+        outdated_gpu_arch = LOCAL_ARCH_FULL == 'broadwell' and '2026.1' in ec['moduleclass']
 
         # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
         if LOCAL_ARCH_FULL not in GPU_ARCHS or outdated_gpu_arch:
