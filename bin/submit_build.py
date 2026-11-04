@@ -61,7 +61,7 @@ SOURCEPATH = {
 # direct, writable mount of the apps filesystem that /apps/<machine> is bound from, used by bwrap
 APPSMNT = {
     BRUSSEL: '/vscmnt/brussel_pixiu_apps/_apps_brussel',
-    SOFIA: '/sofia/apps',
+    SOFIA: os.path.join(APPS, SOFIA),
 }
 
 DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS[MACHINE].items() if prop['default']]

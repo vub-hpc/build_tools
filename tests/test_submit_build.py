@@ -172,4 +172,4 @@ def test_appsmnt_per_machine(submit_build):
     # bwrap writes through this mount, which must point to the apps filesystem of the
     # machine the build actually runs on, not always Brussel's
     assert submit_build.APPSMNT[submit_build.BRUSSEL] == '/vscmnt/brussel_pixiu_apps/_apps_brussel'
-    assert submit_build.APPSMNT[submit_build.SOFIA] == '/sofia/apps'
+    assert submit_build.APPSMNT[submit_build.SOFIA] == '/apps/sofia'
