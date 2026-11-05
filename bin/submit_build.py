@@ -58,6 +58,12 @@ SOURCEPATH = {
     SOFIA: os.path.join(APPS, SOFIA, SOURCES),
 }
 
+# direct, writable mount of the apps filesystem that /apps/<machine> is bound from, used by bwrap
+APPSMNT = {
+    BRUSSEL: '/vscmnt/brussel_pixiu_apps/_apps_brussel',
+    SOFIA: os.path.join(APPS, SOFIA),
+}
+
 DEFAULT_ARCHS = [arch for (arch, prop) in ARCHS[MACHINE].items() if prop['default']]
 LOCAL_ARCH = os.getenv('VSC_ARCH_LOCAL', '') + os.getenv('VSC_ARCH_SUFFIX', '')
 
@@ -145,7 +151,7 @@ def main():
 
     # Default job options
     job = {
-        'appsmnt': '/vscmnt/brussel_pixiu_apps/_apps_brussel',
+        'appsmnt': APPSMNT[MACHINE],
         'bwrap': '0',
         'extra_mod_footer': None,
         'langcode': 'en_US.utf8',
