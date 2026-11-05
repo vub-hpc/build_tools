@@ -166,3 +166,10 @@ def test_gpu_job_submission(submit_build, monkeypatch, tmp_path,
     exp_partition = clusters.ARCHS[clusters.MACHINE][arch]['partition'][exp_kind]
     assert job_options['partition'] == exp_partition
     assert bool(job_options['gpus']) == exp_device
+
+
+def test_appsmnt_per_machine(submit_build):
+    # bwrap writes through this mount, which must point to the apps filesystem of the
+    # machine the build actually runs on, not always Brussel's
+    assert submit_build.APPSMNT[submit_build.BRUSSEL] == '/vscmnt/brussel_pixiu_apps/_apps_brussel'
+    assert submit_build.APPSMNT[submit_build.SOFIA] == '/apps/sofia'
