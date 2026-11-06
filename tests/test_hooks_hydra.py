@@ -139,6 +139,9 @@ class FakeEasyconfig(dict):
         self.toolchain = types.SimpleNamespace(name=toolchain_name, version='2024a')
         self.log = logging.getLogger('test_parse_hook')
 
+    def resolve_template(self, value):
+        return value
+
 
 @pytest.mark.parametrize(
     'gpu_software',
@@ -201,6 +204,50 @@ def test_parse_hook_gpu_arch(parse_hook_config, monkeypatch):
     hooks_hydra.parse_hook(ec)
 
     assert ec['cuda_compute_capabilities'] == hooks_hydra.ARCHS[hooks_hydra.MACHINE]['zen5-ib']['cuda_cc']
+
+
+@pytest.mark.parametrize(
+    'broadwell_moduleclass',
+    [
+        # (moduleclass, outdated)
+        # toolchain generation 2026.1 moved to CUDA 13+, dropping support for Pascal
+        ('2026.1/all', True),
+        # earlier generations are still on a supported CUDA version
+        ('2025a/all', False),
+        ('2024a/all', False),
+        ('system/all', False),
+    ],
+)
+def test_parse_hook_gpu_broadwell_moduleclass(parse_hook_config, monkeypatch, broadwell_moduleclass):
+    moduleclass, outdated = broadwell_moduleclass
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_FULL', 'broadwell')
+    ec = FakeEasyconfig('CUDA')
+    ec['moduleclass'] = moduleclass
+
+    hooks_hydra.parse_hook(ec)
+
+    if outdated:
+        assert ec['modluafooter'] == hooks_hydra.GPU_OUTDATED_DUMMY_MOD_FOOTER
+        assert ec['module_only'] is True
+        assert ec['skipsteps'] == [SANITYCHECK_STEP]
+    else:
+        assert ec['cuda_compute_capabilities'] == hooks_hydra.ARCHS[hooks_hydra.MACHINE]['broadwell']['cuda_cc']
+        assert 'modluafooter' not in ec
+
+
+def test_parse_hook_gpu_broadwell_outdated_nvhpc(parse_hook_config, monkeypatch):
+    monkeypatch.setattr(hooks_hydra, 'LOCAL_ARCH_FULL', 'broadwell')
+    ec = FakeEasyconfig('NVHPC', 'system')
+    ec['moduleclass'] = '2026.1/all'
+    ec['dependencies'] = [('nvidia-compilers', '26.9')]
+    # unrelated to the outdated-arch check: 'modextravars' is required by the existing NVHPC
+    # mpirun binding workaround elsewhere in the parse hook, which also fires for ec.name == 'NVHPC'
+    ec['modextravars'] = {}
+
+    hooks_hydra.parse_hook(ec)
+
+    assert ec['modluafooter'] == hooks_hydra.GPU_OUTDATED_DUMMY_MOD_FOOTER
+    assert ec['default_cuda_version'] == '0'
 
 
 class FakeCfg(dict):

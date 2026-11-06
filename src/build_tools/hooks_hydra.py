@@ -151,6 +151,16 @@ https://hpc.vub.be/docs/job-submission/gpu-job-types/#gpu-jobs
 end
 """
 
+GPU_OUTDATED_DUMMY_MOD_FOOTER = """
+if mode() == "load" and not os.getenv("BUILD_TOOLS_LOAD_DUMMY_MODULES") then
+    LmodError([[
+This module is only available on nodes with a more recent GPU.
+CUDA 13.x or greater no longer supports GPUs with the Pascal architecture:
+https://docs.nvidia.com/datacenter/tesla/drivers/latest/cuda-toolkit-driver-and-architecture-matrix.html
+    ]])
+end
+"""
+
 TC_VERSIONS = {}
 
 
@@ -370,11 +380,15 @@ def parse_hook(ec, *args, **kwargs):  # pylint: disable=unused-argument
                 f"[parse hook] Unknown local architecture: '{LOCAL_ARCH_FULL}' (expected one of: {known_archs})",
             )
 
+        # toolchain generation 2026.1 moved to CUDA 13+, which dropped support for Pascal
+        # (the GPU arch on our broadwells); moduleclass was already set to '<tc_gen>/all' above
+        outdated_gpu_arch = LOCAL_ARCH_FULL == 'broadwell' and '2026.1' in ec['moduleclass']
+
         # skip installation of CUDA software in non-GPU architectures, only create a dummy module file
-        if LOCAL_ARCH_FULL not in GPU_ARCHS:
-            ec.log.info("[parse hook] Generating dummy GPU module on non-GPU node")
+        if LOCAL_ARCH_FULL not in GPU_ARCHS or outdated_gpu_arch:
+            ec.log.info("[parse hook] Generating dummy GPU module")
             # inject error message in module file
-            ec['modluafooter'] = GPU_DUMMY_MOD_FOOTER
+            ec['modluafooter'] = GPU_OUTDATED_DUMMY_MOD_FOOTER if outdated_gpu_arch else GPU_DUMMY_MOD_FOOTER
             # manually set some default CUDA version for dummy module (required by easyblock)
             if ec.name in ('NVHPC', 'nvidia-compilers'):
                 ec['default_cuda_version'] = '0'
