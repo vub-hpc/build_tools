@@ -94,8 +94,6 @@ def main():
                         help='Reinstall in 2 steps via new namespace with bwrap (no robot)')
     parser.add_argument('-c', '--lang-c', action='store_true',
                         help='Set LANG=C in the build (instead of unicode)')
-    parser.add_argument('-d', '--debug', action='store_true',
-                        help='Set log level to DEBUG (default is INFO)')
     parser.add_argument('-D', '--dry-run', action='store_true',
                         help='Do not fetch/install, set debug log level')
     parser.add_argument('-e', '--extra-eb-flags', default=None,
@@ -175,6 +173,7 @@ def main():
 
     # EB command line options (same for all build jobs)
     eb_options = [
+        '--debug',
         '--logtostdout',
         '--module-extensions',
         '--zip-logs=bzip2',
@@ -182,10 +181,6 @@ def main():
         f'--suffix-modules-path={SUFFIX_MODULES_PATH}',
         f'--moduleclasses={",".join(os.path.join(x, SUFFIX_MODULES_SYMLINK) for x in VALID_MODULES_SUBDIRS)}',
     ]
-
-    if opts.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-        eb_options.append('--debug')
 
     dry_run = opts.dry_run
     if dry_run:
