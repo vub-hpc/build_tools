@@ -62,6 +62,7 @@ SOFTWARE_GROUPS = {
     'Stata': 'brusselall',  # site license
     'VASP': {r'^6\.': 'bli_vasp6', r'^5\.': 'bvasp'},  # bli_vasp6 is an autogroup (bvasp6->bvasp, g_vasp6, avasp6)
     'Victory-TCAD': 'btcad',
+    'WIEN2k': 'bli_wien2k',  # bli_wien2k is an autogroup (gwien2k, bsofia_badmin)
 }
 
 GPU_ARCHS = [x for (x, y) in ARCHS[MACHINE].items() if y['partition']['gpu']]
